@@ -10,7 +10,10 @@ app.use(express.json());
 
 // --- 2. ROUTES ---
 const userRoutes = require('./src/routes/user.routes');
+const followerRoutes = require('./src/routes/follower.routes');
+
 app.use('/users', userRoutes);
+app.use('/users', followerRoutes);
 
 // --- 3. DÉMARRAGE ---
 const PORT = process.env.PORT || 5000;

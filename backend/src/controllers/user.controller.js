@@ -41,6 +41,33 @@ exports.getMe = async (req, res) => {
 };
 
 /**
+ * 1.5. GET /users/:id
+ * Récupère les informations publiques d'un utilisateur par son ID
+ * Utilisé pour afficher les profils d'autres utilisateurs
+ */
+exports.getUserById = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    // Validation de l'ID
+    if (isNaN(userId) || userId <= 0) {
+      return res.status(400).json({ error: "ID utilisateur invalide" });
+    }
+
+    // Appel du Service
+    const user = await userService.getUserById(userId);
+
+    if (user) {
+      return res.json(user);
+    }
+    return res.status(404).json({ error: "Utilisateur non trouvé" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+/**
  * 2. POST /users/create
  * Crée l'utilisateur avec les données du formulaire React
  * (Obligatoire car prenom/nom/pseudo sont NOT NULL)

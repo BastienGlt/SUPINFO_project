@@ -6,6 +6,9 @@ const checkJwt = require('../middlewares/auth.middleware');
 // Route protégée : Récupère l'utilisateur connecté
 router.get('/me', checkJwt, userController.getMe);
 
+// Route publique : Récupère un utilisateur par ID
+router.get('/:id', userController.getUserById);
+
 // Route pour CRÉER le profil (envoyée par le formulaire)
 router.post('/create', checkJwt, userController.createUser);
 
