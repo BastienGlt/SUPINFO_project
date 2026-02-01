@@ -1,0 +1,27 @@
+{
+  "name": "projetfinal",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.3",
+    "lucide-react": "^0.314.0",
+    "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.1",
+    "date-fns": "^3.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.8",
+    "vitest": "^1.2.1",
+    "jsdom": "^24.0.0"
+  }
+}
