@@ -12,10 +12,12 @@ app.use(express.json());
 const userRoutes = require('./src/routes/user.routes');
 const followerRoutes = require('./src/routes/follower.routes');
 const critiqueRoutes = require('./src/routes/critique.routes');
+const commentaireRoutes = require('./src/routes/commentaire.routes');
 
 app.use('/users', userRoutes);
 app.use('/users', followerRoutes);
 app.use('/critiques', critiqueRoutes);
+app.use('/commentaires', commentaireRoutes);
 
 // --- Gestion des erreurs 404 ---
 app.use((req, res) => {
