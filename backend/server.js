@@ -11,9 +11,19 @@ app.use(express.json());
 // --- 2. ROUTES ---
 const userRoutes = require('./src/routes/user.routes');
 const followerRoutes = require('./src/routes/follower.routes');
+const critiqueRoutes = require('./src/routes/critique.routes');
 
 app.use('/users', userRoutes);
 app.use('/users', followerRoutes);
+app.use('/critiques', critiqueRoutes);
+
+// --- Gestion des erreurs 404 ---
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: "Route introuvable", 
+    path: req.path 
+  });
+});
 
 // --- 3. DÉMARRAGE ---
 const PORT = process.env.PORT || 5000;
