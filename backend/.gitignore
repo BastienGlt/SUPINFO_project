@@ -37,3 +37,6 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+CLAUDE.md
+database.sql
