@@ -3,6 +3,19 @@ const userService = require('../services/user.service');
 
 class BibliothequeController {
 
+  parseBody(body) {
+    if (!body) return {};
+    if (typeof body === 'object') return body;
+    if (typeof body === 'string') {
+      try {
+        return JSON.parse(body);
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  }
+
   // Ajouter une œuvre à la bibliothèque
   async addItem(req, res) {
     try {
@@ -10,7 +23,14 @@ class BibliothequeController {
       const currentUser = await userService.getUserByAuth0Id(auth0Id);
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
-      const { oeuvre_id, statut } = req.body;
+      const body = this.parseBody(req.body);
+      const { oeuvre_id, statut } = body;
+
+      if (Object.keys(body).length === 0) {
+        return res.status(400).json({
+          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec oeuvre_id et statut.'
+        });
+      }
 
       if (!oeuvre_id) {
         return res.status(400).json({ error: 'L\'ID de l\'œuvre est requis' });
@@ -36,7 +56,13 @@ class BibliothequeController {
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
       const { id } = req.params;
-      const updates = req.body;
+      const updates = this.parseBody(req.body);
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({
+          error: 'Le corps de la requête est vide ou invalide.'
+        });
+      }
 
       const success = await bibliothequeService.updateBibliothequeItem(currentUser.id, id, updates);
 
