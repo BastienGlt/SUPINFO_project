@@ -1,4 +1,5 @@
 const db = require('../../config/db');
+const notificationService = require('./notification.service');
 
 /**
  * Service : Logique métier pour le système de follow/unfollow
@@ -17,6 +18,10 @@ exports.followUser = async (followerId, followedId) => {
     VALUES (?, ?, NOW())
   `;
   await db.query(sql, [followerId, followedId]);
+
+  // Notifier l'utilisateur suivi (fire-and-forget, ne bloque pas la réponse)
+  notificationService.createNotification(followedId, followerId, 'follow', followerId).catch(console.error);
+
   return { success: true, message: 'Utilisateur suivi avec succès' };
 };
 

@@ -18,12 +18,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.text({ type: 'text/plain' }));
 
 // --- 2. ROUTES ---
+const checkActive = require('./src/middlewares/active.middleware');
+
+// Bloque les utilisateurs bannis sur toutes les routes authentifiées
+app.use(checkActive);
+
 const userRoutes = require('./src/routes/user.routes');
 const followerRoutes = require('./src/routes/follower.routes');
 const critiqueRoutes = require('./src/routes/critique.routes');
 const commentaireRoutes = require('./src/routes/commentaire.routes');
 const bibliothequeRoutes = require('./src/routes/bibliotheque.routes');
 const listeRoutes = require('./src/routes/liste.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
+const feedRoutes = require('./src/routes/feed.routes');
+const adminRoutes = require('./src/routes/admin.routes');
 
 app.use('/users', userRoutes);
 app.use('/users', followerRoutes);
@@ -31,6 +39,9 @@ app.use('/critiques', critiqueRoutes);
 app.use('/commentaires', commentaireRoutes);
 app.use('/bibliotheque', bibliothequeRoutes);
 app.use('/listes', listeRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/feed', feedRoutes);
+app.use('/admin', adminRoutes);
 
 // --- Gestion des erreurs 404 ---
 app.use((req, res) => {
