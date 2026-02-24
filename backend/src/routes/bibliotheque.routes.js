@@ -7,10 +7,10 @@ const authMiddleware = require('../middlewares/auth.middleware');
 router.use(authMiddleware);
 
 // CRUD Bibliothèque
-router.post('/items', bibliothequeController.addItem);
-router.put('/items/:id', bibliothequeController.updateItem);
-router.delete('/items/:id', bibliothequeController.deleteItem);
-router.get('/items', bibliothequeController.getBibliotheque);
-router.get('/items/user/:userId', bibliothequeController.getBibliotheque);
+router.post('/items', (req, res) => bibliothequeController.addItem(req, res));
+router.put('/items/:id', (req, res) => bibliothequeController.updateItem(req, res));
+router.delete('/items/:id', (req, res) => bibliothequeController.deleteItem(req, res));
+router.get('/items', (req, res) => bibliothequeController.getBibliotheque(req, res));
+router.get('/items/user/:userId', (req, res) => bibliothequeController.getBibliotheque(req, res));
 
 module.exports = router;
