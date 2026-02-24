@@ -99,6 +99,21 @@ class BibliothequeController {
     }
   }
 
+  // Statistiques de la bibliothèque de l'utilisateur
+  async getStats(req, res) {
+    try {
+      const auth0Id = req.auth.payload.sub;
+      const currentUser = await userService.getUserByAuth0Id(auth0Id);
+      if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
+
+      const stats = await bibliothequeService.getStats(currentUser.id);
+      res.json(stats);
+    } catch (error) {
+      console.error('Erreur getStats:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   // Obtenir la bibliothèque de l'utilisateur
   async getBibliotheque(req, res) {
     try {

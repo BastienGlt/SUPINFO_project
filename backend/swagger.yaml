@@ -222,6 +222,30 @@ components:
         statut:
           type: string
 
+    BibliothequeStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Nombre total d'items dans la bibliothèque
+        oeuvres_uniques:
+          type: integer
+          description: Nombre d'oeuvres distinctes
+        derniere_mise_a_jour:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date de la dernière modification
+        par_statut:
+          type: object
+          description: Répartition du nombre d'items par statut
+          additionalProperties:
+            type: integer
+          example:
+            A_VOIR: 5
+            EN_COURS: 3
+            VU: 4
+
     FollowStats:
       type: object
       properties:
@@ -1347,6 +1371,33 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   # ==================== BIBLIOTHEQUE ====================
+
+  /bibliotheque/stats:
+    get:
+      tags: [Bibliotheque]
+      summary: Statistiques de la bibliothèque de l'utilisateur connecté
+      description: Retourne le total d'items, le nombre d'oeuvres uniques, la date de dernière mise à jour et la répartition par statut.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistiques de la collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BibliothequeStats'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /bibliotheque/items:
     post:
