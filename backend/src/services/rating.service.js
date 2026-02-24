@@ -1,6 +1,10 @@
 const db = require('../../config/db');
 const notificationService = require('./notification.service');
 
+// Whitelist stricte pour prévenir l'injection SQL via ORDER BY
+const ALLOWED_ORDER_BY = ['created_at', 'updated_at', 'note'];
+const ALLOWED_ORDER    = ['ASC', 'DESC'];
+
 /**
  * Service : Logique métier pour le système de notation des œuvres
  * Gère les notes et critiques associées aux œuvres
@@ -85,13 +89,17 @@ exports.getRatingByUserAndOeuvre = async (userId, oeuvreId) => {
  */
 exports.getRatingsByOeuvre = async (oeuvreId, options = {}) => {
   const { limit = 20, offset = 0, orderBy = 'created_at', order = 'DESC' } = options;
-  
+
+  // Validation par whitelist : prévient l'injection SQL sur la clause ORDER BY
+  const safeOrderBy = ALLOWED_ORDER_BY.includes(orderBy) ? orderBy : 'created_at';
+  const safeOrder   = ALLOWED_ORDER.includes((order || '').toUpperCase()) ? order.toUpperCase() : 'DESC';
+
   // Récupérer les critiques
   const sql = `
     SELECT *
     FROM v_critiques_complete
     WHERE oeuvre_id = ?
-    ORDER BY ${orderBy} ${order}
+    ORDER BY ${safeOrderBy} ${safeOrder}
     LIMIT ? OFFSET ?
   `;
   const [critiques] = await db.query(sql, [oeuvreId, limit, offset]);

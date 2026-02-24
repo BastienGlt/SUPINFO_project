@@ -1,5 +1,8 @@
 const bibliothequeService = require('../services/bibliotheque.service');
 const userService = require('../services/user.service');
+const logger = require('../utils/logger');
+
+const STATUTS_VALIDES = ['A_VOIR', 'EN_COURS', 'TERMINE', 'ABANDONNE'];
 
 class BibliothequeController {
 
@@ -33,10 +36,21 @@ class BibliothequeController {
       }
 
       if (!oeuvre_id) {
-        return res.status(400).json({ error: 'L\'ID de l\'œuvre est requis' });
+        return res.status(400).json({ error: "L'ID de l'œuvre est requis" });
       }
 
-      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre_id, statut);
+      const oeuvreIdInt = parseInt(oeuvre_id);
+      if (isNaN(oeuvreIdInt) || oeuvreIdInt <= 0) {
+        return res.status(400).json({ error: "L'ID de l'œuvre doit être un entier positif" });
+      }
+
+      if (statut && !STATUTS_VALIDES.includes(statut)) {
+        return res.status(400).json({
+          error: `Statut invalide. Valeurs acceptées : ${STATUTS_VALIDES.join(', ')}`
+        });
+      }
+
+      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvreIdInt, statut);
 
       res.status(201).json({
         message: 'Œuvre ajoutée à la bibliothèque',
@@ -44,7 +58,10 @@ class BibliothequeController {
       });
     } catch (error) {
       console.error('Erreur addItem:', error);
-      res.status(500).json({ error: error.message });
+      if (error.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Cette œuvre est déjà dans votre bibliothèque' });
+      }
+      res.status(500).json({ error: 'Impossible d\'ajouter l\'œuvre à la bibliothèque' });
     }
   }
 
@@ -64,6 +81,12 @@ class BibliothequeController {
         });
       }
 
+      if (updates.statut && !STATUTS_VALIDES.includes(updates.statut)) {
+        return res.status(400).json({
+          error: `Statut invalide. Valeurs acceptées : ${STATUTS_VALIDES.join(', ')}`
+        });
+      }
+
       const success = await bibliothequeService.updateBibliothequeItem(currentUser.id, id, updates);
 
       if (!success) {
@@ -73,7 +96,7 @@ class BibliothequeController {
       res.json({ message: 'Item mis à jour avec succès' });
     } catch (error) {
       console.error('Erreur updateItem:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de mettre à jour l\'item' });
     }
   }
 
@@ -95,7 +118,7 @@ class BibliothequeController {
       res.json({ message: 'Item supprimé avec succès' });
     } catch (error) {
       console.error('Erreur deleteItem:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de supprimer l\'item' });
     }
   }
 
@@ -110,27 +133,55 @@ class BibliothequeController {
       res.json(stats);
     } catch (error) {
       console.error('Erreur getStats:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de récupérer les statistiques' });
     }
   }
 
   // Obtenir la bibliothèque de l'utilisateur
   async getBibliotheque(req, res) {
     try {
-      const userId = req.params.userId || (await userService.getUserByAuth0Id(req.auth.payload.sub))?.id;
-      if (!userId) return res.status(401).json({ error: 'Utilisateur non authentifié' });
+      const auth0Id = req.auth.payload.sub;
+      const currentUser = await userService.getUserByAuth0Id(auth0Id);
+      if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
+
+      // Déterminer l'ID cible et vérifier les permissions
+      const requestedUserId = req.params.userId
+        ? parseInt(req.params.userId)
+        : currentUser.id;
+
+      if (isNaN(requestedUserId) || requestedUserId <= 0) {
+        return res.status(400).json({ error: 'ID utilisateur invalide' });
+      }
+
+      // BOLA : seul le propriétaire ou un admin peut consulter une bibliothèque
+      const isOwner = currentUser.id === requestedUserId;
+      const isAdmin = currentUser.role_id === 3;
+
+      if (!isOwner && !isAdmin) {
+        logger.security('UNAUTHORIZED_BIBLIOTHEQUE_ACCESS', {
+          currentUserId: currentUser.id,
+          requestedUserId,
+          ip: req.ip,
+        });
+        return res.status(403).json({ error: 'Accès non autorisé à cette bibliothèque' });
+      }
 
       const { statut } = req.query;
-
       const filters = {};
-      if (statut) filters.statut = statut;
+      if (statut) {
+        if (!STATUTS_VALIDES.includes(statut)) {
+          return res.status(400).json({
+            error: `Statut invalide. Valeurs acceptées : ${STATUTS_VALIDES.join(', ')}`
+          });
+        }
+        filters.statut = statut;
+      }
 
-      const items = await bibliothequeService.getUserBibliotheque(userId, filters);
-
+      const items = await bibliothequeService.getUserBibliotheque(requestedUserId, filters);
       res.json(items);
     } catch (error) {
       console.error('Erreur getBibliotheque:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de récupérer la bibliothèque' });
     }
   }
 }

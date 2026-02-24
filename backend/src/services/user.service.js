@@ -16,12 +16,27 @@ exports.getUserByAuth0Id = async (auth0Id) => {
 };
 
 /**
- * Récupère un utilisateur via son ID
+ * Récupère un utilisateur via son ID (usage interne uniquement — données complètes)
  * @param {number} id - L'identifiant de l'utilisateur
  * @returns {Object|null} L'utilisateur trouvé ou null
  */
 exports.getUserById = async (id) => {
   const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+  return rows[0] || null;
+};
+
+/**
+ * Récupère le profil public d'un utilisateur (champs non-sensibles uniquement).
+ * À utiliser sur les endpoints accessibles sans authentification.
+ * Exclut : auth0_id, email, role_id, status
+ * @param {number} id - L'identifiant de l'utilisateur
+ * @returns {Object|null} L'utilisateur trouvé ou null
+ */
+exports.getPublicUserById = async (id) => {
+  const [rows] = await db.query(
+    'SELECT id, pseudo, prenom, nom, bio, photo, created_at FROM users WHERE id = ?',
+    [id]
+  );
   return rows[0] || null;
 };
 

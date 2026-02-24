@@ -112,8 +112,8 @@ exports.getRatingsByOeuvre = async (req, res) => {
     const { limit, offset, orderBy, order } = req.query;
 
     const options = {
-      limit: limit ? parseInt(limit) : 20,
-      offset: offset ? parseInt(offset) : 0,
+      limit: Math.min(Math.max(limit ? parseInt(limit) : 20, 1), 100),
+      offset: Math.max(offset ? parseInt(offset) : 0, 0),
       orderBy: orderBy || 'created_at',
       order: order || 'DESC'
     };
@@ -153,8 +153,8 @@ exports.getRatingsByUser = async (req, res) => {
     const { limit, offset } = req.query;
 
     const options = {
-      limit: limit ? parseInt(limit) : 20,
-      offset: offset ? parseInt(offset) : 0
+      limit: Math.min(Math.max(limit ? parseInt(limit) : 20, 1), 100),
+      offset: Math.max(offset ? parseInt(offset) : 0, 0)
     };
 
     const result = await ratingService.getRatingsByUser(userId, options);

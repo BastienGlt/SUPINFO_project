@@ -1,5 +1,7 @@
 const signalementService = require('../services/signalement.service');
 const userService = require('../services/user.service');
+const { createSignalementSchema, updateStatutSchema } = require('../validators/signalement.validator');
+const logger = require('../utils/logger');
 
 /**
  * Controller : Signalements de contenu
@@ -14,9 +16,6 @@ const userService = require('../services/user.service');
  *  - DELETE /signalements/:id          → deleteSignalement
  */
 
-const TYPES_AUTORISES = ['critique', 'commentaire', 'liste'];
-const STATUTS_AUTORISES = ['traité', 'rejeté'];
-
 /**
  * POST /signalements
  * Signale un contenu.
@@ -29,28 +28,18 @@ exports.createSignalement = async (req, res) => {
       return res.status(401).json({ error: 'Utilisateur non authentifié' });
     }
 
-    const { type_contenu, contenu_id, motif } = req.body;
-
-    if (!type_contenu || !TYPES_AUTORISES.includes(type_contenu)) {
-      return res.status(400).json({
-        error: `type_contenu invalide. Valeurs acceptées : ${TYPES_AUTORISES.join(', ')}`
-      });
+    const parsed = createSignalementSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.errors[0].message });
     }
 
-    const contenuIdInt = parseInt(contenu_id);
-    if (!contenu_id || isNaN(contenuIdInt)) {
-      return res.status(400).json({ error: 'contenu_id invalide' });
-    }
-
-    if (!motif || motif.trim().length === 0) {
-      return res.status(400).json({ error: 'Le motif est requis' });
-    }
+    const { type_contenu, contenu_id, motif } = parsed.data;
 
     const id = await signalementService.createSignalement(
       user.id,
       type_contenu,
-      contenuIdInt,
-      motif.trim()
+      parseInt(contenu_id),
+      motif
     );
 
     res.status(201).json({ message: 'Signalement créé avec succès', id });
@@ -85,9 +74,18 @@ exports.getMesSignalements = async (req, res) => {
  * Liste tous les signalements — modérateur+.
  * Query param optionnel : ?statut=en_attente|traité|rejeté
  */
+const STATUTS_FILTRE_AUTORISES = ['en_attente', 'traité', 'rejeté'];
+
 exports.getAllSignalements = async (req, res) => {
   try {
     const { statut } = req.query;
+
+    if (statut && !STATUTS_FILTRE_AUTORISES.includes(statut)) {
+      return res.status(400).json({
+        error: `statut invalide. Valeurs acceptées : ${STATUTS_FILTRE_AUTORISES.join(', ')}`
+      });
+    }
+
     const signalements = await signalementService.getAllSignalements(statut || null);
     res.json(signalements);
   } catch (error) {
@@ -108,11 +106,9 @@ exports.updateStatut = async (req, res) => {
       return res.status(400).json({ error: 'ID invalide' });
     }
 
-    const { statut } = req.body;
-    if (!statut || !STATUTS_AUTORISES.includes(statut)) {
-      return res.status(400).json({
-        error: `statut invalide. Valeurs acceptées : ${STATUTS_AUTORISES.join(', ')}`
-      });
+    const parsed = updateStatutSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.errors[0].message });
     }
 
     const signalement = await signalementService.getSignalementById(id);
@@ -120,8 +116,15 @@ exports.updateStatut = async (req, res) => {
       return res.status(404).json({ error: 'Signalement non trouvé' });
     }
 
-    await signalementService.updateStatut(id, statut);
-    res.json({ message: `Signalement marqué comme "${statut}"` });
+    await signalementService.updateStatut(id, parsed.data.statut);
+
+    logger.security('MODERATOR_UPDATE_SIGNALEMENT', {
+      moderatorId: req.currentUser?.id,
+      signalementId: id,
+      newStatut: parsed.data.statut,
+    });
+
+    res.json({ message: `Signalement marqué comme "${parsed.data.statut}"` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour du statut' });

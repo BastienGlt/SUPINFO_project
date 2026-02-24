@@ -1,5 +1,7 @@
 const userService = require('../services/user.service');
 const exportService = require('../services/export.service');
+const { createUserSchema, updateUserSchema } = require('../validators/user.validator');
+const logger = require('../utils/logger');
 
 /**
  * Controller : Gère les requêtes HTTP et appelle les Services
@@ -55,8 +57,8 @@ exports.getUserById = async (req, res) => {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Appel du Service
-    const user = await userService.getUserById(userId);
+    // Appel du Service — version publique (sans auth0_id, email, role_id, status)
+    const user = await userService.getPublicUserById(userId);
 
     if (user) {
       return res.json(user);
@@ -81,12 +83,11 @@ exports.createUser = async (req, res) => {
     const photo = req.auth.payload[`${namespace}/picture`];
 
     // Données reçues du formulaire React
-    const { prenom, nom, pseudo, bio } = req.body;
-
-    // Validation (sécurité)
-    if (!prenom || !nom || !pseudo) {
-      return res.status(400).json({ error: "Les champs Prénom, Nom et Pseudo sont obligatoires." });
+    const parsed = createUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.errors[0].message });
     }
+    const { prenom, nom, pseudo, bio } = parsed.data;
 
     // Appel du Service (logique métier déléguée)
     const newUser = await userService.createUser({
@@ -138,14 +139,23 @@ exports.updateUser = async (req, res) => {
 
     // Vérification des permissions (lui-même OU admin)
     const isOwner = currentUser.id === targetUserId;
-    const isAdmin = currentUser.role_id === 3; // role_id 3 = admin
+    const isAdmin = currentUser.role_id === 3;
 
     if (!isOwner && !isAdmin) {
+      logger.security('UNAUTHORIZED_UPDATE_USER', {
+        currentUserId: currentUser.id,
+        targetUserId,
+        ip: req.ip,
+      });
       return res.status(403).json({ error: "Vous n'avez pas la permission de modifier cet utilisateur" });
     }
 
-    // Données à mettre à jour
-    const { prenom, nom, pseudo, bio, photo } = req.body;
+    // Validation Zod des données à mettre à jour
+    const parsed = updateUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.errors[0].message });
+    }
+    const { prenom, nom, pseudo, bio, photo } = parsed.data;
 
     // Appel du Service
     const updatedUser = await userService.updateUser(targetUserId, {
@@ -197,9 +207,14 @@ exports.deleteUser = async (req, res) => {
 
     // Vérification des permissions (lui-même OU admin)
     const isOwner = currentUser.id === targetUserId;
-    const isAdmin = currentUser.role_id === 3; // role_id 3 = admin
+    const isAdmin = currentUser.role_id === 3;
 
     if (!isOwner && !isAdmin) {
+      logger.security('UNAUTHORIZED_DELETE_USER', {
+        currentUserId: currentUser.id,
+        targetUserId,
+        ip: req.ip,
+      });
       return res.status(403).json({ error: "Vous n'avez pas la permission de supprimer cet utilisateur" });
     }
 

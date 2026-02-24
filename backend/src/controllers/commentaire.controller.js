@@ -1,5 +1,6 @@
 const commentaireService = require('../services/commentaire.service');
 const userService = require('../services/user.service');
+const { commentaireSchema } = require('../validators/commentaire.validator');
 
 /**
  * Controller : Gère les requêtes HTTP pour le système de commentaires
@@ -13,21 +14,16 @@ const userService = require('../services/user.service');
 exports.createCommentaire = async (req, res) => {
   try {
     const critiqueId = parseInt(req.params.id);
-    const { contenu } = req.body;
     const auth0Id = req.auth.payload.sub;
 
-    // Validation du contenu
-    if (!contenu || contenu.trim().length === 0) {
-      return res.status(400).json({ error: "Le contenu du commentaire est obligatoire" });
-    }
-
-    if (contenu.length > 2000) {
-      return res.status(400).json({ error: "Le commentaire ne peut pas dépasser 2000 caractères" });
+    // Validation Zod du contenu
+    const parsed = commentaireSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.errors[0].message });
     }
 
     // Récupérer l'utilisateur authentifié
     const currentUser = await userService.getUserByAuth0Id(auth0Id);
-    
     if (!currentUser) {
       return res.status(401).json({ error: "Utilisateur non authentifié" });
     }
@@ -36,7 +32,7 @@ exports.createCommentaire = async (req, res) => {
     const commentaire = await commentaireService.createCommentaire(
       currentUser.id,
       critiqueId,
-      contenu
+      parsed.data.contenu
     );
 
     res.status(201).json(commentaire);
@@ -54,8 +50,8 @@ exports.createCommentaire = async (req, res) => {
 exports.getCommentairesByCritique = async (req, res) => {
   try {
     const critiqueId = parseInt(req.params.id);
-    const limit = parseInt(req.query.limit) || 50;
-    const offset = parseInt(req.query.offset) || 0;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
     const orderBy = req.query.orderBy || 'created_at';
     const order = req.query.order?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
 
@@ -81,8 +77,8 @@ exports.getCommentairesByCritique = async (req, res) => {
 exports.getCommentairesByUser = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = parseInt(req.query.offset) || 0;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
     const result = await commentaireService.getCommentairesByUser(userId, {
       limit,
@@ -104,21 +100,16 @@ exports.getCommentairesByUser = async (req, res) => {
 exports.updateCommentaire = async (req, res) => {
   try {
     const commentaireId = parseInt(req.params.id);
-    const { contenu } = req.body;
     const auth0Id = req.auth.payload.sub;
 
-    // Validation du contenu
-    if (!contenu || contenu.trim().length === 0) {
-      return res.status(400).json({ error: "Le contenu du commentaire est obligatoire" });
-    }
-
-    if (contenu.length > 2000) {
-      return res.status(400).json({ error: "Le commentaire ne peut pas dépasser 2000 caractères" });
+    // Validation Zod du contenu
+    const parsed = commentaireSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.errors[0].message });
     }
 
     // Récupérer l'utilisateur authentifié
     const currentUser = await userService.getUserByAuth0Id(auth0Id);
-    
     if (!currentUser) {
       return res.status(401).json({ error: "Utilisateur non authentifié" });
     }
@@ -127,7 +118,7 @@ exports.updateCommentaire = async (req, res) => {
     const commentaire = await commentaireService.updateCommentaire(
       commentaireId,
       currentUser.id,
-      contenu
+      parsed.data.contenu
     );
 
     res.status(200).json(commentaire);

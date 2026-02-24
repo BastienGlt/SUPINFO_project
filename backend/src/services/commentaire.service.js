@@ -1,6 +1,10 @@
 const db = require('../../config/db');
 const notificationService = require('./notification.service');
 
+// Whitelist stricte pour prévenir l'injection SQL via ORDER BY
+const ALLOWED_ORDER_BY = ['created_at'];
+const ALLOWED_ORDER    = ['ASC', 'DESC'];
+
 /**
  * Service : Logique métier pour le système de commentaires sur les critiques
  * Gère les commentaires associés aux critiques
@@ -52,12 +56,16 @@ exports.getCommentaireById = async (commentaireId) => {
  */
 exports.getCommentairesByCritique = async (critiqueId, options = {}) => {
   const { limit = 50, offset = 0, orderBy = 'created_at', order = 'ASC' } = options;
-  
+
+  // Validation par whitelist : prévient l'injection SQL sur la clause ORDER BY
+  const safeOrderBy = ALLOWED_ORDER_BY.includes(orderBy) ? orderBy : 'created_at';
+  const safeOrder   = ALLOWED_ORDER.includes((order || '').toUpperCase()) ? order.toUpperCase() : 'ASC';
+
   const sql = `
     SELECT *
     FROM v_commentaires
     WHERE critique_id = ?
-    ORDER BY ${orderBy} ${order}
+    ORDER BY ${safeOrderBy} ${safeOrder}
     LIMIT ? OFFSET ?
   `;
   const [commentaires] = await db.query(sql, [critiqueId, limit, offset]);

@@ -105,15 +105,17 @@ class ListeService {
 
     const liste = rows[0];
 
-    // Vérifier les permissions de visibilité
+    // Visibilité PRIVEE : seul le propriétaire y a accès
     if (liste.visibilite === 'PRIVEE' && liste.user_id !== requestUserId) {
       return null;
     }
 
-    if (liste.visibilite === 'AMIS' && requestUserId) {
-      const isFriend = await this.checkIfFriends(liste.user_id, requestUserId);
-      if (!isFriend && liste.user_id !== requestUserId) {
-        return null;
+    // Visibilité AMIS : anonyme = toujours refusé ; autre user = doit être ami
+    if (liste.visibilite === 'AMIS') {
+      if (!requestUserId) return null; // anonyme → refusé
+      if (liste.user_id !== requestUserId) {
+        const isFriend = await this.checkIfFriends(liste.user_id, requestUserId);
+        if (!isFriend) return null;
       }
     }
 

@@ -1,5 +1,6 @@
 const listeService = require('../services/liste.service');
 const userService = require('../services/user.service');
+const { createListeSchema, updateListeSchema } = require('../validators/liste.validator');
 
 class ListeController {
 
@@ -10,18 +11,12 @@ class ListeController {
       const currentUser = await userService.getUserByAuth0Id(auth0Id);
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
-      const data = req.body;
-
-      if (!data.nom) {
-        return res.status(400).json({ error: 'Le nom de la liste est requis' });
+      const parsed = createListeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
       }
 
-      const visibilitesValides = ['PUBLIQUE', 'PRIVEE'];
-      if (data.visibilite && !visibilitesValides.includes(data.visibilite)) {
-        return res.status(400).json({ error: 'Visibilité invalide. Valeurs acceptées : PUBLIQUE, PRIVEE' });
-      }
-
-      const listeId = await listeService.createListe(currentUser.id, data);
+      const listeId = await listeService.createListe(currentUser.id, parsed.data);
 
       res.status(201).json({
         message: 'Liste créée avec succès',
@@ -29,7 +24,7 @@ class ListeController {
       });
     } catch (error) {
       console.error('Erreur createListe:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de créer la liste' });
     }
   }
 
@@ -41,14 +36,13 @@ class ListeController {
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
       const { id } = req.params;
-      const updates = req.body;
 
-      const visibilitesValides = ['PUBLIQUE', 'PRIVEE'];
-      if (updates.visibilite && !visibilitesValides.includes(updates.visibilite)) {
-        return res.status(400).json({ error: 'Visibilité invalide. Valeurs acceptées : PUBLIQUE, PRIVEE' });
+      const parsed = updateListeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
       }
 
-      const success = await listeService.updateListe(currentUser.id, id, updates);
+      const success = await listeService.updateListe(currentUser.id, id, parsed.data);
 
       if (!success) {
         return res.status(404).json({ error: 'Liste non trouvée' });
@@ -57,7 +51,7 @@ class ListeController {
       res.json({ message: 'Liste mise à jour avec succès' });
     } catch (error) {
       console.error('Erreur updateListe:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de mettre à jour la liste' });
     }
   }
 
@@ -79,7 +73,7 @@ class ListeController {
       res.json({ message: 'Liste supprimée avec succès' });
     } catch (error) {
       console.error('Erreur deleteListe:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de supprimer la liste' });
     }
   }
 
@@ -95,7 +89,7 @@ class ListeController {
       res.json(listes);
     } catch (error) {
       console.error('Erreur getUserListes:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de récupérer les listes' });
     }
   }
 
@@ -114,7 +108,7 @@ class ListeController {
       res.json(liste);
     } catch (error) {
       console.error('Erreur getListe:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de récupérer la liste' });
     }
   }
 
@@ -133,7 +127,7 @@ class ListeController {
       res.json(oeuvres);
     } catch (error) {
       console.error('Erreur getListeOeuvres:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de récupérer les œuvres de la liste' });
     }
   }
 
@@ -148,15 +142,26 @@ class ListeController {
       const { oeuvre_id } = req.body;
 
       if (!oeuvre_id) {
-        return res.status(400).json({ error: 'L\'ID de l\'œuvre est requis' });
+        return res.status(400).json({ error: "L'ID de l'œuvre est requis" });
       }
 
-      await listeService.addOeuvreToListe(currentUser.id, id, oeuvre_id);
+      const oeuvreIdInt = parseInt(oeuvre_id);
+      if (isNaN(oeuvreIdInt) || oeuvreIdInt <= 0) {
+        return res.status(400).json({ error: "L'ID de l'œuvre doit être un entier positif" });
+      }
+
+      await listeService.addOeuvreToListe(currentUser.id, id, oeuvreIdInt);
 
       res.status(201).json({ message: 'Œuvre ajoutée à la liste' });
     } catch (error) {
       console.error('Erreur addOeuvre:', error);
-      res.status(500).json({ error: error.message });
+      if (error.message === 'Liste non trouvée ou accès refusé') {
+        return res.status(403).json({ error: error.message });
+      }
+      if (error.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Cette œuvre est déjà dans la liste' });
+      }
+      res.status(500).json({ error: 'Impossible d\'ajouter l\'œuvre à la liste' });
     }
   }
 
@@ -178,22 +183,25 @@ class ListeController {
       res.json({ message: 'Œuvre retirée de la liste' });
     } catch (error) {
       console.error('Erreur removeOeuvre:', error);
-      res.status(500).json({ error: error.message });
+      if (error.message === 'Liste non trouvée ou accès refusé') {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: 'Impossible de retirer l\'œuvre de la liste' });
     }
   }
 
   // Obtenir les listes publiques
   async getPublicListes(req, res) {
     try {
-      const limit = parseInt(req.query.limit) || 20;
-      const offset = parseInt(req.query.offset) || 0;
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+      const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
       const listes = await listeService.getPublicListes(limit, offset);
 
       res.json(listes);
     } catch (error) {
       console.error('Erreur getPublicListes:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Impossible de récupérer les listes publiques' });
     }
   }
 }
