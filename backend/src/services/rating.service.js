@@ -1,4 +1,5 @@
 const db = require('../../config/db');
+const notificationService = require('./notification.service');
 
 /**
  * Service : Logique métier pour le système de notation des œuvres
@@ -190,6 +191,13 @@ exports.likeCritique = async (userId, critiqueId) => {
     VALUES (?, ?, NOW())
   `;
   await db.query(sql, [userId, critiqueId]);
+
+  // Récupérer l'auteur de la critique pour le notifier
+  const [rows] = await db.query('SELECT user_id FROM critiques WHERE id = ?', [critiqueId]);
+  if (rows.length > 0) {
+    notificationService.createNotification(rows[0].user_id, userId, 'like', critiqueId).catch(console.error);
+  }
+
   return { success: true, message: 'Critique likée avec succès' };
 };
 
