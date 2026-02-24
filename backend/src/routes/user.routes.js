@@ -7,6 +7,9 @@ const checkJwt = require('../middlewares/auth.middleware');
 // Route protégée : Récupère l'utilisateur connecté
 router.get('/me', checkJwt, userController.getMe);
 
+// Route protégée : Export des données personnelles (?format=json|csv)
+router.get('/me/export', checkJwt, userController.exportData);
+
 // Route pour CRÉER le profil (envoyée par le formulaire)
 router.post('/create', checkJwt, userController.createUser);
 

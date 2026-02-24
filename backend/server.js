@@ -32,6 +32,7 @@ const listeRoutes = require('./src/routes/liste.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 const feedRoutes = require('./src/routes/feed.routes');
 const adminRoutes = require('./src/routes/admin.routes');
+const signalementRoutes = require('./src/routes/signalement.routes');
 
 app.use('/users', userRoutes);
 app.use('/users', followerRoutes);
@@ -42,6 +43,7 @@ app.use('/listes', listeRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/feed', feedRoutes);
 app.use('/admin', adminRoutes);
+app.use('/signalements', signalementRoutes);
 
 // --- Gestion des erreurs 404 ---
 app.use((req, res) => {

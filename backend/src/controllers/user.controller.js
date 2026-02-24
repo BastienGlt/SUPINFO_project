@@ -1,4 +1,5 @@
 const userService = require('../services/user.service');
+const exportService = require('../services/export.service');
 
 /**
  * Controller : Gère les requêtes HTTP et appelle les Services
@@ -214,5 +215,42 @@ exports.deleteUser = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Impossible de supprimer l'utilisateur" });
+  }
+};
+
+/**
+ * 5. GET /users/me/export
+ * Exporte toutes les données personnelles de l'utilisateur connecté.
+ * Query param : ?format=json (défaut) | csv
+ */
+exports.exportData = async (req, res) => {
+  try {
+    const auth0Id = req.auth.payload.sub;
+    const user = await userService.getUserByAuth0Id(auth0Id);
+
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+
+    const data = await exportService.getUserExportData(user.id);
+    const format = (req.query.format || 'json').toLowerCase();
+
+    if (format === 'csv') {
+      const csv = exportService.buildCsv(data);
+      const filename = `export_${user.pseudo}_${Date.now()}.csv`;
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.send(csv);
+    }
+
+    // JSON (défaut)
+    const filename = `export_${user.pseudo}_${Date.now()}.json`;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.json({ exported_at: new Date().toISOString(), ...data });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur lors de l'export des données" });
   }
 };

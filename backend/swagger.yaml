@@ -384,6 +384,31 @@ components:
         message:
           type: string
 
+    Signalement:
+      type: object
+      properties:
+        id:
+          type: integer
+        type_contenu:
+          type: string
+          enum: [critique, commentaire, liste]
+        contenu_id:
+          type: integer
+        motif:
+          type: string
+        statut:
+          type: string
+          enum: [en_attente, "traité", "rejeté"]
+        created_at:
+          type: string
+          format: date-time
+        signaleur_id:
+          type: integer
+        signaleur_pseudo:
+          type: string
+        signaleur_photo:
+          type: string
+
 tags:
   - name: Users
     description: Gestion des utilisateurs
@@ -405,6 +430,8 @@ tags:
     description: Actions réservées aux administrateurs (role_id=3)
   - name: Modération
     description: Actions accessibles aux modérateurs et administrateurs (role_id>=2)
+  - name: Signalements
+    description: Signalement de contenu — création par tout utilisateur, gestion par modérateur+
 
 paths:
 
@@ -442,6 +469,89 @@ paths:
                         type: string
                       photo:
                         type: string
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/me/export:
+    get:
+      tags: [Users]
+      summary: Exporter ses données personnelles
+      description: >
+        Télécharge l'intégralité des données personnelles de l'utilisateur connecté
+        (profil, critiques, commentaires, listes, bibliothèque, abonnements, signalements).
+        Utiliser `?format=csv` pour obtenir un fichier CSV, `?format=json` (défaut) pour le JSON.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+          description: Format d'export souhaité
+      responses:
+        '200':
+          description: Fichier d'export téléchargé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exported_at:
+                    type: string
+                    format: date-time
+                  profil:
+                    $ref: '#/components/schemas/User'
+                  critiques:
+                    type: array
+                    items:
+                      type: object
+                  commentaires:
+                    type: array
+                    items:
+                      type: object
+                  listes:
+                    type: array
+                    items:
+                      type: object
+                  bibliotheque:
+                    type: array
+                    items:
+                      type: object
+                  abonnements:
+                    type: array
+                    items:
+                      type: object
+                  abonnes:
+                    type: array
+                    items:
+                      type: object
+                  signalements:
+                    type: array
+                    items:
+                      type: object
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur serveur
           content:
@@ -3034,6 +3144,245 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== SIGNALEMENTS ====================
+
+  /signalements:
+    post:
+      tags: [Signalements]
+      summary: Signaler un contenu
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type_contenu, contenu_id, motif]
+              properties:
+                type_contenu:
+                  type: string
+                  enum: [critique, commentaire, liste]
+                  description: Type du contenu signalé
+                contenu_id:
+                  type: integer
+                  description: ID du contenu signalé
+                motif:
+                  type: string
+                  maxLength: 100
+                  description: Motif du signalement
+      responses:
+        '201':
+          description: Signalement créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: integer
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags: [Signalements]
+      summary: Lister tous les signalements (modérateur+)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: statut
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [en_attente, "traité", "rejeté"]
+          description: Filtrer par statut
+      responses:
+        '200':
+          description: Liste des signalements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Signalement'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /signalements/mes:
+    get:
+      tags: [Signalements]
+      summary: Voir ses propres signalements
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste de mes signalements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Signalement'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /signalements/{id}/statut:
+    put:
+      tags: [Signalements]
+      summary: Mettre à jour le statut d'un signalement (modérateur+)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du signalement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statut]
+              properties:
+                statut:
+                  type: string
+                  enum: ["traité", "rejeté"]
+      responses:
+        '200':
+          description: Statut mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID ou statut invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Signalement non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /signalements/{id}:
+    delete:
+      tags: [Signalements]
+      summary: Supprimer un signalement (modérateur+)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du signalement
+      responses:
+        '200':
+          description: Signalement supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Signalement non trouvé
           content:
             application/json:
               schema:
