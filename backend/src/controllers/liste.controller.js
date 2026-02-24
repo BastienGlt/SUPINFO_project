@@ -64,14 +64,16 @@ class ListeController {
 
       const { id } = req.params;
 
-      const success = await listeService.deleteListe(currentUser.id, id);
-
-      if (!success) {
-        return res.status(404).json({ error: 'Liste non trouvée' });
-      }
+      await listeService.deleteListe(currentUser.id, id);
 
       res.json({ message: 'Liste supprimée avec succès' });
     } catch (error) {
+      if (error.message === 'LISTE_NOT_FOUND') {
+        return res.status(404).json({ error: 'Liste non trouvée' });
+      }
+      if (error.message === 'LISTE_FORBIDDEN') {
+        return res.status(403).json({ error: 'Vous n\'êtes pas autorisé à supprimer cette liste' });
+      }
       console.error('Erreur deleteListe:', error);
       res.status(500).json({ error: 'Impossible de supprimer la liste' });
     }

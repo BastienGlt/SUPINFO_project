@@ -1,4 +1,5 @@
 const userService = require('../services/user.service');
+const logger = require('../utils/logger');
 
 /**
  * Middleware admin : s'assure que l'utilisateur connecté a le role_id = 3 (admin).
@@ -15,6 +16,13 @@ const checkAdmin = async (req, res, next) => {
     }
 
     if (currentUser.role_id !== 3) {
+      logger.security('UNAUTHORIZED_ADMIN_ACCESS', {
+        userId: currentUser.id,
+        role_id: currentUser.role_id,
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+      });
       return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
     }
 

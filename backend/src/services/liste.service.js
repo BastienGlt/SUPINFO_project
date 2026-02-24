@@ -45,8 +45,14 @@ class ListeService {
   }
 
   async deleteListe(userId, listeId) {
-    const query = 'DELETE FROM listes WHERE user_id = ? AND id = ?';
-    const [result] = await db.execute(query, [userId, listeId]);
+    const [rows] = await db.execute('SELECT id, user_id FROM listes WHERE id = ?', [listeId]);
+    if (rows.length === 0) {
+      throw new Error('LISTE_NOT_FOUND');
+    }
+    if (rows[0].user_id !== parseInt(userId)) {
+      throw new Error('LISTE_FORBIDDEN');
+    }
+    const [result] = await db.execute('DELETE FROM listes WHERE id = ?', [listeId]);
     return result.affectedRows > 0;
   }
 
