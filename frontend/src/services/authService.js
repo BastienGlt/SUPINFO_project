@@ -1,40 +1,54 @@
-import bcrypt from 'bcryptjs';
-import { DB } from './mockDb';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const authService = {
-    // Initialise le mot de passe pour le test
-    prepareMockHash: async () => {
-        const salt = await bcrypt.genSalt(10);
-        // On cible l'ID 1 (GamerPro123)
-        const user = DB.users.find(u => u.id === 1);
-        if(user) user.password_hash = await bcrypt.hash('password123', salt);
-    },
+  /**
+   * GET /users/me — vérifie si l'utilisateur Auth0 existe en base.
+   * Retourne { exists: true, user } ou { exists: false, prefill }.
+   */
+  getMe: async (getAccessTokenSilently) => {
+    const token = await getAccessTokenSilently();
+    const res = await fetch(`${API_URL}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (res.ok) return { exists: true, user: data };
+    if (res.status === 404 && data.is_new) return { exists: false, prefill: data.prefill };
+    throw new Error(data.error || 'Erreur serveur');
+  },
 
-    login: async (pseudo, password) => {
-        const user = DB.users.find(u => u.pseudo === pseudo);
-        if (!user) throw new Error("Pseudo incorrect");
+  /**
+   * POST /users/create — crée le profil lors de la première connexion.
+   */
+  createProfile: async (getAccessTokenSilently, { prenom, nom, pseudo, bio }) => {
+    const token = await getAccessTokenSilently();
+    const res = await fetch(`${API_URL}/users/create`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prenom, nom, pseudo, bio }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de créer le profil');
+    return data;
+  },
 
-        // Si le hash est vide (cas de mock non init), on le force
-        if (!user.password_hash) await authService.prepareMockHash();
-
-        const isValid = await bcrypt.compare(password, user.password_hash);
-        if (!isValid) throw new Error("Mot de passe incorrect");
-
-        const token = authService.generateToken(user);
-        const { password_hash, ...safeUser } = user;
-        return { user: safeUser, token };
-    },
-
-    generateToken: (user) => {
-        const payload = btoa(JSON.stringify({ sub: user.id, exp: Date.now() + 7200000 }));
-        return `jswauthent.${payload}.signature`;
-    },
-
-    verifyToken: (token) => {
-        if (!token?.startsWith('jswauthent.')) return null;
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return Date.now() > payload.exp ? null : payload;
-        } catch { return null; }
-    }
+  /**
+   * PUT /users/:id — met à jour les informations du profil.
+   */
+  updateProfile: async (getAccessTokenSilently, userId, updates) => {
+    const token = await getAccessTokenSilently();
+    const res = await fetch(`${API_URL}/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de mettre à jour le profil');
+    return data;
+  },
 };

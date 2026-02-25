@@ -8,22 +8,24 @@ import LoginPage from './routes/LoginPage';
 import ProfilePage from './routes/ProfilePage';
 import BibliothequePage from './routes/BibliothequePage';
 import MessagesPage from './routes/MessagesPage';
+import CompleteProfilePage from './routes/CompleteProfilePage';
 
 export default function App() {
-    return (
-        <AuthProvider>
-            <Router>
-                <Navbar />
-                <div className="main-content">
-                    <Routes>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                        <Route path="/bibliotheque" element={<ProtectedRoute><BibliothequePage /></ProtectedRoute>} />
-                        <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
-                    </Routes>
-                </div>
-            </Router>
-        </AuthProvider>
-    );
+  return (
+    <AuthProvider>
+      <Router>
+        <Navbar />
+        <div className="main-content">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/complete-profile" element={<CompleteProfilePage />} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/bibliotheque" element={<ProtectedRoute><BibliothequePage /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
+  );
 }
