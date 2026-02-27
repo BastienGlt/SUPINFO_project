@@ -1,4 +1,5 @@
 const db = require('../../config/db');
+const notificationService = require('./notification.service');
 
 /**
  * Service : Logique métier pour le système de commentaires sur les critiques
@@ -18,6 +19,13 @@ exports.createCommentaire = async (userId, critiqueId, contenu) => {
     VALUES (?, ?, ?, NOW())
   `;
   const [result] = await db.query(sql, [userId, critiqueId, contenu]);
+
+  // Récupérer l'auteur de la critique pour le notifier
+  const [rows] = await db.query('SELECT user_id FROM critiques WHERE id = ?', [critiqueId]);
+  if (rows.length > 0) {
+    notificationService.createNotification(rows[0].user_id, userId, 'commentaire', critiqueId).catch(console.error);
+  }
+
   return await this.getCommentaireById(result.insertId);
 };
 
