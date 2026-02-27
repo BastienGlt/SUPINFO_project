@@ -37,6 +37,5 @@ coverage/
 *.tmp
 *.temp
 .cache/
-
 tmpclaude*
 nul
