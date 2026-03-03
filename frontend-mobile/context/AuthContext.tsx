@@ -37,6 +37,8 @@ const discovery: AuthSession.DiscoveryDocument = {
 
 const redirectUri = AuthSession.makeRedirectUri({ scheme: 'frontendmobile', path: 'callback' });
 
+console.log("=== URL À COPIER DANS AUTH0 ===", redirectUri);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
