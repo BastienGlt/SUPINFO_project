@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "npm run dev --prefix backend",
-    "install:all": "npm install --prefix backend"
+    "start" : "npm run start --prefix backend",
+    "install": "npm install --prefix backend"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
