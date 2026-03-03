@@ -7,12 +7,13 @@ import { useEffect } from 'react';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
-  const { login, loading, user } = useAuth();
+  const { login, loading, user, isNewUser } = useAuth();
 
-  // Si déjà connecté, revenir aux tabs
+  // Si déjà connecté, revenir aux tabs ; si nouvel utilisateur, compléter le profil
   useEffect(() => {
     if (user) router.replace('/(tabs)/');
-  }, [user]);
+    else if (isNewUser) router.replace('/(private)/complete-profile');
+  }, [user, isNewUser]);
 
   const colors = Colors[colorScheme];
 

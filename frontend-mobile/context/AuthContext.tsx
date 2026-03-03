@@ -35,8 +35,7 @@ const discovery: AuthSession.DiscoveryDocument = {
   revocationEndpoint: `https://${CONFIG.AUTH0_DOMAIN}/oidc/logout`,
 };
 
-const redirectUri = AuthSession.makeRedirectUri({ scheme: 'frontendmobile', path: 'callback' });
-
+const redirectUri = AuthSession.makeRedirectUri({ scheme: 'frontendmobile' });
 console.log("=== URL À COPIER DANS AUTH0 ===", redirectUri);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -89,9 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       try {
         const code = successResponse.params.code;
+        // 1. VERIFIER L'URL EXACTE
+        const tokenUrl = `https://${CONFIG.AUTH0_DOMAIN}/oauth/token`;
+        console.log("=== URL DE FETCH ===", tokenUrl);
         const tokenRes = await fetch(`https://${CONFIG.AUTH0_DOMAIN}/oauth/token`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
             grant_type: 'authorization_code',
             client_id: CONFIG.AUTH0_CLIENT_ID,
@@ -100,6 +102,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             redirect_uri: redirectUri,
           }),
         });
+        // 2. VOIR CE QUE REPOND VRAIMENT AUTH0
+        if (!tokenRes.ok) {
+            const errorText = await tokenRes.text();
+            console.error("=== ERREUR SERVER AUTH0 ===", errorText);
+            throw new Error(`HTTP error! status: ${tokenRes.status}`);
+        }
         const tokens = await tokenRes.json();
 
         if (!tokens.access_token) throw new Error('No access token received');
