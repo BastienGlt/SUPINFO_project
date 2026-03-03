@@ -85,49 +85,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const successResponse = response;
 
     const exchangeCode = async () => {
-      setLoading(true);
-      try {
-        const code = successResponse.params.code;
-        // 1. VERIFIER L'URL EXACTE
-        const tokenUrl = `https://${CONFIG.AUTH0_DOMAIN}/oauth/token`;
-        console.log("=== URL DE FETCH ===", tokenUrl);
-        const tokenRes = await fetch(`https://${CONFIG.AUTH0_DOMAIN}/oauth/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({
-            grant_type: 'authorization_code',
-            client_id: CONFIG.AUTH0_CLIENT_ID,
-            code_verifier: request?.codeVerifier,
-            code,
-            redirect_uri: redirectUri,
-          }),
-        });
-        // 2. VOIR CE QUE REPOND VRAIMENT AUTH0
-        if (!tokenRes.ok) {
-            const errorText = await tokenRes.text();
-            console.error("=== ERREUR SERVER AUTH0 ===", errorText);
-            throw new Error(`HTTP error! status: ${tokenRes.status}`);
-        }
-        const tokens = await tokenRes.json();
+    setLoading(true);
+    try {
+      const code = successResponse.params.code;
+      const tokenResult = await AuthSession.exchangeCodeAsync(
+        {
+          clientId: CONFIG.AUTH0_CLIENT_ID,
+          code: code,
+          redirectUri: redirectUri,
+          extraParams: {
+            code_verifier: request?.codeVerifier || '',
+          },
+        },
+        discovery
+      );
 
-        if (!tokens.access_token) throw new Error('No access token received');
+      if (!tokenResult.accessToken) throw new Error('No access token received');
 
-        await AsyncStorage.setItem('access_token', tokens.access_token);
-        setToken(tokens.access_token);
+      // Attention : tokenResult.accessToken s'écrit en camelCase avec cette méthode
+      await AsyncStorage.setItem('access_token', tokenResult.accessToken);
+      setToken(tokenResult.accessToken);
 
-        const meResult = await authService.getMe(tokens.access_token);
-        if (meResult.exists) {
-          setUser(meResult.user);
-          setIsNewUser(false);
-        } else {
-          setIsNewUser(true);
-        }
-      } catch (err) {
-        console.error('Auth error:', err);
-      } finally {
-        setLoading(false);
+      const meResult = await authService.getMe(tokenResult.accessToken);
+      if (meResult.exists) {
+        setUser(meResult.user);
+        setIsNewUser(false);
+      } else {
+        setIsNewUser(true);
       }
-    };
+    } catch (err) {
+      console.error('=== ERREUR D ECHANGE ===', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
     exchangeCode();
   }, [response]);
