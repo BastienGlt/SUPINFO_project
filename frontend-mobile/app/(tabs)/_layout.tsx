@@ -1,5 +1,6 @@
 import { Tabs, router } from 'expo-router';
 import React from 'react';
+import { User, Telescope, House} from 'lucide-react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -36,7 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'Fil d\'actualité',
           tabBarLabel: 'Feed',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <House size={26} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -44,7 +45,7 @@ export default function TabLayout() {
         options={{
           title: 'Explorer',
           tabBarLabel: 'Explorer',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="gamecontroller.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Telescope size={26} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -52,7 +53,7 @@ export default function TabLayout() {
         options={{
           title: user ? 'Mon Profil' : 'Profil',
           tabBarLabel: 'Profil',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
+          tabBarIcon: ({ color }) => <User size={26} color={color} />,
         }}
       />
     </Tabs>
