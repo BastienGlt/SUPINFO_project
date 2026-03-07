@@ -4,21 +4,61 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
+// Remplacement des emojis par des icônes lucide
+import { Heart, UserPlus, MessageCircle, Star, Bell, CheckCheck } from 'lucide-react-native';
 
-const NOTIF_ICONS: Record<string, string> = {
-  like: '❤️',
-  follow: '👤',
-  commentaire: '💬',
-  feature: '⭐',
+// Icônes lucide par type de notification (cf. Swagger: type = like | follow | commentaire | feature)
+function NotifIcon({ type, color }: { type: string; color: string }) {
+  const props = { size: 20, color, strokeWidth: 2 };
+  switch (type) {
+    case 'like': return <Heart {...props} />;
+    case 'follow': return <UserPlus {...props} />;
+    case 'commentaire': return <MessageCircle {...props} />;
+    case 'feature': return <Star {...props} />;
+    default: return <Bell {...props} />;
+  }
+}
+
+// Couleurs de fond par type
+const NOTIF_COLORS: Record<string, string> = {
+  like: '#ef4444',
+  follow: '#6366f1',
+  commentaire: '#3b82f6',
+  feature: '#f59e0b',
 };
+
+// Selon le Swagger, Notification contient from_user (pseudo + photo) + type + source_id.
+// Le champ `content` n'est pas dans le schéma officiel : on génère le texte depuis from_user + type.
+interface FromUser {
+  id: number;
+  pseudo: string;
+  photo?: string;
+}
 
 interface Notification {
   id: number;
   user_id: number;
   type: string;
-  content: string;
+  // `content` peut exister si le backend l'ajoute, sinon on génère depuis from_user
+  content?: string;
+  source_id?: number;
   lu: boolean;
+  from_user?: FromUser;
+  oeuvre_id?: number;
   created_at: string;
+}
+
+/** Génère un texte lisible à partir des données de la notification */
+function buildNotifText(n: Notification): string {
+  if (n.content) return n.content;
+  const who = n.from_user ? `@${n.from_user.pseudo}` : 'Quelqu\'un';
+  switch (n.type) {
+    case 'like': return `${who} a aimé votre critique`;
+    case 'follow': return `${who} vous suit maintenant`;
+    case 'commentaire': return `${who} a commenté votre critique`;
+    case 'feature': return `Votre critique a été mise en avant`;
+    default: return `${who} a interagi avec vous`;
+  }
 }
 
 export default function NotificationsScreen() {
@@ -31,6 +71,7 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
+    // GET /notifications — liste paginée, max 30 par défaut
     apiFetch<{ notifications: Notification[] }>('/notifications', { token })
       .then((data) => setNotifications(data.notifications))
       .catch(() => {})
@@ -39,12 +80,14 @@ export default function NotificationsScreen() {
 
   const unreadCount = notifications.filter((n) => !n.lu).length;
 
+  // PUT /notifications/read-all — marquer toutes comme lues
   const markAllRead = () => {
     if (!token) return;
     apiFetch('/notifications/read-all', { method: 'PUT', token }).catch(() => {});
     setNotifications((prev) => prev.map((n) => ({ ...n, lu: true })));
   };
 
+  // PUT /notifications/{id}/read — marquer une notification comme lue au tap
   const markRead = (id: number) => {
     if (!token) return;
     apiFetch(`/notifications/${id}/read`, { method: 'PUT', token }).catch(() => {});
@@ -62,9 +105,12 @@ export default function NotificationsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {unreadCount > 0 && (
-        <View style={[styles.header, { borderBottomColor: colors.tabIconDefault + '30' }]}>
-          <Text style={[styles.headerText, { color: colors.icon }]}>{unreadCount} non lue(s)</Text>
-          <TouchableOpacity onPress={markAllRead}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerText, { color: colors.icon }]}>
+            {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
+          </Text>
+          <TouchableOpacity style={styles.markAllBtn} onPress={markAllRead} activeOpacity={0.7}>
+            <CheckCheck size={15} color={colors.tint} strokeWidth={2.5} />
             <Text style={[styles.markAll, { color: colors.tint }]}>Tout marquer lu</Text>
           </TouchableOpacity>
         </View>
@@ -75,35 +121,49 @@ export default function NotificationsScreen() {
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ padding: 16, gap: 10 }}
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.icon }]}>Aucune notification pour l'instant.</Text>
+          <View style={styles.emptyWrap}>
+            <Bell size={40} color={colors.icon} strokeWidth={1.5} />
+            <Text style={[styles.empty, { color: colors.icon }]}>Aucune notification pour l'instant.</Text>
+          </View>
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => markRead(item.id)}
-            style={[
-              styles.notifCard,
-              {
-                backgroundColor: item.lu ? colors.tabIconDefault + '10' : colors.tint + '18',
-                borderColor: item.lu ? colors.tabIconDefault + '30' : colors.tint + '50',
-              },
-            ]}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.notifIcon}>{NOTIF_ICONS[item.type] ?? '🔔'}</Text>
-            <View style={styles.notifContent}>
-              <Text style={[styles.notifText, { color: colors.text }]}>{item.content}</Text>
-              <Text style={[styles.notifDate, { color: colors.icon }]}>
-                {new Date(item.created_at).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
-            </View>
-            {!item.lu && <View style={[styles.dot, { backgroundColor: colors.tint }]} />}
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const typeColor = NOTIF_COLORS[item.type] ?? colors.tint;
+          return (
+            <TouchableOpacity
+              onPress={() => markRead(item.id)}
+              style={[
+                styles.notifCard,
+                {
+                  backgroundColor: item.lu ? colors.surface : colors.tint + '12',
+                  borderColor: item.lu ? colors.border : colors.tint + '45',
+                },
+              ]}
+              activeOpacity={0.7}
+            >
+              {/* Icône dans un carré coloré par type */}
+              <View style={[styles.notifIconWrap, { backgroundColor: typeColor + '18' }]}>
+                <NotifIcon type={item.type} color={typeColor} />
+              </View>
+
+              <View style={styles.notifContent}>
+                <Text style={[styles.notifText, { color: colors.text }]}>
+                  {buildNotifText(item)}
+                </Text>
+                <Text style={[styles.notifDate, { color: colors.icon }]}>
+                  {new Date(item.created_at).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
+
+              {/* Point bleu pour les non lues */}
+              {!item.lu && <View style={[styles.dot, { backgroundColor: colors.tint }]} />}
+            </TouchableOpacity>
+          );
+        }}
       />
     </View>
   );
@@ -119,19 +179,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerText: { fontSize: 13 },
+  markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   markAll: { fontSize: 13, fontWeight: '600' },
   notifCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     padding: 14,
     gap: 12,
   },
-  notifIcon: { fontSize: 24 },
+  notifIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   notifContent: { flex: 1, gap: 4 },
   notifText: { fontSize: 14, lineHeight: 20 },
   notifDate: { fontSize: 12 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  empty: { textAlign: 'center', marginTop: 40, fontSize: 14 },
+  emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
+  empty: { fontSize: 14 },
 });

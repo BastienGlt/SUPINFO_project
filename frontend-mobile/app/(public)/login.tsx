@@ -4,6 +4,8 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
+// Lucide uniquement — emojis supprimés
+import { Gamepad2, Star, Users, BookOpen, LogIn } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -19,20 +21,27 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Zone logo */}
       <View style={styles.header}>
-        <Text style={[styles.logo, { color: colors.tint }]}>🎮</Text>
+        <View style={[styles.logoWrap, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '40' }]}>
+          <Gamepad2 size={48} color={colors.tint} strokeWidth={1.5} />
+        </View>
         <Text style={[styles.title, { color: colors.text }]}>GameCritique</Text>
         <Text style={[styles.subtitle, { color: colors.icon }]}>
-          Partagez vos avis sur les jeux vidéo
+          La communauté des passionnés de jeux vidéo
         </Text>
       </View>
 
-      <View style={styles.features}>
-        <FeatureItem icon="⭐" text="Notez et critiquez vos jeux" colorScheme={colorScheme} />
-        <FeatureItem icon="👥" text="Suivez la communauté" colorScheme={colorScheme} />
-        <FeatureItem icon="📚" text="Gérez votre bibliothèque" colorScheme={colorScheme} />
+      {/* Fonctionnalités groupées dans une carte */}
+      <View style={[styles.featuresCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <FeatureItem icon={<Star size={20} color={colors.tint} />} text="Notez et critiquez vos jeux" colors={colors} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <FeatureItem icon={<Users size={20} color={colors.tint} />} text="Suivez la communauté" colors={colors} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <FeatureItem icon={<BookOpen size={20} color={colors.tint} />} text="Gérez votre bibliothèque" colors={colors} />
       </View>
 
+      {/* Bouton connexion */}
       <View style={styles.actions}>
         {loading ? (
           <ActivityIndicator color={colors.tint} size="large" />
@@ -40,8 +49,9 @@ export default function LoginScreen() {
           <TouchableOpacity
             style={[styles.loginButton, { backgroundColor: colors.tint }]}
             onPress={login}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
+            <LogIn size={18} color="white" strokeWidth={2.5} />
             <Text style={styles.loginButtonText}>Se connecter avec Auth0</Text>
           </TouchableOpacity>
         )}
@@ -53,11 +63,18 @@ export default function LoginScreen() {
   );
 }
 
-function FeatureItem({ icon, text, colorScheme }: { icon: string; text: string; colorScheme: 'light' | 'dark' }) {
-  const colors = Colors[colorScheme];
+function FeatureItem({
+  icon,
+  text,
+  colors,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  colors: typeof Colors.light;
+}) {
   return (
     <View style={styles.featureItem}>
-      <Text style={styles.featureIcon}>{icon}</Text>
+      <View style={[styles.featureIconWrap, { backgroundColor: colors.tint + '14' }]}>{icon}</View>
       <Text style={[styles.featureText, { color: colors.text }]}>{text}</Text>
     </View>
   );
@@ -67,15 +84,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 32,
-    paddingVertical: 80,
+    paddingHorizontal: 28,
+    paddingVertical: 72,
   },
   header: {
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
-  logo: {
-    fontSize: 64,
+  logoWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 28,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   title: {
     fontSize: 32,
@@ -83,33 +106,50 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
+    lineHeight: 22,
   },
-  features: {
-    gap: 20,
+  // Les features sont maintenant dans une carte avec séparateurs
+  featuresCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingVertical: 4,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  featureIcon: {
-    fontSize: 28,
+  featureIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   featureText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
   },
+  divider: {
+    height: 1,
+    marginHorizontal: 20,
+  },
   actions: {
-    gap: 16,
+    gap: 14,
     alignItems: 'center',
   },
   loginButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 16,
   },
   loginButtonText: {
     color: 'white',

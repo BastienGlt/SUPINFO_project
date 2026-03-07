@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+// Lucide : remplacement du 👋 emoji
+import { Sparkles } from 'lucide-react-native';
 
 export default function CompleteProfileScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -13,6 +15,7 @@ export default function CompleteProfileScreen() {
   const [form, setForm] = useState({ prenom: '', nom: '', pseudo: '', bio: '' });
   const [loading, setLoading] = useState(false);
 
+  // POST /users/create — appelé via completeProfile() du AuthContext
   const handleSubmit = async () => {
     if (!form.prenom || !form.nom || !form.pseudo) {
       Alert.alert('Erreur', 'Prénom, nom et pseudo sont obligatoires.');
@@ -32,10 +35,16 @@ export default function CompleteProfileScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
-      <Text style={[styles.title, { color: colors.text }]}>Bienvenue ! 👋</Text>
-      <Text style={[styles.subtitle, { color: colors.icon }]}>
-        Complétez votre profil pour rejoindre la communauté.
-      </Text>
+      {/* En-tête avec icône Sparkles */}
+      <View style={styles.headerWrap}>
+        <View style={[styles.iconWrap, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
+          <Sparkles size={32} color={colors.tint} strokeWidth={1.5} />
+        </View>
+        <Text style={[styles.title, { color: colors.text }]}>Bienvenue !</Text>
+        <Text style={[styles.subtitle, { color: colors.icon }]}>
+          Complétez votre profil pour rejoindre la communauté.
+        </Text>
+      </View>
 
       <View style={styles.form}>
         <Field
@@ -43,12 +52,14 @@ export default function CompleteProfileScreen() {
           value={form.prenom}
           onChangeText={(v) => setForm((f) => ({ ...f, prenom: v }))}
           colors={colors}
+          placeholder="Votre prénom"
         />
         <Field
           label="Nom *"
           value={form.nom}
           onChangeText={(v) => setForm((f) => ({ ...f, nom: v }))}
           colors={colors}
+          placeholder="Votre nom"
         />
         <Field
           label="Pseudo *"
@@ -56,6 +67,7 @@ export default function CompleteProfileScreen() {
           onChangeText={(v) => setForm((f) => ({ ...f, pseudo: v }))}
           colors={colors}
           autoCapitalize="none"
+          placeholder="@votre_pseudo"
         />
         <Field
           label="Bio (optionnel)"
@@ -63,7 +75,8 @@ export default function CompleteProfileScreen() {
           onChangeText={(v) => setForm((f) => ({ ...f, bio: v }))}
           colors={colors}
           multiline
-          style={{ minHeight: 80, textAlignVertical: 'top' }}
+          placeholder="Parlez-nous de vous..."
+          style={{ minHeight: 90, textAlignVertical: 'top' }}
         />
       </View>
 
@@ -71,7 +84,7 @@ export default function CompleteProfileScreen() {
         style={[styles.button, { backgroundColor: colors.tint }, loading && { opacity: 0.6 }]}
         onPress={handleSubmit}
         disabled={loading}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
       >
         {loading ? (
           <ActivityIndicator color="white" />
@@ -100,7 +113,7 @@ function Field({
         {...props}
         style={[
           fieldStyles.input,
-          { color: colors.text, backgroundColor: colors.tabIconDefault + '15', borderColor: colors.tabIconDefault },
+          { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border },
           style,
         ]}
         placeholderTextColor={colors.tabIconDefault}
@@ -110,16 +123,27 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 24 },
-  title: { fontSize: 28, fontWeight: '800' },
-  subtitle: { fontSize: 15 },
+  container: { padding: 24, gap: 28 },
+  headerWrap: { alignItems: 'center', gap: 12 },
+  iconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  title: { fontSize: 28, fontWeight: '800', textAlign: 'center' },
+  subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
   form: { gap: 16 },
-  button: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  button: { borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: '700', fontSize: 16 },
 });
 
 const fieldStyles = StyleSheet.create({
   wrapper: { gap: 6 },
-  label: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
+  label: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
+  // Fond surface (blanc / slate-800) + bordure propre
+  input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15 },
 });
