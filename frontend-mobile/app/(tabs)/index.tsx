@@ -2,7 +2,8 @@ import {
   FlatList, View, Text, StyleSheet, TouchableOpacity, Image,
   ActivityIndicator, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,6 +28,7 @@ export default function FeedScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const { token } = useAuth();
+  const router = useRouter();
 
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,14 +41,31 @@ export default function FeedScreen() {
   const [commentTexts, setCommentTexts] = useState<Record<number, string>>({});
   const [sendingIds, setSendingIds] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    if (!token) { setLoading(false); return; }
-    // GET /feed — fil d'actualité
-    apiFetch<{ feed: FeedItem[] }>('/feed', { token })
-      .then((data) => setFeed(data.feed))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [token]);
+  // Charge le feed au montage et à chaque retour sur l'écran (pour actualiser les compteurs)
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) { setLoading(false); return; }
+      apiFetch<{ feed: FeedItem[] }>('/feed', { token })
+        .then(async (data) => {
+          const items = data.feed ?? [];
+          // GET /commentaires/critiques/{id}/count — compteur réel pour chaque critique
+          const critiques = items.filter((f) => f.type === 'critique');
+          const counts = await Promise.all(
+            critiques.map((f) =>
+              apiFetch<{ count: number }>(`/commentaires/critiques/${f.id}/count`)
+                .then((r) => ({ id: f.id, count: Number(r?.count) || 0 }))
+                .catch(() => ({ id: f.id, count: 0 }))
+            )
+          );
+          const countMap = Object.fromEntries(counts.map((c) => [c.id, c.count]));
+          setFeed(items.map((f) =>
+            f.type === 'critique' ? { ...f, comments_count: countMap[f.id] ?? f.comments_count } : f
+          ));
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }, [token])
+  );
 
   // POST /critiques/{id}/like — liker
   // DELETE /critiques/{id}/like — unliker
@@ -56,7 +75,7 @@ export default function FeedScreen() {
       const isLiked = likedIds.has(item.id);
       setLikedIds((prev) => { const s = new Set(prev); isLiked ? s.delete(item.id) : s.add(item.id); return s; });
       setFeed((prev) =>
-        prev.map((f) => f.id === item.id ? { ...f, likes_count: f.likes_count + (isLiked ? -1 : 1) } : f)
+        prev.map((f) => f.id === item.id ? { ...f, likes_count: (Number(f.likes_count) || 0) + (isLiked ? -1 : 1) } : f)
       );
       apiFetch(`/critiques/${item.id}/like`, { method: isLiked ? 'DELETE' : 'POST', token }).catch(() => {});
     },
@@ -87,7 +106,7 @@ export default function FeedScreen() {
         });
         // Mise à jour optimiste du compteur de commentaires
         setFeed((prev) =>
-          prev.map((f) => f.id === item.id ? { ...f, comments_count: f.comments_count + 1 } : f)
+          prev.map((f) => f.id === item.id ? { ...f, comments_count: (Number(f.comments_count) || 0) + 1 } : f)
         );
         // Fermer l'input et vider le texte
         setCommentTexts((prev) => ({ ...prev, [item.id]: '' }));
@@ -99,6 +118,24 @@ export default function FeedScreen() {
       }
     },
     [token, commentTexts]
+  );
+
+  const handleOpenCritique = useCallback(
+    (item: FeedItem) => {
+      if (item.type !== 'critique') return;
+      router.push({
+        pathname: '/(public)/critique/[id]',
+        params: {
+          id: item.id,
+          author_pseudo: item.author_pseudo,
+          author_photo: item.author_photo ?? '',
+          oeuvre_titre: item.oeuvre_titre ?? '',
+          note: item.note !== undefined && item.note !== null ? String(item.note) : '',
+          contenu: item.contenu ?? '',
+        },
+      });
+    },
+    [router]
   );
 
   if (loading) {
@@ -144,8 +181,13 @@ export default function FeedScreen() {
 
           return (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {/* En-tête : avatar + titre + note */}
-              <View style={styles.cardHeader}>
+              {/* En-tête + contenu — cliquable pour ouvrir les commentaires */}
+              <TouchableOpacity
+                onPress={() => handleOpenCritique(item)}
+                activeOpacity={0.85}
+              >
+                {/* En-tête : avatar + titre + note */}
+                <View style={styles.cardHeader}>
                 <View style={styles.authorRow}>
                   {item.author_photo ? (
                     <Image source={{ uri: item.author_photo }} style={styles.avatar} />
@@ -175,6 +217,7 @@ export default function FeedScreen() {
                   "{item.contenu}"
                 </Text>
               ) : null}
+              </TouchableOpacity>
 
               {/* Footer : like + commentaire */}
               <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
@@ -185,7 +228,7 @@ export default function FeedScreen() {
                   activeOpacity={0.7}
                 >
                   <Heart size={15} color={isLiked ? '#ef4444' : colors.icon} fill={isLiked ? '#ef4444' : 'transparent'} strokeWidth={2} />
-                  <Text style={[styles.footerCount, { color: isLiked ? '#ef4444' : colors.icon }]}>{item.likes_count}</Text>
+                  <Text style={[styles.footerCount, { color: isLiked ? '#ef4444' : colors.icon }]}>{Number(item.likes_count) || 0}</Text>
                 </TouchableOpacity>
 
                 {/* Commentaire — ouvre l'input inline */}
@@ -201,7 +244,7 @@ export default function FeedScreen() {
                     strokeWidth={2}
                   />
                   <Text style={[styles.footerCount, { color: isCommentOpen ? colors.tint : colors.icon }]}>
-                    {item.comments_count}
+                    {Number(item.comments_count) || 0}
                   </Text>
                 </TouchableOpacity>
               </View>

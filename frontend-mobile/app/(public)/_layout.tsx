@@ -5,6 +5,7 @@ export default function PublicLayout() {
     <Stack>
       <Stack.Screen name="login" options={{ title: 'Connexion', headerShown: false }} />
       <Stack.Screen name="user/[id]" options={{ title: 'Profil' }} />
+      <Stack.Screen name="critique/[id]" options={{ title: 'Critique' }} />
     </Stack>
   );
 }
