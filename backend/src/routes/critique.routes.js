@@ -24,6 +24,9 @@ router.delete('/:id', checkJwt, ratingController.deleteRating);
 
 //LIKE
 
+// GET /ratings/:id/likes - Récupérer le nombre de likes d'une critique
+router.get('/:id/likes', ratingController.getLikesCount);
+
 // POST /ratings/:id/like - Liker une critique
 router.post('/:id/like', checkJwt, ratingController.likeCritique);
 

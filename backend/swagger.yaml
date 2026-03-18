@@ -1168,6 +1168,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /critiques/{id}/likes:
+    get:
+      tags: [Critiques]
+      summary: Récupérer le nombre de likes d'une critique
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Nombre de likes de la critique
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likeCount:
+                    type: integer
+                    description: Nombre total de likes
+                    example: 42
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /critiques/{id}/like:
     post:
       tags: [Critiques]

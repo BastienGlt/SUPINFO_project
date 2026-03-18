@@ -323,6 +323,22 @@ exports.toggleLikeCritique = async (req, res) => {
 };
 
 /**
+ * GET /ratings/:id/likes
+ * Récupérer le nombre de likes d'une critique
+ */
+exports.getLikesCount = async (req, res) => {
+  try {
+    const critiqueId = parseInt(req.params.id);
+    const likeCount = await ratingService.getLikesCount(critiqueId);
+    res.status(200).json({ likeCount });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Impossible de récupérer le nombre de likes" });
+  }
+};
+
+
+/**
  * PUT /oeuvres/:id/ratings/upsert
  * Créer ou mettre à jour une note (logique unifiée)
  */

@@ -213,6 +213,12 @@ exports.unlikeCritique = async (userId, critiqueId) => {
   return result.affectedRows > 0;
 };
 
+exports.getLikesCount = async (critiqueId) => {
+  const sql = 'SELECT COUNT(*) as like_count FROM likes_critiques WHERE critique_id = ?';
+  const [rows] = await db.query(sql, [critiqueId]);
+  return rows[0].like_count;
+};
+
 /**
  * Vérifier si un utilisateur a liké une critique
  * @param {number} userId - L'ID de l'utilisateur
