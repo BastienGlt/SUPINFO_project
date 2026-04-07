@@ -180,6 +180,22 @@ exports.deleteRating = async (ratingId, userId) => {
 };
 
 /**
+ * Créer ou mettre à jour une note (upsert)
+ * @param {number} userId
+ * @param {number} oeuvreId
+ * @param {number} note
+ * @param {string} contenu
+ * @returns {Object} La critique
+ */
+exports.upsertRating = async (userId, oeuvreId, note, contenu = null) => {
+  const existing = await exports.getRatingByUserAndOeuvre(userId, oeuvreId);
+  if (existing) {
+    return await exports.updateRating(userId, oeuvreId, note, contenu);
+  }
+  return await exports.createRating(userId, oeuvreId, note, contenu);
+};
+
+/**
  * Aimer/Liker une critique
  * @param {number} userId - L'ID de l'utilisateur
  * @param {number} critiqueId - L'ID de la critique

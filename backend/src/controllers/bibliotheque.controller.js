@@ -1,5 +1,6 @@
 const bibliothequeService = require('../services/bibliotheque.service');
 const userService = require('../services/user.service');
+const oeuvreService = require('../services/oeuvre.service');
 
 class BibliothequeController {
 
@@ -24,23 +25,31 @@ class BibliothequeController {
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
       const body = this.parseBody(req.body);
-      const { oeuvre_id, statut } = body;
+      const { api_reference_id, titre, description, statut } = body;
 
       if (Object.keys(body).length === 0) {
         return res.status(400).json({
-          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec oeuvre_id et statut.'
+          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec api_reference_id, titre, description et statut.'
         });
       }
 
-      if (!oeuvre_id) {
-        return res.status(400).json({ error: 'L\'ID de l\'œuvre est requis' });
+      if (!api_reference_id) {
+        return res.status(400).json({ error: 'La référence API de l\'œuvre (api_reference_id) est requise' });
       }
 
-      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre_id, statut);
+      if (!titre || !description) {
+        return res.status(400).json({ error: 'Le titre et la description de l\'œuvre sont obligatoires' });
+      }
+
+      // Crée l'œuvre en base si elle n'existe pas encore
+      const oeuvre = await oeuvreService.findOrCreate(api_reference_id, titre, description);
+
+      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre.id, statut);
 
       res.status(201).json({
         message: 'Œuvre ajoutée à la bibliothèque',
-        item_id: itemId
+        item_id: itemId,
+        oeuvre
       });
     } catch (error) {
       console.error('Erreur addItem:', error);
