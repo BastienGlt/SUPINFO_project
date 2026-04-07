@@ -193,6 +193,32 @@ exports.getUserRatingForOeuvre = async (req, res) => {
 };
 
 /**
+ * GET /critiques/:id/ratings/me
+ * Récupérer la note de l'utilisateur connecté pour une œuvre. :id = api_reference_id.
+ */
+exports.getMyRatingForOeuvre = async (req, res) => {
+  try {
+    const apiRefId = req.params.id;
+    const auth0Id = req.auth.payload.sub;
+
+    const currentUser = await userService.getUserByAuth0Id(auth0Id);
+    if (!currentUser) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    const oeuvre = await oeuvreService.findByApiRef(apiRefId);
+    if (!oeuvre) return res.status(404).json({ error: "Œuvre introuvable" });
+
+    const rating = await ratingService.getRatingByUserAndOeuvre(currentUser.id, oeuvre.id);
+    if (!rating) return res.status(404).json({ error: "Note non trouvée" });
+
+    res.status(200).json(rating);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Impossible de récupérer la note" });
+  }
+};
+
+/**
  * DELETE /ratings/:id
  * Supprimer une note (seul l'auteur peut supprimer sa note)
  */
