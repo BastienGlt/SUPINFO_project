@@ -13,8 +13,8 @@ export default function LoginScreen() {
 
   // Si déjà connecté, revenir aux tabs ; si nouvel utilisateur, compléter le profil
   useEffect(() => {
-    if (user) router.replace('/(tabs)/');
-    else if (isNewUser) router.replace('/(private)/complete-profile');
+    if (user) router.replace('/(tabs)/feed');
+    else if (isNewUser) router.replace('/(private)/onboarding/complete-profile');
   }, [user, isNewUser]);
 
   const colors = Colors[colorScheme];

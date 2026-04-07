@@ -98,6 +98,8 @@ components:
       type: object
       required:
         - note
+        - titre
+        - description
       properties:
         note:
           type: number
@@ -107,6 +109,12 @@ components:
         contenu:
           type: string
           description: Texte de la critique (optionnel)
+        titre:
+          type: string
+          description: Titre de l'oeuvre (requis pour la créer en base si elle n'existe pas encore)
+        description:
+          type: string
+          description: Description de l'oeuvre (requis pour la créer en base si elle n'existe pas encore)
 
     RatingStats:
       type: object
@@ -209,12 +217,21 @@ components:
     BibliothequeItemCreate:
       type: object
       required:
-        - oeuvre_id
+        - api_reference_id
+        - titre
+        - description
       properties:
-        oeuvre_id:
-          type: integer
+        api_reference_id:
+          type: string
+          description: Identifiant dans l'API externe. L'oeuvre est créée en base si elle n'existe pas encore.
+        titre:
+          type: string
+        description:
+          type: string
         statut:
           type: string
+          enum: [A_VOIR, EN_COURS, VU]
+          default: A_VOIR
 
     BibliothequeItemUpdate:
       type: object
@@ -378,6 +395,35 @@ components:
         error:
           type: string
 
+    Oeuvre:
+      type: object
+      properties:
+        id:
+          type: integer
+        api_reference_id:
+          type: string
+          description: Identifiant de l'oeuvre dans l'API externe (ex. RAWG, IGDB, TMDB…)
+        titre:
+          type: string
+        description:
+          type: string
+
+    OeuvreRef:
+      type: object
+      description: Référence à une oeuvre via l'API externe. L'oeuvre est créée en base si elle n'existe pas encore.
+      required:
+        - api_reference_id
+        - titre
+        - description
+      properties:
+        api_reference_id:
+          type: string
+          description: Identifiant dans l'API externe
+        titre:
+          type: string
+        description:
+          type: string
+
     Success:
       type: object
       properties:
@@ -385,6 +431,8 @@ components:
           type: string
 
 tags:
+  - name: Oeuvres
+    description: Référentiel d'oeuvres (résolution automatique via api_reference_id)
   - name: Users
     description: Gestion des utilisateurs
   - name: Followers
@@ -955,8 +1003,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: ID de l'oeuvre
+            type: string
+          description: api_reference_id de l'oeuvre (référence API externe)
         - name: limit
           in: query
           schema:
@@ -985,6 +1033,12 @@ paths:
             application/json:
               schema:
                 type: object
+        '404':
+          description: Oeuvre introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur serveur
           content:
@@ -995,6 +1049,10 @@ paths:
     post:
       tags: [Critiques]
       summary: Créer une note pour une oeuvre
+      description: |
+        Crée la note pour l'oeuvre identifiée par son `api_reference_id` (dans l'URL).
+        Si l'oeuvre n'existe pas encore en base, elle est automatiquement créée à partir de
+        `titre` et `description` fournis dans le corps de la requête.
       security:
         - BearerAuth: []
       parameters:
@@ -1002,8 +1060,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: ID de l'oeuvre
+            type: string
+          description: api_reference_id de l'oeuvre dans l'API externe
       requestBody:
         required: true
         content:
@@ -1018,7 +1076,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Rating'
         '400':
-          description: Note invalide
+          description: Note invalide ou titre/description manquants
           content:
             application/json:
               schema:
@@ -1052,8 +1110,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: ID de l'oeuvre
+            type: string
+          description: api_reference_id de l'oeuvre dans l'API externe
       requestBody:
         required: true
         content:
@@ -1080,7 +1138,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Note non trouvée (utiliser POST)
+          description: Note non trouvée (utiliser POST) ou oeuvre introuvable
           content:
             application/json:
               schema:
@@ -1101,8 +1159,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: ID de l'oeuvre
+            type: string
+          description: api_reference_id de l'oeuvre dans l'API externe
       responses:
         '200':
           description: Statistiques de notation
@@ -1110,6 +1168,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RatingStats'
+        '404':
+          description: Oeuvre introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur serveur
           content:
@@ -1161,6 +1225,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /critiques/{id}/likes:
+    get:
+      tags: [Critiques]
+      summary: Récupérer le nombre de likes d'une critique
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Nombre de likes de la critique
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likeCount:
+                    type: integer
+                    description: Nombre total de likes
+                    example: 42
         '500':
           description: Erreur serveur
           content:
@@ -1529,6 +1623,10 @@ paths:
     post:
       tags: [Bibliotheque]
       summary: Ajouter une oeuvre à la bibliothèque
+      description: |
+        Ajoute l'oeuvre à la bibliothèque de l'utilisateur connecté.
+        Si l'oeuvre n'existe pas encore en base, elle est automatiquement créée à partir de
+        `api_reference_id`, `titre` et `description`.
       security:
         - BearerAuth: []
       requestBody:
@@ -1549,8 +1647,10 @@ paths:
                     type: string
                   item_id:
                     type: integer
+                  oeuvre:
+                    $ref: '#/components/schemas/Oeuvre'
         '400':
-          description: Données invalides
+          description: Données invalides ou champs manquants
           content:
             application/json:
               schema:
@@ -2070,6 +2170,9 @@ paths:
     post:
       tags: [Listes]
       summary: Ajouter une oeuvre à une liste
+      description: |
+        Ajoute l'oeuvre à la liste. Si l'oeuvre n'existe pas encore en base, elle est
+        automatiquement créée à partir de `api_reference_id`, `titre` et `description`.
       security:
         - BearerAuth: []
       parameters:
@@ -2084,21 +2187,21 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - oeuvre_id
-              properties:
-                oeuvre_id:
-                  type: integer
+              $ref: '#/components/schemas/OeuvreRef'
       responses:
         '201':
           description: Oeuvre ajoutée à la liste
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Success'
+                type: object
+                properties:
+                  message:
+                    type: string
+                  oeuvre:
+                    $ref: '#/components/schemas/Oeuvre'
         '400':
-          description: ID de l'oeuvre manquant
+          description: Champs manquants ou invalides
           content:
             application/json:
               schema:

@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Modal, TextInput, Platform,
+  ActivityIndicator, Modal, TextInput, Platform, KeyboardAvoidingView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useState, useCallback, useRef } from 'react';
@@ -87,6 +87,7 @@ export default function GameDetailScreen() {
   const [critiqueNote, setCritiqueNote] = useState('');
   const [critiqueContenu, setCritiqueContenu] = useState('');
   const [savingCritique, setSavingCritique] = useState(false);
+  const [critiqueError, setCritiqueError] = useState('');
 
   const loadedRef = useRef(false);
 
@@ -107,7 +108,7 @@ export default function GameDetailScreen() {
 
       if (user && token) {
         loads.push(
-          apiFetch<UserRating>(`/users/${user.id}/ratings/${id}`)
+          apiFetch<UserRating>(`/critiques/${id}/ratings/me`, { token })
             .then((r) => {
               setUserRating(r);
               setCritiqueNote(String(r.note));
@@ -146,7 +147,12 @@ export default function GameDetailScreen() {
         const data = await apiFetch<{ item_id: number }>('/bibliotheque/items', {
           method: 'POST',
           token,
-          body: JSON.stringify({ oeuvre_id: Number(id), statut }),
+          body: JSON.stringify({
+            api_reference_id: String(id),
+            titre: game?.name ?? '',
+            description: game?.description_raw ?? '',
+            statut,
+          }),
         });
         setLibrairie({ id: data.item_id, oeuvre_id: Number(id), statut });
       }
@@ -155,29 +161,52 @@ export default function GameDetailScreen() {
     } finally {
       setSavingStatut(false);
     }
-  }, [token, id, librairie]);
+  }, [token, id, librairie, game]);
 
   // ─── Critique ──────────────────────────────────────────────────────────────
 
   const handleSaveCritique = useCallback(async () => {
     if (!token || !id) return;
     const note = parseFloat(critiqueNote.replace(',', '.'));
-    if (isNaN(note) || note < 0 || note > 20) return;
+    if (isNaN(note) || note < 0 || note > 5) {
+      setCritiqueError('Note invalide (entre 0 et 5)');
+      return;
+    }
     setSavingCritique(true);
+    setCritiqueError('');
     try {
       const body = JSON.stringify({
         note,
+        titre: game?.name ?? '',
+        description: game?.description_raw?.slice(0, 500) ?? '',
         ...(critiqueContenu.trim() ? { contenu: critiqueContenu.trim() } : {}),
       });
       const method = userRating ? 'PUT' : 'POST';
       const saved = await apiFetch<UserRating>(`/critiques/${id}/ratings`, { method, token, body });
       setUserRating(saved ?? { id: 0, note, contenu: critiqueContenu.trim() });
       setCritiqueModal(false);
-    } catch {
+    } catch (err) {
+      const e = err as { status?: number; error?: string; message?: string };
+      if (e?.status === 409) {
+        // Un avis existe déjà — on repasse en PUT
+        try {
+          const body = JSON.stringify({
+            note,
+            titre: game?.name ?? '',
+            description: game?.description_raw?.slice(0, 500) ?? '',
+            ...(critiqueContenu.trim() ? { contenu: critiqueContenu.trim() } : {}),
+          });
+          const saved = await apiFetch<UserRating>(`/critiques/${id}/ratings`, { method: 'PUT', token, body });
+          setUserRating(saved ?? { id: userRating?.id ?? 0, note, contenu: critiqueContenu.trim() });
+          setCritiqueModal(false);
+        } catch {}
+      } else {
+        setCritiqueError(e?.error ?? e?.message ?? `Erreur ${e?.status ?? ''}`);
+      }
     } finally {
       setSavingCritique(false);
     }
-  }, [token, id, critiqueNote, critiqueContenu, userRating]);
+  }, [token, id, critiqueNote, critiqueContenu, userRating, game]);
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -303,7 +332,7 @@ export default function GameDetailScreen() {
                 <View style={styles.statItem}>
                   <Text style={[styles.statValue, { color: colors.tint }]}>
                     {stats.moyenne.toFixed(1)}
-                    <Text style={[styles.statSuffix, { color: colors.icon }]}>/20</Text>
+                    <Text style={[styles.statSuffix, { color: colors.icon }]}>/5</Text>
                   </Text>
                   <Text style={[styles.statLabel, { color: colors.icon }]}>Moyenne</Text>
                 </View>
@@ -315,23 +344,6 @@ export default function GameDetailScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
-          )}
-
-          {/* Ma note (si existe, toujours visible) */}
-          {userRating && (
-            <View style={[styles.myRatingCard, { backgroundColor: colors.tint + '10', borderColor: colors.tint + '40' }]}>
-              <View style={styles.myRatingRow}>
-                <Star size={14} color={colors.tint} fill={colors.tint} strokeWidth={0} />
-                <Text style={[styles.myRatingTitle, { color: colors.tint }]}>
-                  Ma note : {userRating.note}/20
-                </Text>
-              </View>
-              {!!userRating.contenu && (
-                <Text style={[styles.myRatingContenu, { color: colors.icon }]} numberOfLines={3}>
-                  {userRating.contenu}
-                </Text>
-              )}
             </View>
           )}
 
@@ -351,21 +363,38 @@ export default function GameDetailScreen() {
                 <ChevronDown size={14} color={librairie ? colors.tint : colors.icon} strokeWidth={2} />
               </TouchableOpacity>
 
-              {/* Critique */}
-              <TouchableOpacity
-                style={[styles.actionBtn, { borderColor: userRating ? colors.tint + '60' : colors.border, backgroundColor: userRating ? colors.tint + '10' : colors.surface }]}
-                onPress={() => setCritiqueModal(true)}
-                activeOpacity={0.8}
-              >
-                {userRating ? (
-                  <Edit3 size={18} color={colors.tint} strokeWidth={2} />
-                ) : (
+              {/* Critique — affiche l'avis existant ou le bouton "Donner mon avis" */}
+              {userRating ? (
+                <View style={[styles.myRatingCard, { backgroundColor: colors.tint + '10', borderColor: colors.tint + '40' }]}>
+                  <View style={styles.myRatingRow}>
+                    <Star size={14} color={colors.tint} fill={colors.tint} strokeWidth={0} />
+                    <Text style={[styles.myRatingTitle, { color: colors.tint }]}>
+                      Mon avis : {userRating.note}/5
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => { setCritiqueError(''); setCritiqueModal(true); }}
+                      hitSlop={8}
+                      activeOpacity={0.7}
+                    >
+                      <Edit3 size={15} color={colors.tint} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+                  {!!userRating.contenu && (
+                    <Text style={[styles.myRatingContenu, { color: colors.icon }]} numberOfLines={4}>
+                      {userRating.contenu}
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.actionBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => { setCritiqueError(''); setCritiqueModal(true); }}
+                  activeOpacity={0.8}
+                >
                   <Plus size={18} color={colors.icon} strokeWidth={2} />
-                )}
-                <Text style={[styles.actionBtnText, { color: userRating ? colors.tint : colors.text }]}>
-                  {userRating ? 'Modifier ma critique' : 'Donner mon avis'}
-                </Text>
-              </TouchableOpacity>
+                  <Text style={[styles.actionBtnText, { color: colors.text }]}>Donner mon avis</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -425,60 +454,72 @@ export default function GameDetailScreen() {
         animationType="slide"
         onRequestClose={() => setCritiqueModal(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setCritiqueModal(false)}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {userRating ? 'Modifier ma critique' : 'Donner mon avis'}
-              </Text>
-              <TouchableOpacity onPress={() => setCritiqueModal(false)} hitSlop={8}>
-                <X size={20} color={colors.icon} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setCritiqueModal(false)}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+              <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    {userRating ? 'Modifier ma critique' : 'Donner mon avis'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setCritiqueModal(false)} hitSlop={8}>
+                    <X size={20} color={colors.icon} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
 
-            {/* Note */}
-            <View style={[styles.noteRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <TextInput
-                style={[styles.noteInput, { color: colors.text }]}
-                value={critiqueNote}
-                onChangeText={setCritiqueNote}
-                placeholder="0 – 20"
-                placeholderTextColor={colors.tabIconDefault}
-                keyboardType="decimal-pad"
-                maxLength={5}
-              />
-              <Text style={[styles.noteSuffix, { color: colors.icon }]}>/20</Text>
-            </View>
+                {/* Note */}
+                <View style={[styles.noteRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.noteInput, { color: colors.text }]}
+                    value={critiqueNote}
+                    onChangeText={setCritiqueNote}
+                    placeholder="0 – 5"
+                    placeholderTextColor={colors.tabIconDefault}
+                    keyboardType="decimal-pad"
+                    maxLength={5}
+                  />
+                  <Text style={[styles.noteSuffix, { color: colors.icon }]}>/5</Text>
+                </View>
 
-            {/* Texte */}
-            <TextInput
-              style={[styles.contenuInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
-              value={critiqueContenu}
-              onChangeText={setCritiqueContenu}
-              placeholder="Votre critique (facultatif)…"
-              placeholderTextColor={colors.tabIconDefault}
-              multiline
-              maxLength={2000}
-              textAlignVertical="top"
-            />
+                {/* Texte */}
+                <TextInput
+                  style={[styles.contenuInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+                  value={critiqueContenu}
+                  onChangeText={setCritiqueContenu}
+                  placeholder="Votre critique (facultatif)…"
+                  placeholderTextColor={colors.tabIconDefault}
+                  multiline
+                  maxLength={2000}
+                  textAlignVertical="top"
+                />
 
-            {/* Bouton enregistrer */}
-            <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: colors.tint }, savingCritique && { opacity: 0.6 }]}
-              onPress={handleSaveCritique}
-              disabled={savingCritique}
-              activeOpacity={0.85}
-            >
-              {savingCritique
-                ? <ActivityIndicator color="white" />
-                : <Text style={styles.saveBtnText}>Enregistrer</Text>}
+                {/* Erreur */}
+                {!!critiqueError && (
+                  <Text style={[styles.critiqueErrorText, { color: '#ef4444' }]}>{critiqueError}</Text>
+                )}
+
+                {/* Bouton enregistrer */}
+                <TouchableOpacity
+                  style={[styles.saveBtn, { backgroundColor: colors.tint }, savingCritique && { opacity: 0.6 }]}
+                  onPress={handleSaveCritique}
+                  disabled={savingCritique}
+                  activeOpacity={0.85}
+                >
+                  {savingCritique
+                    ? <ActivityIndicator color="white" />
+                    : <Text style={styles.saveBtnText}>Enregistrer</Text>}
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -522,8 +563,8 @@ const styles = StyleSheet.create({
 
   // Ma note
   myRatingCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 6 },
-  myRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  myRatingTitle: { fontWeight: '700', fontSize: 14 },
+  myRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'space-between' },
+  myRatingTitle: { flex: 1, fontWeight: '700', fontSize: 14 },
   myRatingContenu: { fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
 
   // Actions
@@ -580,4 +621,5 @@ const styles = StyleSheet.create({
   },
   saveBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   saveBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  critiqueErrorText: { fontSize: 13, fontWeight: '500', textAlign: 'center' },
 });

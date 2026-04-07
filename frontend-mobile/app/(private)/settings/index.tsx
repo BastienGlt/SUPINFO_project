@@ -229,7 +229,7 @@ export default function MyProfileScreen() {
           <QuickLink
             icon={<Library size={18} color={colors.tint} />}
             label="Ma Collection"
-            onPress={() => router.push('/(private)/bibliotheque')}
+            onPress={() => router.push('/(private)/library')}
             colors={colors}
           />
           <QuickLink

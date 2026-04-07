@@ -25,7 +25,7 @@ export default function TabLayout() {
         headerRight: () =>
           !user ? (
             <TouchableOpacity
-              onPress={() => router.push('/(public)/login')}
+              onPress={() => router.push('/(public)/auth/login')}
               style={{ marginRight: 16, backgroundColor: colors.tint + '20', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}
             >
               <Text style={{ color: colors.tint, fontWeight: '700', fontSize: 14 }}>Connexion</Text>
@@ -33,7 +33,7 @@ export default function TabLayout() {
           ) : null,
       }}>
       <Tabs.Screen
-        name="index"
+        name="feed"
         options={{
           title: 'Fil d\'actualité',
           tabBarLabel: 'Feed',

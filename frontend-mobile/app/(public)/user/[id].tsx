@@ -2,7 +2,7 @@ import {
   View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { authService, type AppUser } from '@/services/authService';
@@ -24,6 +24,7 @@ export default function PublicUserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const router = useRouter();
 
   // Contexte auth : token pour les actions follow + user pour savoir si c'est son propre profil
   const { token, user: currentUser } = useAuth();
@@ -52,7 +53,7 @@ export default function PublicUserProfileScreen() {
     // GET /users/{id}/is-following — vérifier si l'utilisateur connecté suit déjà ce profil
     if (token) {
       requests.push(
-        apiFetch<{ is_following: boolean }>(`/users/${userId}/is-following`, { token })
+        apiFetch<Record<string, boolean>>(`/users/${userId}/is-following`, { token })
       );
     }
 
@@ -62,7 +63,8 @@ export default function PublicUserProfileScreen() {
         setFollowStats(results[1] as { followers: number; following: number });
         setRatings(results[2] as Rating[]);
         if (token && results[3]) {
-          setIsFollowing((results[3] as { is_following: boolean }).is_following);
+          const followData = results[3] as Record<string, boolean>;
+          setIsFollowing(followData.isFollowing ?? followData.is_following ?? false);
         }
       })
       .catch(() => setNotFound(true))
@@ -187,9 +189,21 @@ export default function PublicUserProfileScreen() {
           <Text style={{ color: colors.icon, fontSize: 14 }}>Aucune critique pour l'instant.</Text>
         ) : (
           ratings.map((r) => (
-            <View
+            <TouchableOpacity
               key={r.id}
               style={[styles.critiqueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push({
+                pathname: '/(public)/critique/[id]',
+                params: {
+                  id: r.id,
+                  author_pseudo: profileUser.pseudo,
+                  author_photo: profileUser.photo ?? '',
+                  oeuvre_titre: r.oeuvre_titre ?? '',
+                  note: String(r.note),
+                  contenu: r.contenu ?? '',
+                },
+              })}
+              activeOpacity={0.8}
             >
               <View style={styles.critiqueHeader}>
                 <Text style={[styles.critiqueGame, { color: colors.text }]}>
@@ -204,7 +218,7 @@ export default function PublicUserProfileScreen() {
                   "{r.contenu}"
                 </Text>
               ) : null}
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </View>

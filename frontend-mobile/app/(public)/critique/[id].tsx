@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, FlatList, Image, ActivityIndicator,
-  TextInput, TouchableOpacity, KeyboardAvoidingView, Platform,
+  TextInput, TouchableOpacity, Alert,
 } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
@@ -8,7 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { SendHorizonal } from 'lucide-react-native';
+import { SendHorizonal, Heart, Trash2 } from 'lucide-react-native';
 
 interface Comment {
   id: number;
@@ -44,7 +44,7 @@ function extractComments(raw: unknown): Comment[] {
 }
 
 export default function CritiqueDetailScreen() {
-  const { id, author_pseudo, author_photo, oeuvre_titre, note, contenu } =
+  const { id, author_pseudo, author_photo, oeuvre_titre, note, contenu, likes_count } =
     useLocalSearchParams<{
       id: string;
       author_pseudo?: string;
@@ -52,11 +52,12 @@ export default function CritiqueDetailScreen() {
       oeuvre_titre?: string;
       note?: string;
       contenu?: string;
+      likes_count?: string;
     }>();
 
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigation = useNavigation();
 
   const [comments, setComments] = useState<Comment[]>([]);
@@ -64,6 +65,9 @@ export default function CritiqueDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [sending, setSending] = useState(false);
+  const [likesCount, setLikesCount] = useState(Number(likes_count) || 0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     navigation.setOptions({ title: oeuvre_titre ?? 'Critique' });
@@ -71,22 +75,65 @@ export default function CritiqueDetailScreen() {
 
   const fetchComments = useCallback(() => {
     if (!id) return;
-    // GET /commentaires/critiques/{id} et /count en parallèle
+    // GET /commentaires/critiques/{id}, /count, /likes + détection isLiked en parallèle
     Promise.all([
       apiFetch<unknown>(`/commentaires/critiques/${id}`),
       apiFetch<{ count: number }>(`/commentaires/critiques/${id}/count`),
+      apiFetch<{ likeCount: number }>(`/critiques/${id}/likes`),
+      token
+        ? apiFetch(`/critiques/${id}/like`, { method: 'POST', token })
+            .then(() => {
+              apiFetch(`/critiques/${id}/like`, { method: 'DELETE', token }).catch(() => {});
+              return false;
+            })
+            .catch((err: unknown) => (err as { status?: number })?.status === 409)
+        : Promise.resolve(false),
     ])
-      .then(([rawComments, countData]) => {
+      .then(([rawComments, countData, likesData, likedResult]) => {
         setComments(extractComments(rawComments));
         setCount(Number(countData?.count) || 0);
+        setLikesCount(Number(likesData?.likeCount) || 0);
+        setIsLiked(likedResult as boolean);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, token]);
 
   useEffect(() => {
     fetchComments();
   }, [fetchComments]);
+
+  // POST/DELETE /critiques/{id}/like
+  const handleLike = useCallback(() => {
+    if (!token) return;
+    setIsLiked((prev) => !prev);
+    setLikesCount((prev) => prev + (isLiked ? -1 : 1));
+    apiFetch(`/critiques/${id}/like`, { method: isLiked ? 'DELETE' : 'POST', token }).catch(() => {});
+  }, [token, id, isLiked]);
+
+  // DELETE /commentaires/:id — supprimer son commentaire (mise à jour optimiste)
+  const handleDeleteComment = useCallback((commentId: number) => {
+    if (!token) return;
+    Alert.alert(
+      'Supprimer le commentaire',
+      'Es-tu sûr de vouloir supprimer ce commentaire ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () => {
+            setDeletingIds((prev) => new Set(prev).add(commentId));
+            setComments((prev) => prev.filter((c) => c.id !== commentId));
+            setCount((prev) => Math.max(0, prev - 1));
+            apiFetch(`/commentaires/${commentId}`, { method: 'DELETE', token })
+              .catch(() => fetchComments())
+              .finally(() => setDeletingIds((prev) => { const s = new Set(prev); s.delete(commentId); return s; }));
+          },
+        },
+      ]
+    );
+  }, [token, fetchComments]);
 
   // POST /commentaires/critiques/{id} — ajouter, puis re-fetch pour avoir auteur_pseudo enrichi
   const handleSend = useCallback(async () => {
@@ -136,6 +183,16 @@ export default function CritiqueDetailScreen() {
         <Text style={[styles.critiqueContent, { color: colors.icon }]}>"{contenu}"</Text>
       ) : null}
 
+      {/* Likes */}
+      <TouchableOpacity
+        style={styles.likeRow}
+        onPress={handleLike}
+        activeOpacity={token ? 0.7 : 1}
+      >
+        <Heart size={16} color={isLiked ? '#ef4444' : colors.icon} fill={isLiked ? '#ef4444' : 'transparent'} strokeWidth={2} />
+        <Text style={[styles.likeCount, { color: isLiked ? '#ef4444' : colors.icon }]}>{likesCount}</Text>
+      </TouchableOpacity>
+
       <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -145,11 +202,7 @@ export default function CritiqueDetailScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.tint} />
@@ -159,7 +212,7 @@ export default function CritiqueDetailScreen() {
           data={comments}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={[styles.list, { backgroundColor: colors.background }]}
-          style={{ backgroundColor: colors.background }}
+          style={{ flex: 1, backgroundColor: colors.background }}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={
@@ -183,6 +236,15 @@ export default function CritiqueDetailScreen() {
                 <Text style={[styles.commentDate, { color: colors.icon }]}>
                   {new Date(item.created_at).toLocaleDateString('fr-FR')}
                 </Text>
+                {user && item.user_id === user.id && (
+                  <TouchableOpacity
+                    onPress={() => handleDeleteComment(item.id)}
+                    disabled={deletingIds.has(item.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Trash2 size={14} color={colors.icon} strokeWidth={2} />
+                  </TouchableOpacity>
+                )}
               </View>
               <Text style={[styles.commentContent, { color: colors.text }]}>{item.contenu}</Text>
             </View>
@@ -220,7 +282,7 @@ export default function CritiqueDetailScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -242,6 +304,8 @@ const styles = StyleSheet.create({
   noteBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   noteText: { fontWeight: '800', fontSize: 13 },
   critiqueContent: { fontSize: 14, lineHeight: 21, fontStyle: 'italic' },
+  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  likeCount: { fontSize: 14, fontWeight: '500' },
   separator: { height: 1, marginVertical: 4 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   emptyText: { textAlign: 'center', fontSize: 14, marginTop: 16 },

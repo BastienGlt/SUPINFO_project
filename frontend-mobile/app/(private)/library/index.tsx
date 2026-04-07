@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -7,15 +8,15 @@ import { apiFetch } from '@/services/apiService';
 import { CheckCircle2, Gamepad2, Bookmark, Library, Trash2, RefreshCw } from 'lucide-react-native';
 
 const STATUS_CONFIG = {
-  termine:  { label: 'Terminé',  color: '#22c55e', bg: '#f0fdf4', darkBg: '#14532d22' },
+  'terminé':  { label: 'Terminé',  color: '#22c55e', bg: '#f0fdf4', darkBg: '#14532d22' },
   en_cours: { label: 'En cours', color: '#3b82f6', bg: '#eff6ff', darkBg: '#1e3a5f22' },
   envie:    { label: 'Envie',    color: '#f59e0b', bg: '#fffbeb', darkBg: '#78350f22' },
 } as const;
 
 type StatusKey = keyof typeof STATUS_CONFIG;
 
-// Cycle : en_cours → termine → envie → en_cours
-const STATUS_CYCLE: StatusKey[] = ['en_cours', 'termine', 'envie'];
+// Cycle : en_cours → terminé → envie → en_cours
+const STATUS_CYCLE: StatusKey[] = ['en_cours', 'terminé', 'envie'];
 function nextStatus(current: string): StatusKey {
   const idx = STATUS_CYCLE.indexOf(current as StatusKey);
   return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
@@ -24,7 +25,7 @@ function nextStatus(current: string): StatusKey {
 function StatusIcon({ statut, color, size = 14 }: { statut: string; color: string; size?: number }) {
   const props = { size, color, strokeWidth: 2.5 };
   switch (statut) {
-    case 'termine':  return <CheckCircle2 {...props} />;
+    case 'terminé':  return <CheckCircle2 {...props} />;
     case 'en_cours': return <Gamepad2 {...props} />;
     case 'envie':    return <Bookmark {...props} />;
     default: return null;
@@ -46,6 +47,7 @@ export default function BibliothequeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const { token } = useAuth();
+  const router = useRouter();
 
   const [items, setItems] = useState<BiblioItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +66,7 @@ export default function BibliothequeScreen() {
   const grouped = {
     en_cours: items.filter((i) => i.statut === 'en_cours'),
     envie:    items.filter((i) => i.statut === 'envie'),
-    termine:  items.filter((i) => i.statut === 'termine'),
+    'terminé':  items.filter((i) => i.statut === 'terminé'),
   };
 
   /**
@@ -172,7 +174,11 @@ export default function BibliothequeScreen() {
           const isUpdating = updatingIds.has(item.id);
 
           return (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => item.api_reference_id && router.push({ pathname: '/(public)/game/[id]', params: { id: item.api_reference_id } })}
+              activeOpacity={item.api_reference_id ? 0.75 : 1}
+            >
               {/* Bande colorée à gauche */}
               {cfg && <View style={[styles.statusStripe, { backgroundColor: cfg.color }]} />}
 
@@ -208,7 +214,7 @@ export default function BibliothequeScreen() {
               >
                 <Trash2 size={16} color="#ef4444" strokeWidth={2} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           );
         }}
       />

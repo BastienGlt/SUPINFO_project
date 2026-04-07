@@ -24,7 +24,7 @@ export default function CompleteProfileScreen() {
     setLoading(true);
     try {
       await completeProfile(form);
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)/feed');
     } catch (err: unknown) {
       const error = err as { error?: string };
       Alert.alert('Erreur', error?.error ?? 'Impossible de créer le profil.');

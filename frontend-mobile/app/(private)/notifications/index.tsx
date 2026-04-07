@@ -1,5 +1,6 @@
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -65,6 +66,7 @@ export default function NotificationsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const { token } = useAuth();
+  const router = useRouter();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,11 +89,17 @@ export default function NotificationsScreen() {
     setNotifications((prev) => prev.map((n) => ({ ...n, lu: true })));
   };
 
-  // PUT /notifications/{id}/read — marquer une notification comme lue au tap
-  const markRead = (id: number) => {
+  // PUT /notifications/{id}/read — marquer comme lue + naviguer vers la source
+  const handleNotifPress = (item: Notification) => {
     if (!token) return;
-    apiFetch(`/notifications/${id}/read`, { method: 'PUT', token }).catch(() => {});
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, lu: true } : n)));
+    apiFetch(`/notifications/${item.id}/read`, { method: 'PUT', token }).catch(() => {});
+    setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, lu: true } : n)));
+
+    if ((item.type === 'like' || item.type === 'commentaire') && item.source_id) {
+      router.push({ pathname: '/(public)/critique/[id]', params: { id: item.source_id } });
+    } else if (item.type === 'follow' && item.from_user?.id) {
+      router.push({ pathname: '/(public)/user/[id]', params: { id: item.from_user.id } });
+    }
   };
 
   if (loading) {
@@ -130,7 +138,7 @@ export default function NotificationsScreen() {
           const typeColor = NOTIF_COLORS[item.type] ?? colors.tint;
           return (
             <TouchableOpacity
-              onPress={() => markRead(item.id)}
+              onPress={() => handleNotifPress(item)}
               style={[
                 styles.notifCard,
                 {

@@ -12,9 +12,9 @@ export default function PrivateLayout() {
   useEffect(() => {
     if (loading) return;
     if (!user && !isNewUser) {
-      router.replace('/(public)/login');
+      router.replace('/(public)/auth/login');
     } else if (isNewUser) {
-      router.replace('/(private)/complete-profile');
+      router.replace('/(private)/onboarding/complete-profile');
     }
   }, [user, isNewUser, loading]);
 
@@ -28,10 +28,10 @@ export default function PrivateLayout() {
 
   return (
     <Stack>
-      <Stack.Screen name="complete-profile" options={{ title: 'Créer mon profil', headerBackVisible: false }} />
-      <Stack.Screen name="bibliotheque" options={{ title: 'Ma Collection' }} />
-      <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
-      <Stack.Screen name="profile" options={{ title: 'Mon Profil' }} />
+      <Stack.Screen name="onboarding/complete-profile" options={{ title: 'Créer mon profil', headerBackVisible: false }} />
+      <Stack.Screen name="library/index" options={{ title: 'Ma Collection' }} />
+      <Stack.Screen name="notifications/index" options={{ title: 'Notifications' }} />
+      <Stack.Screen name="settings/index" options={{ title: 'Mon Profil' }} />
     </Stack>
   );
 }

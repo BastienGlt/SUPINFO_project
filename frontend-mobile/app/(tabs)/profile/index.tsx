@@ -43,7 +43,7 @@ export default function ProfileTabScreen() {
         </Text>
         <TouchableOpacity
           style={[styles.loginButton, { backgroundColor: colors.tint }]}
-          onPress={() => router.push('/(public)/login')}
+          onPress={() => router.push('/(public)/auth/login')}
           activeOpacity={0.85}
         >
           <LogIn size={16} color="white" strokeWidth={2.5} />
@@ -58,7 +58,7 @@ export default function ProfileTabScreen() {
       {/* En-tête profil — cliquable pour ouvrir le profil complet */}
       <TouchableOpacity
         style={[styles.profileHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={() => router.push('/(private)/profile')}
+        onPress={() => router.push('/(private)/settings')}
         activeOpacity={0.8}
       >
         {user.photo ? (
@@ -94,7 +94,7 @@ export default function ProfileTabScreen() {
           icon={<Library size={20} color={colors.tint} />}
           label="Ma Collection"
           description="Gérez vos jeux"
-          onPress={() => router.push('/(private)/bibliotheque')}
+          onPress={() => router.push('/(private)/library')}
           colors={colors}
         />
         <MenuItem
@@ -108,7 +108,7 @@ export default function ProfileTabScreen() {
           icon={<CircleUser size={20} color={colors.tint} />}
           label="Mon Profil"
           description="Modifier mes informations"
-          onPress={() => router.push('/(private)/profile')}
+          onPress={() => router.push('/(private)/settings')}
           colors={colors}
         />
       </View>

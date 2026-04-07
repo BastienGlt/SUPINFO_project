@@ -48,18 +48,32 @@ export default function FeedScreen() {
       apiFetch<{ feed: FeedItem[] }>('/feed', { token })
         .then(async (data) => {
           const items = data.feed ?? [];
-          // GET /commentaires/critiques/{id}/count — compteur réel pour chaque critique
           const critiques = items.filter((f) => f.type === 'critique');
-          const counts = await Promise.all(
+          const perCritique = await Promise.all(
             critiques.map((f) =>
-              apiFetch<{ count: number }>(`/commentaires/critiques/${f.id}/count`)
-                .then((r) => ({ id: f.id, count: Number(r?.count) || 0 }))
-                .catch(() => ({ id: f.id, count: 0 }))
+              Promise.all([
+                apiFetch<{ count: number }>(`/commentaires/critiques/${f.id}/count`)
+                  .then((r) => Number(r?.count) || 0)
+                  .catch(() => 0),
+                apiFetch<{ likeCount: number }>(`/critiques/${f.id}/likes`)
+                  .then((r) => Number(r?.likeCount) || 0)
+                  .catch(() => 0),
+                // Détecter si l'utilisateur a déjà liké : 409 = oui, 201 = non (on annule)
+                apiFetch(`/critiques/${f.id}/like`, { method: 'POST', token })
+                  .then(() => {
+                    apiFetch(`/critiques/${f.id}/like`, { method: 'DELETE', token }).catch(() => {});
+                    return false;
+                  })
+                  .catch((err: unknown) => (err as { status?: number })?.status === 409),
+              ]).then(([commentsCount, likesCount, isLiked]) => ({ id: f.id, commentsCount, likesCount, isLiked }))
             )
           );
-          const countMap = Object.fromEntries(counts.map((c) => [c.id, c.count]));
+          const dataMap = Object.fromEntries(perCritique.map((c) => [c.id, c]));
+          setLikedIds(new Set(perCritique.filter((c) => c.isLiked).map((c) => c.id)));
           setFeed(items.map((f) =>
-            f.type === 'critique' ? { ...f, comments_count: countMap[f.id] ?? f.comments_count } : f
+            f.type === 'critique'
+              ? { ...f, comments_count: dataMap[f.id]?.commentsCount ?? f.comments_count, likes_count: dataMap[f.id]?.likesCount ?? f.likes_count }
+              : f
           ));
         })
         .catch(() => {})
@@ -132,6 +146,7 @@ export default function FeedScreen() {
           oeuvre_titre: item.oeuvre_titre ?? '',
           note: item.note !== undefined && item.note !== null ? String(item.note) : '',
           contenu: item.contenu ?? '',
+          likes_count: String(Number(item.likes_count) || 0),
         },
       });
     },
@@ -189,6 +204,11 @@ export default function FeedScreen() {
                 {/* En-tête : avatar + titre + note */}
                 <View style={styles.cardHeader}>
                 <View style={styles.authorRow}>
+                  <TouchableOpacity
+                    style={styles.authorPressable}
+                    onPress={() => router.push({ pathname: '/(public)/user/[id]', params: { id: item.author_id } })}
+                    activeOpacity={0.7}
+                  >
                   {item.author_photo ? (
                     <Image source={{ uri: item.author_photo }} style={styles.avatar} />
                   ) : (
@@ -204,10 +224,11 @@ export default function FeedScreen() {
                     </Text>
                     <Text style={[styles.authorName, { color: colors.icon }]}>par @{item.author_pseudo}</Text>
                   </View>
+                  </TouchableOpacity>
                 </View>
                 {item.note !== undefined && item.note !== null && (
                   <View style={[styles.noteBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
-                    <Text style={[styles.noteText, { color: colors.tint }]}>{item.note}/20</Text>
+                    <Text style={[styles.noteText, { color: colors.tint }]}>{item.note}/5</Text>
                   </View>
                 )}
               </View>
@@ -297,6 +318,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, padding: 16, paddingBottom: 0 },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  authorPressable: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   avatar: { width: 42, height: 42, borderRadius: 21 },
   avatarFallback: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
   gameTitle: { fontSize: 15, fontWeight: '700' },
