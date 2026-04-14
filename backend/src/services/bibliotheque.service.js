@@ -69,18 +69,16 @@ class BibliothequeService {
   }
 
   async getUserBibliotheque(userId, filters = {}) {
-    let query = `
-      SELECT * FROM vue_bibliotheque_details WHERE user_id = ?;
-    `;
+    let query = `SELECT * FROM v_bibliotheque_details WHERE user_id = ?`;
 
     const params = [userId];
 
     if (filters.statut_id) {
-      query += ' AND bi.statut_id = ?';
+      query += ' AND statut_id = ?';
       params.push(filters.statut_id);
     }
 
-    query += ' ORDER BY bi.updated_at DESC';
+    query += ' ORDER BY updated_at DESC';
 
     const [rows] = await db.execute(query, params);
     return rows.map(row => ({
