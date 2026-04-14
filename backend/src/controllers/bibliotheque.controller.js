@@ -25,11 +25,11 @@ class BibliothequeController {
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
       const body = this.parseBody(req.body);
-      const { api_reference_id, titre, description, statut } = body;
+      const { api_reference_id, titre, description, statut_id } = body;
 
       if (Object.keys(body).length === 0) {
         return res.status(400).json({
-          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec api_reference_id, titre, description et statut.'
+          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec api_reference_id, titre, description et statut_id.'
         });
       }
 
@@ -44,7 +44,7 @@ class BibliothequeController {
       // Crée l'œuvre en base si elle n'existe pas encore
       const oeuvre = await oeuvreService.findOrCreate(api_reference_id, titre, description);
 
-      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre.id, statut);
+      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre.id, statut_id);
 
       res.status(201).json({
         message: 'Œuvre ajoutée à la bibliothèque',
@@ -129,10 +129,10 @@ class BibliothequeController {
       const userId = req.params.userId || (await userService.getUserByAuth0Id(req.auth.payload.sub))?.id;
       if (!userId) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
-      const { statut } = req.query;
+      const { statut_id } = req.query;
 
       const filters = {};
-      if (statut) filters.statut = statut;
+      if (statut_id) filters.statut_id = parseInt(statut_id, 10);
 
       const items = await bibliothequeService.getUserBibliotheque(userId, filters);
 
