@@ -68,8 +68,8 @@ router.put('/users/:id/unwarn', checkJwt, checkModerator, adminController.unwarn
 
 // ==================== STATUTS (admin uniquement) ====================
 
-// Lister tous les statuts
-router.get('/statuts', checkJwt, checkAdmin, adminController.getStatuts);
+// Lister tous les statuts (public)
+router.get('/statuts', adminController.getStatuts);
 
 // Créer un statut
 router.post('/statuts', checkJwt, checkAdmin, adminController.createStatut);
