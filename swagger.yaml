@@ -199,6 +199,18 @@ components:
           type: string
           enum: [PUBLIQUE, PRIVEE]
 
+    Statut:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          example: A_VOIR
+        libele:
+          type: string
+          example: À voir
+
     BibliothequeItem:
       type: object
       properties:
@@ -208,9 +220,15 @@ components:
           type: integer
         oeuvre_id:
           type: integer
-        statut:
+        titre:
           type: string
-        created_at:
+        description:
+          type: string
+        api_reference_id:
+          type: string
+        statut:
+          $ref: '#/components/schemas/Statut'
+        updated_at:
           type: string
           format: date-time
 
@@ -228,16 +246,17 @@ components:
           type: string
         description:
           type: string
-        statut:
-          type: string
-          enum: [A_VOIR, EN_COURS, VU]
-          default: A_VOIR
+        statut_id:
+          type: integer
+          description: "ID du statut souhaité (ex: 1=A_VOIR, 2=EN_COURS, 3=VU)"
+          default: 1
 
     BibliothequeItemUpdate:
       type: object
       properties:
-        statut:
-          type: string
+        statut_id:
+          type: integer
+          description: "ID du statut souhaité (ex: 1=A_VOIR, 2=EN_COURS, 3=VU)"
 
     BibliothequeStats:
       type: object
@@ -1674,11 +1693,11 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - name: statut
+        - name: statut_id
           in: query
           schema:
-            type: string
-          description: Filtrer par statut
+            type: integer
+          description: Filtrer par ID de statut
       responses:
         '200':
           description: Liste des items de la bibliothèque
@@ -1714,11 +1733,11 @@ paths:
           schema:
             type: integer
           description: ID de l'utilisateur
-        - name: statut
+        - name: statut_id
           in: query
           schema:
-            type: string
-          description: Filtrer par statut
+            type: integer
+          description: Filtrer par ID de statut
       responses:
         '200':
           description: Liste des items de la bibliothèque
@@ -3137,6 +3156,210 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/statuts:
+    get:
+      tags: [Admin]
+      summary: Lister tous les statuts de bibliothèque
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des statuts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Statut'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (admin uniquement)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Admin]
+      summary: Créer un nouveau statut de bibliothèque
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, libele]
+              properties:
+                code:
+                  type: string
+                  example: ABANDONNE
+                libele:
+                  type: string
+                  example: Abandonné
+      responses:
+        '201':
+          description: Statut créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statut'
+        '400':
+          description: Champs manquants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (admin uniquement)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/statuts/{id}:
+    put:
+      tags: [Admin]
+      summary: Modifier un statut de bibliothèque
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du statut
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: EN_PAUSE
+                libele:
+                  type: string
+                  example: En pause
+      responses:
+        '200':
+          description: Statut mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statut'
+        '400':
+          description: ID invalide ou aucun champ fourni
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (admin uniquement)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Statut non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Admin]
+      summary: Supprimer un statut de bibliothèque
+      description: Échoue avec 409 si des items de bibliothèque utilisent encore ce statut.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du statut
+      responses:
+        '200':
+          description: Statut supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (admin uniquement)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Statut non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Statut encore utilisé par des items de bibliothèque
           content:
             application/json:
               schema:

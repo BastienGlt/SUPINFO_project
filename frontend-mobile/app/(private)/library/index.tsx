@@ -1,11 +1,11 @@
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, TextInput, ScrollView } from 'react-native';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { CheckCircle2, Gamepad2, Bookmark, Library, Trash2, RefreshCw } from 'lucide-react-native';
+import { CheckCircle2, Gamepad2, Bookmark, Library, Trash2, RefreshCw, Search, X } from 'lucide-react-native';
 
 const STATUS_CONFIG = {
   'terminé':  { label: 'Terminé',  color: '#22c55e', bg: '#f0fdf4', darkBg: '#14532d22' },
@@ -53,6 +53,10 @@ export default function BibliothequeScreen() {
   const [loading, setLoading] = useState(true);
   // IDs en cours de mise à jour (pour désactiver les boutons)
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  // Filtres
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusKey>>(new Set(['en_cours', 'terminé', 'envie']));
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
@@ -68,6 +72,17 @@ export default function BibliothequeScreen() {
     envie:    items.filter((i) => i.statut === 'envie'),
     'terminé':  items.filter((i) => i.statut === 'terminé'),
   };
+
+  // Filtrer les items selon la recherche et les statuts sélectionnés
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesSearch = item.titre.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = selectedStatuses.has(item.statut as StatusKey);
+      // Les catégories sont vides pour l'instant (pas dans BiblioItem)
+      const matchesCategory = selectedCategories.size === 0 || true; // TODO: ajouter les catégories
+      return matchesSearch && matchesStatus && matchesCategory;
+    });
+  }, [items, searchQuery, selectedStatuses, selectedCategories]);
 
   /**
    * PUT /bibliotheque/items/{id} — changer le statut d'un jeu.
@@ -138,6 +153,61 @@ export default function BibliothequeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Barre de recherche */}
+      <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Search size={18} color={colors.icon} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Chercher un jeu..."
+          placeholderTextColor={colors.icon}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <X size={18} color={colors.icon} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Filtres par statut */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+        <View style={styles.filterContainer}>
+          {(Object.keys(STATUS_CONFIG) as StatusKey[]).map((statusKey) => {
+            const cfg = STATUS_CONFIG[statusKey];
+            const isSelected = selectedStatuses.has(statusKey);
+            return (
+              <TouchableOpacity
+                key={statusKey}
+                style={[
+                  styles.filterBtn,
+                  {
+                    backgroundColor: isSelected ? cfg.color : colors.surface,
+                    borderColor: cfg.color,
+                  },
+                ]}
+                onPress={() => {
+                  setSelectedStatuses((prev) => {
+                    const s = new Set(prev);
+                    if (s.has(statusKey)) {
+                      s.delete(statusKey);
+                    } else {
+                      s.add(statusKey);
+                    }
+                    return s;
+                  });
+                }}
+              >
+                <StatusIcon statut={statusKey} color={isSelected ? '#fff' : cfg.color} size={14} />
+                <Text style={[styles.filterBtnText, { color: isSelected ? '#fff' : cfg.color }]}>
+                  {cfg.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+
       {/* Résumé des compteurs par statut */}
       <View style={styles.summary}>
         {(Object.keys(STATUS_CONFIG) as StatusKey[]).map((statusKey) => {
@@ -155,14 +225,16 @@ export default function BibliothequeScreen() {
       </View>
 
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Library size={44} color={colors.icon} strokeWidth={1.5} />
             <Text style={[styles.empty, { color: colors.icon }]}>
-              Votre bibliothèque est vide.{'\n'}Ajoutez des jeux depuis leur fiche !
+              {searchQuery || selectedStatuses.size < 3
+                ? 'Aucun jeu ne correspond à vos filtres.'
+                : "Votre bibliothèque est vide.\nAjoutez des jeux depuis leur fiche !"}
             </Text>
           </View>
         }
@@ -223,7 +295,44 @@ export default function BibliothequeScreen() {
 }
 
 const styles = StyleSheet.create({
-  summary: { flexDirection: 'row', gap: 10, padding: 16, paddingBottom: 8 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  filterBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  summary: { flexDirection: 'row', gap: 10, padding: 16, paddingTop: 0, paddingBottom: 8 },
   summaryBadge: {
     flex: 1,
     alignItems: 'center',
