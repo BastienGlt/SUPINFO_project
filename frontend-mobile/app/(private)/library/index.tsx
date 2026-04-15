@@ -7,36 +7,37 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 import { CheckCircle2, Gamepad2, Bookmark, Library, Trash2, RefreshCw, Search, X } from 'lucide-react-native';
 
-const STATUS_CONFIG = {
-  'terminé':  { label: 'Terminé',  color: '#22c55e', bg: '#f0fdf4', darkBg: '#14532d22' },
-  en_cours: { label: 'En cours', color: '#3b82f6', bg: '#eff6ff', darkBg: '#1e3a5f22' },
-  envie:    { label: 'Envie',    color: '#f59e0b', bg: '#fffbeb', darkBg: '#78350f22' },
-} as const;
+// Config visuelle uniquement — clé = code du statut en BDD
+const STATUS_CONFIG: Record<string, { color: string; bg: string; darkBg: string }> = {
+  VU:       { color: '#22c55e', bg: '#f0fdf4', darkBg: '#14532d22' },
+  EN_COURS: { color: '#3b82f6', bg: '#eff6ff', darkBg: '#1e3a5f22' },
+  A_VOIR:   { color: '#f59e0b', bg: '#fffbeb', darkBg: '#78350f22' },
+};
 
-type StatusKey = keyof typeof STATUS_CONFIG;
+// Ordre du cycle UI
+const STATUS_CYCLE = ['EN_COURS', 'VU', 'A_VOIR'];
 
-// Cycle : en_cours → terminé → envie → en_cours
-const STATUS_CYCLE: StatusKey[] = ['en_cours', 'terminé', 'envie'];
-function nextStatus(current: string): StatusKey {
-  const idx = STATUS_CYCLE.indexOf(current as StatusKey);
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-}
-
-function StatusIcon({ statut, color, size = 14 }: { statut: string; color: string; size?: number }) {
+function StatusIcon({ code, color, size = 14 }: { code: string; color: string; size?: number }) {
   const props = { size, color, strokeWidth: 2.5 };
-  switch (statut) {
-    case 'terminé':  return <CheckCircle2 {...props} />;
-    case 'en_cours': return <Gamepad2 {...props} />;
-    case 'envie':    return <Bookmark {...props} />;
+  switch (code) {
+    case 'VU':       return <CheckCircle2 {...props} />;
+    case 'EN_COURS': return <Gamepad2 {...props} />;
+    case 'A_VOIR':   return <Bookmark {...props} />;
     default: return null;
   }
+}
+
+interface Statut {
+  id: number;
+  code: string;
+  libele: string;
 }
 
 interface BiblioItem {
   id: number;
   user_id: number;
   oeuvre_id: number;
-  statut: string;
+  statut: Statut;
   updated_at: string;
   titre: string;
   description: string;
@@ -50,51 +51,57 @@ export default function BibliothequeScreen() {
   const router = useRouter();
 
   const [items, setItems] = useState<BiblioItem[]>([]);
+  const [statuts, setStatuts] = useState<Statut[]>([]);
   const [loading, setLoading] = useState(true);
-  // IDs en cours de mise à jour (pour désactiver les boutons)
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
-  // Filtres
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusKey>>(new Set(['en_cours', 'terminé', 'envie']));
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    // GET /bibliotheque/items — bibliothèque personnelle
-    apiFetch<BiblioItem[]>('/bibliotheque/items', { token })
-      .then(setItems)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      apiFetch<Statut[]>('/admin/statuts').then((data) => {
+        setStatuts(data);
+        setSelectedCodes(new Set(data.map((s) => s.code)));
+      }).catch(() => {}),
+      apiFetch<BiblioItem[]>('/bibliotheque/items', { token })
+        .then(setItems)
+        .catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, [token]);
 
-  const grouped = {
-    en_cours: items.filter((i) => i.statut === 'en_cours'),
-    envie:    items.filter((i) => i.statut === 'envie'),
-    'terminé':  items.filter((i) => i.statut === 'terminé'),
-  };
+  const grouped = useMemo(() => {
+    const result: Record<string, BiblioItem[]> = {};
+    for (const s of statuts) {
+      result[s.code] = items.filter((i) => i.statut.code === s.code);
+    }
+    return result;
+  }, [items, statuts]);
 
-  // Filtrer les items selon la recherche et les statuts sélectionnés
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const matchesSearch = item.titre.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = selectedStatuses.has(item.statut as StatusKey);
-      // Les catégories sont vides pour l'instant (pas dans BiblioItem)
-      const matchesCategory = selectedCategories.size === 0 || true; // TODO: ajouter les catégories
-      return matchesSearch && matchesStatus && matchesCategory;
+      const matchesStatus = selectedCodes.has(item.statut.code);
+      return matchesSearch && matchesStatus;
     });
-  }, [items, searchQuery, selectedStatuses, selectedCategories]);
+  }, [items, searchQuery, selectedCodes]);
 
   /**
-   * PUT /bibliotheque/items/{id} — changer le statut d'un jeu.
-   * Le statut tourne en cycle : en_cours → terminé → envie → en_cours.
+   * PUT /bibliotheque/items/{id} — cycle le statut selon STATUS_CYCLE.
    */
   const handleCycleStatus = useCallback(async (item: BiblioItem) => {
-    if (!token || updatingIds.has(item.id)) return;
-    const newStatut = nextStatus(item.statut);
+    if (!token || updatingIds.has(item.id) || statuts.length === 0) return;
+
+    const idx = STATUS_CYCLE.indexOf(item.statut.code);
+    const nextCode = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    const nextStatut = statuts.find((s) => s.code === nextCode);
+    if (!nextStatut) return;
 
     // Mise à jour optimiste
     setItems((prev) =>
-      prev.map((i) => i.id === item.id ? { ...i, statut: newStatut, updated_at: new Date().toISOString() } : i)
+      prev.map((i) => i.id === item.id
+        ? { ...i, statut: nextStatut, updated_at: new Date().toISOString() }
+        : i)
     );
     setUpdatingIds((prev) => new Set(prev).add(item.id));
 
@@ -102,21 +109,20 @@ export default function BibliothequeScreen() {
       await apiFetch(`/bibliotheque/items/${item.id}`, {
         method: 'PUT',
         token,
-        body: JSON.stringify({ statut: newStatut }),
+        body: JSON.stringify({ statut_id: nextStatut.id }),
       });
     } catch {
-      // Rollback en cas d'erreur
+      // Rollback
       setItems((prev) =>
         prev.map((i) => i.id === item.id ? { ...i, statut: item.statut } : i)
       );
     } finally {
       setUpdatingIds((prev) => { const s = new Set(prev); s.delete(item.id); return s; });
     }
-  }, [token, updatingIds]);
+  }, [token, updatingIds, statuts]);
 
   /**
-   * DELETE /bibliotheque/items/{id} — retirer un jeu de la bibliothèque.
-   * Demande confirmation avant de supprimer.
+   * DELETE /bibliotheque/items/{id}
    */
   const handleDelete = useCallback((item: BiblioItem) => {
     if (!token) return;
@@ -129,12 +135,10 @@ export default function BibliothequeScreen() {
           text: 'Supprimer',
           style: 'destructive',
           onPress: async () => {
-            // Suppression optimiste
             setItems((prev) => prev.filter((i) => i.id !== item.id));
             try {
               await apiFetch(`/bibliotheque/items/${item.id}`, { method: 'DELETE', token });
             } catch {
-              // Rollback : remettre l'item
               setItems((prev) => [...prev, item].sort((a, b) => a.id - b.id));
             }
           },
@@ -173,34 +177,25 @@ export default function BibliothequeScreen() {
       {/* Filtres par statut */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
         <View style={styles.filterContainer}>
-          {(Object.keys(STATUS_CONFIG) as StatusKey[]).map((statusKey) => {
-            const cfg = STATUS_CONFIG[statusKey];
-            const isSelected = selectedStatuses.has(statusKey);
+          {statuts.map((statut) => {
+            const cfg = STATUS_CONFIG[statut.code];
+            const color = cfg?.color ?? colors.tint;
+            const isSelected = selectedCodes.has(statut.code);
             return (
               <TouchableOpacity
-                key={statusKey}
-                style={[
-                  styles.filterBtn,
-                  {
-                    backgroundColor: isSelected ? cfg.color : colors.surface,
-                    borderColor: cfg.color,
-                  },
-                ]}
-                onPress={() => {
-                  setSelectedStatuses((prev) => {
+                key={statut.id}
+                style={[styles.filterBtn, { backgroundColor: isSelected ? color : colors.surface, borderColor: color }]}
+                onPress={() =>
+                  setSelectedCodes((prev) => {
                     const s = new Set(prev);
-                    if (s.has(statusKey)) {
-                      s.delete(statusKey);
-                    } else {
-                      s.add(statusKey);
-                    }
+                    if (s.has(statut.code)) s.delete(statut.code); else s.add(statut.code);
                     return s;
-                  });
-                }}
+                  })
+                }
               >
-                <StatusIcon statut={statusKey} color={isSelected ? '#fff' : cfg.color} size={14} />
-                <Text style={[styles.filterBtnText, { color: isSelected ? '#fff' : cfg.color }]}>
-                  {cfg.label}
+                <StatusIcon code={statut.code} color={isSelected ? '#fff' : color} size={14} />
+                <Text style={[styles.filterBtnText, { color: isSelected ? '#fff' : color }]}>
+                  {statut.libele}
                 </Text>
               </TouchableOpacity>
             );
@@ -210,15 +205,15 @@ export default function BibliothequeScreen() {
 
       {/* Résumé des compteurs par statut */}
       <View style={styles.summary}>
-        {(Object.keys(STATUS_CONFIG) as StatusKey[]).map((statusKey) => {
-          const cfg = STATUS_CONFIG[statusKey];
-          const list = grouped[statusKey];
-          const bgColor = colorScheme === 'dark' ? cfg.darkBg : cfg.bg;
+        {statuts.map((statut) => {
+          const cfg = STATUS_CONFIG[statut.code];
+          const color = cfg?.color ?? colors.tint;
+          const bgColor = cfg ? (colorScheme === 'dark' ? cfg.darkBg : cfg.bg) : colors.surface;
           return (
-            <View key={statusKey} style={[styles.summaryBadge, { backgroundColor: bgColor, borderColor: cfg.color + '50' }]}>
-              <StatusIcon statut={statusKey} color={cfg.color} />
-              <Text style={[styles.summaryCount, { color: cfg.color }]}>{list.length}</Text>
-              <Text style={[styles.summaryLabel, { color: cfg.color }]}>{cfg.label}</Text>
+            <View key={statut.id} style={[styles.summaryBadge, { backgroundColor: bgColor, borderColor: color + '50' }]}>
+              <StatusIcon code={statut.code} color={color} />
+              <Text style={[styles.summaryCount, { color }]}>{(grouped[statut.code] ?? []).length}</Text>
+              <Text style={[styles.summaryLabel, { color }]}>{statut.libele}</Text>
             </View>
           );
         })}
@@ -232,17 +227,16 @@ export default function BibliothequeScreen() {
           <View style={styles.emptyWrap}>
             <Library size={44} color={colors.icon} strokeWidth={1.5} />
             <Text style={[styles.empty, { color: colors.icon }]}>
-              {searchQuery || selectedStatuses.size < 3
+              {searchQuery || selectedCodes.size < statuts.length
                 ? 'Aucun jeu ne correspond à vos filtres.'
                 : "Votre bibliothèque est vide.\nAjoutez des jeux depuis leur fiche !"}
             </Text>
           </View>
         }
         renderItem={({ item }) => {
-          const cfg = STATUS_CONFIG[item.statut as StatusKey];
-          const bgColor = cfg
-            ? colorScheme === 'dark' ? cfg.darkBg : cfg.bg
-            : colors.surface;
+          const cfg = STATUS_CONFIG[item.statut.code];
+          const color = cfg?.color ?? colors.tint;
+          const bgColor = cfg ? (colorScheme === 'dark' ? cfg.darkBg : cfg.bg) : colors.surface;
           const isUpdating = updatingIds.has(item.id);
 
           return (
@@ -251,8 +245,7 @@ export default function BibliothequeScreen() {
               onPress={() => item.api_reference_id && router.push({ pathname: '/(public)/game/[id]', params: { id: item.api_reference_id } })}
               activeOpacity={item.api_reference_id ? 0.75 : 1}
             >
-              {/* Bande colorée à gauche */}
-              {cfg && <View style={[styles.statusStripe, { backgroundColor: cfg.color }]} />}
+              <View style={[styles.statusStripe, { backgroundColor: color }]} />
 
               <View style={styles.cardContent}>
                 <Text style={[styles.gameTitle, { color: colors.text }]}>{item.titre}</Text>
@@ -262,21 +255,19 @@ export default function BibliothequeScreen() {
               </View>
 
               {/* Bouton statut (tappable) — PUT /bibliotheque/items/{id} */}
-              {cfg && (
-                <TouchableOpacity
-                  style={[styles.statusPill, { backgroundColor: bgColor, borderColor: cfg.color + '55' }]}
-                  onPress={() => handleCycleStatus(item)}
-                  disabled={isUpdating}
-                  activeOpacity={0.7}
-                >
-                  {isUpdating ? (
-                    <RefreshCw size={13} color={cfg.color} strokeWidth={2.5} />
-                  ) : (
-                    <StatusIcon statut={item.statut} color={cfg.color} />
-                  )}
-                  <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.statusPill, { backgroundColor: bgColor, borderColor: color + '55' }]}
+                onPress={() => handleCycleStatus(item)}
+                disabled={isUpdating}
+                activeOpacity={0.7}
+              >
+                {isUpdating ? (
+                  <RefreshCw size={13} color={color} strokeWidth={2.5} />
+                ) : (
+                  <StatusIcon code={item.statut.code} color={color} />
+                )}
+                <Text style={[styles.statusText, { color }]}>{item.statut.libele}</Text>
+              </TouchableOpacity>
 
               {/* Bouton supprimer — DELETE /bibliotheque/items/{id} */}
               <TouchableOpacity
@@ -354,7 +345,6 @@ const styles = StyleSheet.create({
   cardContent: { flex: 1, paddingVertical: 14, paddingHorizontal: 12, gap: 3 },
   gameTitle: { fontSize: 15, fontWeight: '700' },
   lastUpdate: { fontSize: 12 },
-  // Badge de statut tappable : appui → cycle de statut
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,7 +355,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   statusText: { fontSize: 12, fontWeight: '600' },
-  // Icône poubelle à droite
   deleteBtn: {
     paddingHorizontal: 12,
     paddingVertical: 14,

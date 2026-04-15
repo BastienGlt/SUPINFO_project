@@ -3170,9 +3170,7 @@ paths:
   /admin/statuts:
     get:
       tags: [Admin]
-      summary: Lister tous les statuts de bibliothèque
-      security:
-        - BearerAuth: []
+      summary: Lister tous les statuts de bibliothèque (public)
       responses:
         '200':
           description: Liste des statuts
@@ -3182,18 +3180,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Statut'
-        '401':
-          description: Non authentifié
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Accès refusé (admin uniquement)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Erreur serveur
           content:

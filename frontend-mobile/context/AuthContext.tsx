@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,6 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     discovery
   );
 
+  // Conserver le codeVerifier dans un ref pour éviter les problèmes de closure
+  const codeVerifierRef = useRef<string>('');
+  useEffect(() => {
+    if (request?.codeVerifier) {
+      codeVerifierRef.current = request.codeVerifier;
+    }
+  }, [request?.codeVerifier]);
+
   // Restaurer la session depuis AsyncStorage au démarrage
   useEffect(() => {
     const restoreSession = async () => {
@@ -88,13 +96,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const code = successResponse.params.code;
+      const verifier = codeVerifierRef.current;
+      if (!verifier) {
+        console.error('=== PKCE code_verifier manquant ===');
+        return;
+      }
+      console.log('=== EXCHANGE: redirectUri ===', redirectUri);
       const tokenResult = await AuthSession.exchangeCodeAsync(
         {
           clientId: CONFIG.AUTH0_CLIENT_ID,
           code: code,
           redirectUri: redirectUri,
           extraParams: {
-            code_verifier: request?.codeVerifier || '',
+            code_verifier: verifier,
           },
         },
         discovery

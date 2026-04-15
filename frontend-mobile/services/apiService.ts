@@ -30,10 +30,17 @@ export async function apiFetch<T = unknown>(
     clearTimeout(timeoutId);
   }
 
-  const data = await res.json();
+  const text = await res.text();
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    if (!res.ok) throw { status: res.status, error: text };
+    return (text as unknown) as T;
+  }
 
   if (!res.ok) {
-    throw { status: res.status, ...data };
+    throw { status: res.status, ...(data as object) };
   }
 
   return data as T;

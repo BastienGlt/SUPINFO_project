@@ -42,20 +42,20 @@ interface UserRating {
   contenu?: string;
 }
 
+interface Statut {
+  id: number;
+  code: string;
+  libele: string;
+}
+
 interface BiblioItem {
   id: number;
   oeuvre_id: number;
-  statut: string;
+  statut: Statut;
   api_reference_id?: string;
 }
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
-
-const STATUTS = [
-  { key: 'en_cours', label: 'En cours' },
-  { key: 'envie',    label: 'Envie de jouer' },
-  { key: 'terminé',  label: 'Terminé' },
-] as const;
 
 function metacriticColor(score: number) {
   if (score >= 75) return '#22c55e';
@@ -75,6 +75,7 @@ export default function GameDetailScreen() {
   const [stats, setStats] = useState<RatingStats | null>(null);
   const [userRating, setUserRating] = useState<UserRating | null>(null);
   const [librairie, setLibrairie] = useState<BiblioItem | null>(null);
+  const [statuts, setStatuts] = useState<Statut[]>([]);
   const [loading, setLoading] = useState(true);
   const [descExpanded, setDescExpanded] = useState(false);
 
@@ -104,6 +105,9 @@ export default function GameDetailScreen() {
         apiFetch<RatingStats>(`/critiques/${id}/ratings/stats`)
           .then(setStats)
           .catch(() => {}),
+        apiFetch<Statut[]>('/admin/statuts')
+          .then(setStatuts)
+          .catch(() => {}),
       ];
 
       if (user && token) {
@@ -132,7 +136,7 @@ export default function GameDetailScreen() {
 
   // ─── Bibliothèque ──────────────────────────────────────────────────────────
 
-  const handleSetStatut = useCallback(async (statut: string) => {
+  const handleSetStatut = useCallback(async (statut: Statut) => {
     if (!token || !id) return;
     setSavingStatut(true);
     try {
@@ -140,7 +144,7 @@ export default function GameDetailScreen() {
         await apiFetch(`/bibliotheque/items/${librairie.id}`, {
           method: 'PUT',
           token,
-          body: JSON.stringify({ statut }),
+          body: JSON.stringify({ statut_id: statut.id }),
         });
         setLibrairie((prev) => prev ? { ...prev, statut } : null);
       } else {
@@ -151,7 +155,7 @@ export default function GameDetailScreen() {
             api_reference_id: String(id),
             titre: game?.name ?? '',
             description: game?.description_raw ?? '',
-            statut,
+            statut_id: statut.id,
           }),
         });
         setLibrairie({ id: data.item_id, oeuvre_id: Number(id), statut });
@@ -227,7 +231,6 @@ export default function GameDetailScreen() {
   }
 
   const rawgStars = Math.round(game.rating);
-  const statutLabel = STATUTS.find((s) => s.key === librairie?.statut)?.label;
 
   return (
     <>
@@ -358,7 +361,7 @@ export default function GameDetailScreen() {
               >
                 <BookOpen size={18} color={librairie ? colors.tint : colors.icon} strokeWidth={2} />
                 <Text style={[styles.actionBtnText, { color: librairie ? colors.tint : colors.text }]}>
-                  {librairie ? statutLabel ?? librairie.statut : 'Ajouter à ma collection'}
+                  {librairie ? librairie.statut.libele : 'Ajouter à ma collection'}
                 </Text>
                 <ChevronDown size={14} color={librairie ? colors.tint : colors.icon} strokeWidth={2} />
               </TouchableOpacity>
@@ -419,22 +422,22 @@ export default function GameDetailScreen() {
                 <X size={20} color={colors.icon} strokeWidth={2} />
               </TouchableOpacity>
             </View>
-            {STATUTS.map((s) => {
-              const isSelected = librairie?.statut === s.key;
+            {statuts.map((s) => {
+              const isSelected = librairie?.statut.id === s.id;
               return (
                 <TouchableOpacity
-                  key={s.key}
+                  key={s.id}
                   style={[
                     styles.statutItem,
                     { borderColor: colors.border },
                     isSelected && { backgroundColor: colors.tint + '14', borderColor: colors.tint + '40' },
                   ]}
-                  onPress={() => handleSetStatut(s.key)}
+                  onPress={() => handleSetStatut(s)}
                   disabled={savingStatut}
                   activeOpacity={0.75}
                 >
                   <Text style={[styles.statutText, { color: isSelected ? colors.tint : colors.text }]}>
-                    {s.label}
+                    {s.libele}
                   </Text>
                   {isSelected && (savingStatut
                     ? <ActivityIndicator size="small" color={colors.tint} />
