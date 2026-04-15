@@ -6,7 +6,7 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 // Remplacement des emojis par des icônes lucide
-import { Lock, Library, Bell, CircleUser, ChevronRight, LogIn } from 'lucide-react-native';
+import { Lock, Library, Bell, ShieldUser, ChevronRight, LogIn } from 'lucide-react-native';
 
 export default function ProfileTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -104,13 +104,15 @@ export default function ProfileTabScreen() {
           onPress={() => router.push('/(private)/notifications')}
           colors={colors}
         />
-        <MenuItem
-          icon={<CircleUser size={20} color={colors.tint} />}
-          label="Mon Profil"
-          description="Modifier mes informations"
-          onPress={() => router.push('/(private)/settings')}
-          colors={colors}
-        />
+        {user.role_id >= 2 && (
+          <MenuItem
+            icon={<ShieldUser size={20} color={colors.tint} />}
+            label="Administration"
+            description={user.role_id === 3 ? 'Panel administrateur' : 'Panel modérateur'}
+            onPress={() => router.push('/(private)/admin')}
+            colors={colors}
+          />
+        )}
       </View>
     </ScrollView>
   );

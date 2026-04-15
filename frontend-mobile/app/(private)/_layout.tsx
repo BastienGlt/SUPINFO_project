@@ -32,6 +32,10 @@ export default function PrivateLayout() {
       <Stack.Screen name="library/index" options={{ title: 'Ma Collection' }} />
       <Stack.Screen name="notifications/index" options={{ title: 'Notifications' }} />
       <Stack.Screen name="settings/index" options={{ title: 'Mon Profil' }} />
+      <Stack.Screen name="admin/index" options={{ title: 'Administration' }} />
+      <Stack.Screen name="admin/users" options={{ title: 'Utilisateurs' }} />
+      <Stack.Screen name="admin/critiques" options={{ title: 'Modération — Critiques' }} />
+      <Stack.Screen name="admin/statuts" options={{ title: 'Statuts bibliothèque' }} />
     </Stack>
   );
 }
