@@ -321,3 +321,102 @@ exports.getWarnedUsers = async (req, res) => {
     res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs avertis' });
   }
 };
+
+// ==================== STATUTS ====================
+
+/**
+ * GET /admin/statuts
+ * Liste tous les statuts de la bibliothèque.
+ */
+exports.getStatuts = async (req, res) => {
+  try {
+    const statuts = await adminService.getAllStatuts();
+    res.json(statuts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des statuts' });
+  }
+};
+
+/**
+ * POST /admin/statuts
+ * Crée un nouveau statut.
+ * Body: { code, libele }
+ */
+exports.createStatut = async (req, res) => {
+  try {
+    const { code, libele } = req.body;
+    if (!code || !libele) {
+      return res.status(400).json({ error: 'Les champs code et libele sont obligatoires' });
+    }
+
+    const insertId = await adminService.createStatut(code.trim().toUpperCase(), libele.trim());
+    const statut = await adminService.getStatutById(insertId);
+    res.status(201).json(statut);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la création du statut' });
+  }
+};
+
+/**
+ * PUT /admin/statuts/:id
+ * Met à jour un statut existant.
+ * Body: { code?, libele? }
+ */
+exports.updateStatut = async (req, res) => {
+  try {
+    const statutId = parseInt(req.params.id);
+    if (isNaN(statutId)) {
+      return res.status(400).json({ error: 'ID invalide' });
+    }
+
+    const statut = await adminService.getStatutById(statutId);
+    if (!statut) {
+      return res.status(404).json({ error: 'Statut non trouvé' });
+    }
+
+    const { code, libele } = req.body;
+    const codeNormalized = code !== undefined ? code.trim().toUpperCase() : undefined;
+    const libeleNormalized = libele !== undefined ? libele.trim() : undefined;
+
+    if (codeNormalized === undefined && libeleNormalized === undefined) {
+      return res.status(400).json({ error: 'Aucun champ à mettre à jour' });
+    }
+
+    await adminService.updateStatut(statutId, codeNormalized, libeleNormalized);
+    const updated = await adminService.getStatutById(statutId);
+    res.json(updated);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour du statut' });
+  }
+};
+
+/**
+ * DELETE /admin/statuts/:id
+ * Supprime un statut (refusé si des items l'utilisent).
+ */
+exports.deleteStatut = async (req, res) => {
+  try {
+    const statutId = parseInt(req.params.id);
+    if (isNaN(statutId)) {
+      return res.status(400).json({ error: 'ID invalide' });
+    }
+
+    const statut = await adminService.getStatutById(statutId);
+    if (!statut) {
+      return res.status(404).json({ error: 'Statut non trouvé' });
+    }
+
+    const { deleted, inUse } = await adminService.deleteStatut(statutId);
+    if (inUse) {
+      return res.status(409).json({ error: 'Impossible de supprimer un statut utilisé par des items de bibliothèque' });
+    }
+
+    res.json({ message: `Statut "${statut.code}" supprimé avec succès` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la suppression du statut' });
+  }
+};

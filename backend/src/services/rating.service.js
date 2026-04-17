@@ -180,6 +180,22 @@ exports.deleteRating = async (ratingId, userId) => {
 };
 
 /**
+ * Créer ou mettre à jour une note (upsert)
+ * @param {number} userId
+ * @param {number} oeuvreId
+ * @param {number} note
+ * @param {string} contenu
+ * @returns {Object} La critique
+ */
+exports.upsertRating = async (userId, oeuvreId, note, contenu = null) => {
+  const existing = await exports.getRatingByUserAndOeuvre(userId, oeuvreId);
+  if (existing) {
+    return await exports.updateRating(userId, oeuvreId, note, contenu);
+  }
+  return await exports.createRating(userId, oeuvreId, note, contenu);
+};
+
+/**
  * Aimer/Liker une critique
  * @param {number} userId - L'ID de l'utilisateur
  * @param {number} critiqueId - L'ID de la critique
@@ -211,6 +227,12 @@ exports.unlikeCritique = async (userId, critiqueId) => {
   const sql = 'DELETE FROM likes_critiques WHERE user_id = ? AND critique_id = ?';
   const [result] = await db.query(sql, [userId, critiqueId]);
   return result.affectedRows > 0;
+};
+
+exports.getLikesCount = async (critiqueId) => {
+  const sql = 'SELECT COUNT(*) as like_count FROM likes_critiques WHERE critique_id = ?';
+  const [rows] = await db.query(sql, [critiqueId]);
+  return rows[0].like_count;
 };
 
 /**

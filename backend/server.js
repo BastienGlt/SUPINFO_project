@@ -43,6 +43,11 @@ app.use('/notifications', notificationRoutes);
 app.use('/feed', feedRoutes);
 app.use('/admin', adminRoutes);
 
+// --- Health check ---
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // --- Gestion des erreurs 404 ---
 app.use((req, res) => {
   res.status(404).json({ 

@@ -66,4 +66,18 @@ router.put('/users/:id/warn', checkJwt, checkModerator, adminController.warnUser
 // Retirer un avertissement
 router.put('/users/:id/unwarn', checkJwt, checkModerator, adminController.unwarnUser);
 
+// ==================== STATUTS (admin uniquement) ====================
+
+// Lister tous les statuts (public)
+router.get('/statuts', adminController.getStatuts);
+
+// Créer un statut
+router.post('/statuts', checkJwt, checkAdmin, adminController.createStatut);
+
+// Modifier un statut
+router.put('/statuts/:id', checkJwt, checkAdmin, adminController.updateStatut);
+
+// Supprimer un statut
+router.delete('/statuts/:id', checkJwt, checkAdmin, adminController.deleteStatut);
+
 module.exports = router;

@@ -210,3 +210,75 @@ exports.getWarnedUsers = async () => {
   );
   return rows;
 };
+
+// ==================== STATUTS ====================
+
+/**
+ * Récupère tous les statuts — admin uniquement.
+ * @returns {Array}
+ */
+exports.getAllStatuts = async () => {
+  const [rows] = await db.query('SELECT * FROM statuts ORDER BY id ASC');
+  return rows;
+};
+
+/**
+ * Récupère un statut par son ID — admin uniquement.
+ * @param {number} statutId
+ * @returns {Object|null}
+ */
+exports.getStatutById = async (statutId) => {
+  const [rows] = await db.query('SELECT * FROM statuts WHERE id = ?', [statutId]);
+  return rows.length > 0 ? rows[0] : null;
+};
+
+/**
+ * Crée un nouveau statut — admin uniquement.
+ * @param {string} code
+ * @param {string} libele
+ * @returns {number} ID du statut créé
+ */
+exports.createStatut = async (code, libele) => {
+  const [result] = await db.query(
+    'INSERT INTO statuts (code, libele) VALUES (?, ?)',
+    [code, libele]
+  );
+  return result.insertId;
+};
+
+/**
+ * Met à jour un statut — admin uniquement.
+ * @param {number} statutId
+ * @param {string|undefined} code
+ * @param {string|undefined} libele
+ * @returns {boolean}
+ */
+exports.updateStatut = async (statutId, code, libele) => {
+  const fields = [];
+  const values = [];
+  if (code !== undefined) { fields.push('code = ?'); values.push(code); }
+  if (libele !== undefined) { fields.push('libele = ?'); values.push(libele); }
+  if (fields.length === 0) return false;
+  values.push(statutId);
+  const [result] = await db.query(
+    `UPDATE statuts SET ${fields.join(', ')} WHERE id = ?`,
+    values
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Supprime un statut — admin uniquement.
+ * Refuse la suppression si des items de bibliothèque utilisent ce statut.
+ * @param {number} statutId
+ * @returns {{ deleted: boolean, inUse: boolean }}
+ */
+exports.deleteStatut = async (statutId) => {
+  const [usages] = await db.query(
+    'SELECT COUNT(*) AS cnt FROM bibliotheque_items WHERE statut_id = ?',
+    [statutId]
+  );
+  if (usages[0].cnt > 0) return { deleted: false, inUse: true };
+  const [result] = await db.query('DELETE FROM statuts WHERE id = ?', [statutId]);
+  return { deleted: result.affectedRows > 0, inUse: false };
+};
