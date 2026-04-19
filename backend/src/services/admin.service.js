@@ -1,0 +1,212 @@
+const db = require('../../config/db');
+
+/**
+ * Service : Actions d'administration et de modération
+ *
+ * Fonctionnalités admin (role_id = 3) :
+ *  - Bannissement / débannissement d'un utilisateur
+ *  - Mise en avant / retrait d'une critique
+ *  - Listes des critiques en avant / utilisateurs bannis
+ *
+ * Fonctionnalités modérateur (role_id >= 2) :
+ *  - Suppression d'une critique (n'importe laquelle)
+ *  - Masquage / affichage d'une critique
+ *  - Suppression d'un commentaire (n'importe lequel)
+ *  - Avertissement / retrait d'avertissement d'un utilisateur
+ *  - Listes des critiques masquées / utilisateurs avertis
+ */
+
+// ==================== CRITIQUES ====================
+
+/**
+ * Récupère une critique par son ID.
+ * @param {number} critiqueId
+ * @returns {Object|null}
+ */
+exports.getCritiqueById = async (critiqueId) => {
+  const [rows] = await db.query('SELECT * FROM critiques WHERE id = ?', [critiqueId]);
+  return rows.length > 0 ? rows[0] : null;
+};
+
+/**
+ * Supprime une critique sans vérification d'ownership (modérateur+).
+ * @param {number} critiqueId
+ * @returns {boolean}
+ */
+exports.deleteCritique = async (critiqueId) => {
+  const [result] = await db.query('DELETE FROM critiques WHERE id = ?', [critiqueId]);
+  return result.affectedRows > 0;
+};
+
+/**
+ * Masque une critique (hidden = true) — modérateur+.
+ * La critique reste en base mais n'est plus visible publiquement.
+ * @param {number} critiqueId
+ * @returns {boolean}
+ */
+exports.hideCritique = async (critiqueId) => {
+  const [result] = await db.query(
+    'UPDATE critiques SET hidden = TRUE WHERE id = ?',
+    [critiqueId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Rend une critique de nouveau visible (hidden = false) — modérateur+.
+ * @param {number} critiqueId
+ * @returns {boolean}
+ */
+exports.unhideCritique = async (critiqueId) => {
+  const [result] = await db.query(
+    'UPDATE critiques SET hidden = FALSE WHERE id = ?',
+    [critiqueId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Récupère toutes les critiques masquées — modérateur+.
+ * @returns {Array}
+ */
+exports.getHiddenCritiques = async () => {
+  const [rows] = await db.query(
+    'SELECT * FROM v_critiques_complete WHERE hidden = TRUE ORDER BY updated_at DESC'
+  );
+  return rows;
+};
+
+/**
+ * Met une critique en avant (featured = true) — admin uniquement.
+ * @param {number} critiqueId
+ * @returns {boolean}
+ */
+exports.featureCritique = async (critiqueId) => {
+  const [result] = await db.query(
+    'UPDATE critiques SET featured = TRUE WHERE id = ?',
+    [critiqueId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Retire une critique de la mise en avant (featured = false) — admin uniquement.
+ * @param {number} critiqueId
+ * @returns {boolean}
+ */
+exports.unfeatureCritique = async (critiqueId) => {
+  const [result] = await db.query(
+    'UPDATE critiques SET featured = FALSE WHERE id = ?',
+    [critiqueId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Récupère toutes les critiques mises en avant — admin uniquement.
+ * @returns {Array}
+ */
+exports.getFeaturedCritiques = async () => {
+  const [rows] = await db.query(
+    'SELECT * FROM v_critiques_complete WHERE featured = TRUE ORDER BY created_at DESC'
+  );
+  return rows;
+};
+
+// ==================== COMMENTAIRES ====================
+
+/**
+ * Récupère un commentaire par son ID.
+ * @param {number} commentaireId
+ * @returns {Object|null}
+ */
+exports.getCommentaireById = async (commentaireId) => {
+  const [rows] = await db.query('SELECT * FROM commentaires WHERE id = ?', [commentaireId]);
+  return rows.length > 0 ? rows[0] : null;
+};
+
+/**
+ * Supprime n'importe quel commentaire sans vérification d'ownership — modérateur+.
+ * @param {number} commentaireId
+ * @returns {boolean}
+ */
+exports.deleteCommentaire = async (commentaireId) => {
+  const [result] = await db.query('DELETE FROM commentaires WHERE id = ?', [commentaireId]);
+  return result.affectedRows > 0;
+};
+
+// ==================== UTILISATEURS ====================
+
+/**
+ * Bannit un utilisateur (status = 'banned') — admin uniquement.
+ * @param {number} userId
+ * @returns {boolean}
+ */
+exports.banUser = async (userId) => {
+  const [result] = await db.query(
+    "UPDATE users SET status = 'banned', updated_at = NOW() WHERE id = ?",
+    [userId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Débannit un utilisateur (status = 'active') — admin uniquement.
+ * @param {number} userId
+ * @returns {boolean}
+ */
+exports.unbanUser = async (userId) => {
+  const [result] = await db.query(
+    "UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?",
+    [userId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Émet un avertissement à un utilisateur (status = 'warned') — modérateur+.
+ * @param {number} userId
+ * @returns {boolean}
+ */
+exports.warnUser = async (userId) => {
+  const [result] = await db.query(
+    "UPDATE users SET status = 'warned', updated_at = NOW() WHERE id = ?",
+    [userId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Retire l'avertissement d'un utilisateur (status = 'active') — modérateur+.
+ * @param {number} userId
+ * @returns {boolean}
+ */
+exports.unwarnUser = async (userId) => {
+  const [result] = await db.query(
+    "UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?",
+    [userId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Récupère tous les utilisateurs bannis — admin uniquement.
+ * @returns {Array}
+ */
+exports.getBannedUsers = async () => {
+  const [rows] = await db.query(
+    "SELECT id, pseudo, email, prenom, nom, photo, status, created_at, updated_at FROM users WHERE status = 'banned' ORDER BY updated_at DESC"
+  );
+  return rows;
+};
+
+/**
+ * Récupère tous les utilisateurs avertis — modérateur+.
+ * @returns {Array}
+ */
+exports.getWarnedUsers = async () => {
+  const [rows] = await db.query(
+    "SELECT id, pseudo, email, prenom, nom, photo, status, created_at, updated_at FROM users WHERE status = 'warned' ORDER BY updated_at DESC"
+  );
+  return rows;
+};
