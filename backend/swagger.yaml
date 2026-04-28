@@ -2843,6 +2843,41 @@ paths:
 
   # ==================== MODÉRATION ====================
 
+  /admin/critiques:
+    get:
+      tags: [Modération]
+      summary: Lister toutes les critiques
+      description: Retourne toutes les critiques (visibles et masquées). Accessible aux modérateurs et administrateurs.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste de toutes les critiques
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /admin/critiques/hidden:
     get:
       tags: [Modération]
@@ -3019,6 +3054,41 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Commentaire non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users:
+    get:
+      tags: [Modération]
+      summary: Lister tous les utilisateurs
+      description: Retourne tous les utilisateurs avec leur rôle et statut. Accessible aux modérateurs et administrateurs.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste de tous les utilisateurs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
           content:
             application/json:
               schema:

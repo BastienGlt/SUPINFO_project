@@ -19,6 +19,17 @@ const db = require('../../config/db');
 // ==================== CRITIQUES ====================
 
 /**
+ * Récupère toutes les critiques — modérateur+.
+ * @returns {Array}
+ */
+exports.getAllCritiques = async () => {
+  const [rows] = await db.query(
+    'SELECT * FROM v_critiques_complete ORDER BY created_at DESC'
+  );
+  return rows;
+};
+
+/**
  * Récupère une critique par son ID.
  * @param {number} critiqueId
  * @returns {Object|null}
@@ -187,6 +198,17 @@ exports.unwarnUser = async (userId) => {
     [userId]
   );
   return result.affectedRows > 0;
+};
+
+/**
+ * Récupère tous les utilisateurs — modérateur+.
+ * @returns {Array}
+ */
+exports.getAllUsers = async () => {
+  const [rows] = await db.query(
+    'SELECT id, pseudo, email, prenom, nom, photo, role_id, status, created_at, updated_at FROM users ORDER BY created_at DESC'
+  );
+  return rows;
 };
 
 /**

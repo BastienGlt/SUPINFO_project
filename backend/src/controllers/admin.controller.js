@@ -141,6 +141,20 @@ exports.unfeatureCritique = async (req, res) => {
 };
 
 /**
+ * GET /admin/critiques
+ * Liste toutes les critiques.
+ */
+exports.getAllCritiques = async (req, res) => {
+  try {
+    const critiques = await adminService.getAllCritiques();
+    res.json(critiques);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des critiques' });
+  }
+};
+
+/**
  * GET /admin/critiques/featured
  * Liste toutes les critiques mises en avant.
  */
@@ -151,6 +165,20 @@ exports.getFeaturedCritiques = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erreur lors de la récupération des critiques en avant' });
+  }
+};
+
+/**
+ * GET /admin/users
+ * Liste tous les utilisateurs.
+ */
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await adminService.getAllUsers();
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs' });
   }
 };
 
