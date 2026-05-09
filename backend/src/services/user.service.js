@@ -26,6 +26,19 @@ exports.getUserById = async (id) => {
 };
 
 /**
+ * Recherche des utilisateurs par pseudo (recherche partielle)
+ * @param {string} pseudo - Le pseudo à rechercher
+ * @returns {Array} Liste des utilisateurs correspondants
+ */
+exports.searchUsersByPseudo = async (pseudo) => {
+  const [rows] = await db.query(
+    'SELECT id, pseudo, prenom, nom, photo, bio FROM users WHERE pseudo LIKE ? AND status = ? LIMIT 20',
+    [`%${pseudo}%`, 'active']
+  );
+  return rows;
+};
+
+/**
  * Crée un nouvel utilisateur dans la base de données
  * @param {Object} userData - Les données de l'utilisateur à créer
  * @param {string} userData.auth0Id - L'identifiant Auth0

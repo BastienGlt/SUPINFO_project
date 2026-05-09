@@ -6,6 +6,26 @@ const userService = require('../services/user.service');
  */
 
 /**
+ * GET /users?search=<pseudo>
+ * Recherche des utilisateurs par pseudo
+ */
+exports.searchUsers = async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    if (!search || search.trim().length === 0) {
+      return res.status(400).json({ error: "Le paramètre 'search' est requis" });
+    }
+
+    const users = await userService.searchUsersByPseudo(search.trim());
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+/**
  * 1. GET /users/me
  * Vérifie si l'utilisateur existe.
  * - Si OUI : Renvoie les données.
