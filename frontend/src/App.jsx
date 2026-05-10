@@ -1,8 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
-import Navbar from './components/Navbar';
+import Header from './components/Header';
+import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './routes/HomePage';
 import LoginPage from './routes/LoginPage';
@@ -11,24 +12,16 @@ import BibliothequePage from './routes/BibliothequePage';
 import MessagesPage from './routes/MessagesPage';
 import CompleteProfilePage from './routes/CompleteProfilePage';
 
-/**
- * Gère les redirections après le retour d'Auth0 :
- * - Authentifié + nouveau → /complete-profile
- * - Authentifié + profil OK + sur /login → /profile
- * - Sinon → ne fait rien
- */
 function AuthRedirect({ children }) {
   const { isAuthenticated, isNewUser, user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) return <div className="page-container">Chargement...</div>;
 
-  // Nouvel utilisateur authentifié → compléter le profil
   if (isAuthenticated && isNewUser && location.pathname !== '/complete-profile') {
     return <Navigate to="/complete-profile" replace />;
   }
 
-  // Utilisateur connecté avec profil qui est encore sur /login → rediriger
   if (isAuthenticated && user && location.pathname === '/login') {
     return <Navigate to="/profile" replace />;
   }
@@ -36,11 +29,14 @@ function AuthRedirect({ children }) {
   return children;
 }
 
-export default function App() {
+function AppLayout() {
+  const { isAuthenticated } = useAuth();
+
   return (
-    <AuthProvider>
-      <Router>
-        <Navbar />
+    <>
+      <Header />
+      <div className="app-layout">
+        {isAuthenticated && <Sidebar />}
         <div className="main-content">
           <AuthRedirect>
             <Routes>
@@ -53,6 +49,16 @@ export default function App() {
             </Routes>
           </AuthRedirect>
         </div>
+      </div>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppLayout />
       </Router>
     </AuthProvider>
   );
