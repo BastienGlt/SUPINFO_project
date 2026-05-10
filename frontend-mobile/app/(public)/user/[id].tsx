@@ -2,7 +2,7 @@ import {
   View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { authService, type AppUser } from '@/services/authService';
@@ -14,10 +14,17 @@ const ROLE_LABELS: Record<number, string> = { 1: 'Membre', 2: 'Modérateur', 3: 
 
 interface Rating {
   id: number;
+  user_id?: number;
   oeuvre_id: number;
   note: number;
   contenu?: string;
   oeuvre_titre?: string;
+  created_at?: string;
+}
+
+interface RatingsResponse {
+  critiques: Rating[];
+  pagination: { limit: number; offset: number; total: number };
 }
 
 export default function PublicUserProfileScreen() {
@@ -43,33 +50,37 @@ export default function PublicUserProfileScreen() {
     const userId = parseInt(id ?? '0', 10);
     if (!userId) { setNotFound(true); setLoading(false); return; }
 
-    // Chargement parallèle du profil, des stats et des critiques
-    const requests: Promise<unknown>[] = [
-      authService.getUserById(userId),
-      apiFetch<{ followers: number; following: number }>(`/users/${userId}/follow-stats`),
-      apiFetch<Rating[]>(`/users/${userId}/ratings`),
-    ];
-
-    // GET /users/{id}/is-following — vérifier si l'utilisateur connecté suit déjà ce profil
-    if (token) {
-      requests.push(
-        apiFetch<Record<string, boolean>>(`/users/${userId}/is-following`, { token })
-      );
-    }
-
-    Promise.all(requests)
-      .then((results) => {
-        setProfileUser(results[0] as AppUser);
-        setFollowStats(results[1] as { followers: number; following: number });
-        setRatings(results[2] as Rating[]);
-        if (token && results[3]) {
-          const followData = results[3] as Record<string, boolean>;
-          setIsFollowing(followData.isFollowing ?? followData.is_following ?? false);
-        }
+    // Charge le profil d'abord — seul cet échec déclenche "not found"
+    authService.getUserById(userId)
+      .then((u) => {
+        setProfileUser(u);
+        Promise.allSettled([
+          apiFetch<{ followers: number; following: number }>(`/users/${userId}/follow-stats`),
+          apiFetch<RatingsResponse>(`/users/${userId}/ratings`),
+        ]).then(([statsResult, ratingsResult]) => {
+          if (statsResult.status === 'fulfilled') {
+            setFollowStats(statsResult.value);
+          }
+          if (ratingsResult.status === 'fulfilled') {
+            const data = ratingsResult.value;
+            setRatings(Array.isArray(data.critiques) ? data.critiques : []);
+          }
+        });
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id, token]);
+
+  // Rafraîchit le statut follow à chaque fois que l'écran prend le focus
+  useFocusEffect(
+    useCallback(() => {
+      const userId = parseInt(id ?? '0', 10);
+      if (!token || !userId) return;
+      apiFetch<{ isFollowing: boolean }>(`/users/${userId}/is-following`, { token })
+        .then((data) => setIsFollowing(data.isFollowing ?? false))
+        .catch(() => {});
+    }, [id, token])
+  );
 
   // POST /users/{id}/follow — suivre
   // DELETE /users/{id}/follow — se désabonner
@@ -79,14 +90,16 @@ export default function PublicUserProfileScreen() {
     const method = isFollowing ? 'DELETE' : 'POST';
     try {
       await apiFetch(`/users/${profileUser.id}/follow`, { method, token });
-      // Mise à jour optimiste des stats et de l'état
       setIsFollowing((prev) => !prev);
       setFollowStats((prev) => ({
         ...prev,
         followers: prev.followers + (isFollowing ? -1 : 1),
       }));
-    } catch {
-      // Pas de rollback — l'utilisateur peut réessayer
+    } catch (err) {
+      // 409 = déjà abonné → corriger l'état local
+      if ((err as { status?: number })?.status === 409) {
+        setIsFollowing(true);
+      }
     } finally {
       setFollowLoading(false);
     }
@@ -190,7 +203,7 @@ export default function PublicUserProfileScreen() {
         ) : (
           ratings.map((r) => (
             <TouchableOpacity
-              key={r.id}
+              key={`${r.id}-${r.oeuvre_id}`}
               style={[styles.critiqueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => router.push({
                 pathname: '/(public)/critique/[id]',

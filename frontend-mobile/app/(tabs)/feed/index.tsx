@@ -2,13 +2,22 @@ import {
   FlatList, View, Text, StyleSheet, TouchableOpacity, Image,
   ActivityIndicator, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { Heart, MessageCircle, Rss, SendHorizonal } from 'lucide-react-native';
+import { Heart, MessageCircle, Rss, SendHorizonal, Search, X } from 'lucide-react-native';
+
+interface SearchUser {
+  id: number;
+  pseudo: string;
+  prenom: string;
+  nom: string;
+  photo?: string;
+  bio?: string;
+}
 
 interface FeedItem {
   id: number;
@@ -40,6 +49,41 @@ export default function FeedScreen() {
   const [openCommentId, setOpenCommentId] = useState<number | null>(null);
   const [commentTexts, setCommentTexts] = useState<Record<number, string>>({});
   const [sendingIds, setSendingIds] = useState<Set<number>>(new Set());
+
+  // Recherche utilisateur
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+      if (!text.trim()) {
+        setSearchResults([]);
+        setSearchLoading(false);
+        return;
+      }
+      setSearchLoading(true);
+      searchDebounce.current = setTimeout(() => {
+        apiFetch<SearchUser[]>(`/users?search=${encodeURIComponent(text.trim())}`, token ? { token } : undefined)
+          .then((data) => setSearchResults(Array.isArray(data) ? data : []))
+          .catch(() => setSearchResults([]))
+          .finally(() => setSearchLoading(false));
+      }, 400);
+    },
+    [token]
+  );
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchLoading(false);
+    setSearchFocused(false);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+  }, []);
 
   // Charge le feed au montage et à chaque retour sur l'écran (pour actualiser les compteurs)
   useFocusEffect(
@@ -174,12 +218,74 @@ export default function FeedScreen() {
         style={{ backgroundColor: colors.background }}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
-          <View style={styles.hero}>
-            <View style={styles.heroRow}>
-              <Rss size={22} color={colors.tint} strokeWidth={2} />
-              <Text style={[styles.heroTitle, { color: colors.text }]}>Dernières critiques</Text>
+          <View>
+            {/* Barre de recherche utilisateur */}
+            <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: searchFocused ? colors.tint : colors.border }]}>
+              <Search size={16} color={searchFocused ? colors.tint : colors.icon} strokeWidth={2} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                value={searchQuery}
+                onChangeText={handleSearchChange}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => { if (!searchQuery) setSearchFocused(false); }}
+                placeholder="Rechercher un utilisateur…"
+                placeholderTextColor={colors.tabIconDefault}
+                returnKeyType="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} activeOpacity={0.7}>
+                  <X size={16} color={colors.icon} strokeWidth={2} />
+                </TouchableOpacity>
+              )}
             </View>
-            <Text style={[styles.heroSub, { color: colors.icon }]}>Les avis récents de la communauté</Text>
+
+            {/* Résultats de recherche */}
+            {(searchFocused || searchQuery.length > 0) && (
+              <View style={[styles.searchResults, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {searchLoading ? (
+                  <ActivityIndicator size="small" color={colors.tint} style={{ padding: 16 }} />
+                ) : searchQuery.trim().length > 0 && searchResults.length === 0 ? (
+                  <Text style={[styles.searchEmpty, { color: colors.icon }]}>Aucun utilisateur trouvé</Text>
+                ) : (
+                  searchResults.map((u) => (
+                    <TouchableOpacity
+                      key={u.id}
+                      style={[styles.searchResultRow, { borderBottomColor: colors.border }]}
+                      onPress={() => {
+                        clearSearch();
+                        router.push({ pathname: '/(public)/user/[id]', params: { id: u.id } });
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      {u.photo ? (
+                        <Image source={{ uri: u.photo }} style={styles.searchAvatar} />
+                      ) : (
+                        <View style={[styles.searchAvatarFallback, { backgroundColor: colors.tint + '25' }]}>
+                          <Text style={{ color: colors.tint, fontWeight: '700', fontSize: 14 }}>
+                            {u.pseudo?.[0]?.toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.searchPseudo, { color: colors.text }]}>@{u.pseudo}</Text>
+                        <Text style={[styles.searchName, { color: colors.icon }]}>{u.prenom} {u.nom}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            )}
+
+            {/* Titre du feed */}
+            <View style={styles.hero}>
+              <View style={styles.heroRow}>
+                <Rss size={22} color={colors.tint} strokeWidth={2} />
+                <Text style={[styles.heroTitle, { color: colors.text }]}>Dernières critiques</Text>
+              </View>
+              <Text style={[styles.heroSub, { color: colors.icon }]}>Les avis récents de la communauté</Text>
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -311,10 +417,41 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   list: { padding: 16, gap: 12, paddingBottom: 40 },
-  hero: { marginBottom: 12, gap: 4 },
+  hero: { marginBottom: 12, gap: 4, marginTop: 8 },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroTitle: { fontSize: 24, fontWeight: '800' },
   heroSub: { fontSize: 13 },
+  // Recherche
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
+  searchResults: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  searchAvatar: { width: 38, height: 38, borderRadius: 19 },
+  searchAvatarFallback: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
+  searchPseudo: { fontSize: 14, fontWeight: '700' },
+  searchName: { fontSize: 12, marginTop: 1 },
+  searchEmpty: { fontSize: 13, textAlign: 'center', padding: 16 },
   card: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, padding: 16, paddingBottom: 0 },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },

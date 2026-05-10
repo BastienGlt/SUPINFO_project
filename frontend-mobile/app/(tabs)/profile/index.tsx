@@ -11,7 +11,7 @@ import { Lock, Library, Bell, ShieldUser, ChevronRight, LogIn } from 'lucide-rea
 export default function ProfileTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { user, loading } = useAuth();
+  const { user, loading, token } = useAuth();
 
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   const [critiquesCount, setCritiquesCount] = useState(0);
@@ -23,8 +23,9 @@ export default function ProfileTabScreen() {
       .then(setFollowStats)
       .catch(() => {});
     // GET /users/{id}/ratings — nombre de critiques rédigées
-    apiFetch<unknown[]>(`/users/${user.id}/ratings`)
-      .then((data) => setCritiquesCount(data.length))
+    // Le backend retourne { critiques: [...], pagination: {...} }
+    apiFetch<{ critiques: unknown[]; pagination: unknown }>(`/users/${user.id}/ratings`, { token })
+      .then((data) => setCritiquesCount(Array.isArray(data.critiques) ? data.critiques.length : 0))
       .catch(() => {});
   }, [user?.id]);
 
@@ -81,11 +82,11 @@ export default function ProfileTabScreen() {
 
       {/* Ligne de stats */}
       <View style={[styles.statsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <StatItem label="Abonnés" value={followStats.followers} colors={colors} />
+        <StatItem label="Abonnés" value={followStats.followers} colors={colors} onPress={() => router.push('/(tabs)/profile/followers')} />
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <StatItem label="Abonnements" value={followStats.following} colors={colors} />
+        <StatItem label="Abonnements" value={followStats.following} colors={colors} onPress={() => router.push('/(tabs)/profile/following')} />
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <StatItem label="Critiques" value={critiquesCount} colors={colors} />
+        <StatItem label="Critiques" value={critiquesCount} colors={colors} onPress={() => router.push('/(tabs)/profile/critiques')} />
       </View>
 
       {/* Menu navigation */}
@@ -118,12 +119,12 @@ export default function ProfileTabScreen() {
   );
 }
 
-function StatItem({ label, value, colors }: { label: string; value: number; colors: typeof Colors.light }) {
+function StatItem({ label, value, colors, onPress }: { label: string; value: number; colors: typeof Colors.light; onPress?: () => void }) {
   return (
-    <View style={styles.statItem}>
+    <TouchableOpacity style={styles.statItem} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.icon }]}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 

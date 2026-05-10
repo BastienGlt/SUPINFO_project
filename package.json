@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "mobile": "npm run lan --prefix frontend-mobile",
+    "tunnel": "npm run tunnel --prefix frontend-mobile",
     "install": "npm install --prefix frontend-mobile"
   },
   "devDependencies": {

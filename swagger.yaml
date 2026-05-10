@@ -477,6 +477,56 @@ paths:
 
   # ==================== USERS ====================
 
+  /users:
+    get:
+      tags: [Users]
+      summary: Rechercher des utilisateurs par pseudo
+      description: Retourne la liste des utilisateurs dont le pseudo correspond à la recherche (correspondance partielle). Limité à 20 résultats.
+      parameters:
+        - name: search
+          in: query
+          required: true
+          description: Pseudo ou partie du pseudo à rechercher
+          schema:
+            type: string
+            example: bastien
+      responses:
+        '200':
+          description: Liste des utilisateurs correspondants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    pseudo:
+                      type: string
+                    prenom:
+                      type: string
+                    nom:
+                      type: string
+                    photo:
+                      type: string
+                      nullable: true
+                    bio:
+                      type: string
+                      nullable: true
+        '400':
+          description: Paramètre search manquant ou vide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /users/me:
     get:
       tags: [Users]
