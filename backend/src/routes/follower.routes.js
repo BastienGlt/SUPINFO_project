@@ -24,6 +24,6 @@ router.get('/:id/following', followerController.getFollowing);
 router.get('/:id/follow-stats', followerController.getFollowStats);
 
 // Vérifier si l'utilisateur connecté suit un autre utilisateur
-router.get('/:id/is-following', followerController.checkIfFollowing);
+router.get('/:id/is-following', checkJwt, followerController.checkIfFollowing);
 
 module.exports = router;
