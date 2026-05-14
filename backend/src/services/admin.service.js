@@ -82,7 +82,7 @@ exports.unhideCritique = async (critiqueId) => {
  */
 exports.getHiddenCritiques = async () => {
   const [rows] = await db.query(
-    'SELECT * FROM v_critiques_complete WHERE hidden = TRUE ORDER BY updated_at DESC'
+    'SELECT v.* FROM v_critiques_complete v JOIN critiques c ON c.id = v.id WHERE c.hidden = TRUE ORDER BY v.updated_at DESC'
   );
   return rows;
 };
@@ -119,7 +119,7 @@ exports.unfeatureCritique = async (critiqueId) => {
  */
 exports.getFeaturedCritiques = async () => {
   const [rows] = await db.query(
-    'SELECT * FROM v_critiques_complete WHERE featured = TRUE ORDER BY created_at DESC'
+    'SELECT v.* FROM v_critiques_complete v JOIN critiques c ON c.id = v.id WHERE c.featured = TRUE ORDER BY v.created_at DESC'
   );
   return rows;
 };
