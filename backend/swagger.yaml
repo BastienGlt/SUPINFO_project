@@ -508,7 +508,7 @@ paths:
     get:
       tags: [Users]
       summary: Rechercher des utilisateurs par pseudo
-      description: Retourne la liste des utilisateurs dont le pseudo correspond à la recherche (correspondance partielle). Limité à 20 résultats.
+      description: Retourne la liste des utilisateurs dont le pseudo correspond à la recherche (correspondance partielle), tous statuts confondus. Limité à 20 résultats.
       parameters:
         - name: search
           in: query
@@ -969,7 +969,13 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les abonnés d'un utilisateur
-      description: Retourne 403 si le compte est privé (`public=0`).
+      description: |
+        Accessible sans authentification pour les profils publics.
+        Le propriétaire (token JWT requis) peut accéder à ses abonnés même si son compte est privé.
+        Retourne 403 pour tout autre visiteur sur un compte privé.
+      security:
+        - BearerAuth: []
+        - {}
       parameters:
         - name: id
           in: path
@@ -992,7 +998,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Compte privé
+          description: Compte privé (non accessible au visiteur)
           content:
             application/json:
               schema:
@@ -1021,7 +1027,13 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les abonnements d'un utilisateur
-      description: Retourne 403 si le compte est privé (`public=0`).
+      description: |
+        Accessible sans authentification pour les profils publics.
+        Le propriétaire (token JWT requis) peut accéder à ses abonnements même si son compte est privé.
+        Retourne 403 pour tout autre visiteur sur un compte privé.
+      security:
+        - BearerAuth: []
+        - {}
       parameters:
         - name: id
           in: path
@@ -1044,7 +1056,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Compte privé
+          description: Compte privé (non accessible au visiteur)
           content:
             application/json:
               schema:
@@ -1073,7 +1085,13 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les statistiques de suivi d'un utilisateur
-      description: Retourne 403 si le compte est privé (`public=0`).
+      description: |
+        Accessible sans authentification pour les profils publics.
+        Le propriétaire (token JWT requis) peut accéder à ses statistiques même si son compte est privé.
+        Retourne 403 pour tout autre visiteur sur un compte privé.
+      security:
+        - BearerAuth: []
+        - {}
       parameters:
         - name: id
           in: path
@@ -1094,7 +1112,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Compte privé
+          description: Compte privé (non accessible au visiteur)
           content:
             application/json:
               schema:
