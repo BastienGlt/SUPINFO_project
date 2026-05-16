@@ -32,7 +32,7 @@ exports.getUserById = async (id) => {
  */
 exports.searchUsersByPseudo = async (pseudo) => {
   const [rows] = await db.query(
-    'SELECT id, pseudo, prenom, nom, photo, bio FROM users WHERE pseudo LIKE ? AND status = ? LIMIT 20',
+    'SELECT id, pseudo, prenom, nom, photo, bio, `public` FROM users WHERE pseudo LIKE ? AND status = ? LIMIT 20',
     [`%${pseudo}%`, 'active']
   );
   return rows;
@@ -94,11 +94,11 @@ exports.createUser = async (userData) => {
  */
 exports.updateUser = async (userId, updateData) => {
   const { prenom, nom, pseudo, bio, photo } = updateData;
-  
-  // Construire dynamiquement la requête SQL en fonction des champs fournis
+  const isPublic = updateData.public;
+
   const fields = [];
   const values = [];
-  
+
   if (prenom !== undefined) {
     fields.push('prenom = ?');
     values.push(prenom);
@@ -118,6 +118,10 @@ exports.updateUser = async (userId, updateData) => {
   if (photo !== undefined) {
     fields.push('photo = ?');
     values.push(photo);
+  }
+  if (isPublic !== undefined) {
+    fields.push('`public` = ?');
+    values.push(isPublic ? 1 : 0);
   }
   
   if (fields.length === 0) {

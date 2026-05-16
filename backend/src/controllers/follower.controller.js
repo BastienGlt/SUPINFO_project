@@ -88,18 +88,19 @@ exports.getFollowers = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
 
-    // Validation de l'ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Vérifier que l'utilisateur existe
     const user = await userService.getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Appel du Service
+    if (user.public === 0) {
+      return res.status(403).json({ error: "Ce compte est privé", is_private: true });
+    }
+
     const followers = await followerService.getFollowers(userId);
     res.json(followers);
 
@@ -117,18 +118,19 @@ exports.getFollowing = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
 
-    // Validation de l'ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Vérifier que l'utilisateur existe
     const user = await userService.getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Appel du Service
+    if (user.public === 0) {
+      return res.status(403).json({ error: "Ce compte est privé", is_private: true });
+    }
+
     const following = await followerService.getFollowing(userId);
     res.json(following);
 
@@ -146,18 +148,19 @@ exports.getFollowStats = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
 
-    // Validation de l'ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Vérifier que l'utilisateur existe
     const user = await userService.getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Appel du Service
+    if (user.public === 0) {
+      return res.status(403).json({ error: "Ce compte est privé", is_private: true });
+    }
+
     const stats = await followerService.getFollowStats(userId);
     res.json(stats);
 

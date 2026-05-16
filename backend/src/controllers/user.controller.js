@@ -69,18 +69,28 @@ exports.getUserById = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
 
-    // Validation de l'ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Appel du Service
     const user = await userService.getUserById(userId);
 
-    if (user) {
-      return res.json(user);
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
-    return res.status(404).json({ error: "Utilisateur non trouvé" });
+
+    if (user.public === 0) {
+      return res.json({
+        id: user.id,
+        pseudo: user.pseudo,
+        prenom: user.prenom,
+        nom: user.nom,
+        photo: user.photo,
+        is_private: true
+      });
+    }
+
+    return res.json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erreur serveur" });
@@ -164,7 +174,7 @@ exports.updateUser = async (req, res) => {
     }
 
     // Données à mettre à jour
-    const { prenom, nom, pseudo, bio, photo } = req.body;
+    const { prenom, nom, pseudo, bio, photo, public: isPublic } = req.body;
 
     // Appel du Service
     const updatedUser = await userService.updateUser(targetUserId, {
@@ -172,7 +182,8 @@ exports.updateUser = async (req, res) => {
       nom,
       pseudo,
       bio,
-      photo
+      photo,
+      public: isPublic
     });
 
     res.json(updatedUser);

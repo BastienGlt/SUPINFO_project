@@ -40,3 +40,4 @@ coverage/
 tmpclaude*
 nul
 rawg.yaml
+database.sql
