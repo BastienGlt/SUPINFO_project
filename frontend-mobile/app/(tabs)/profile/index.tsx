@@ -1,12 +1,12 @@
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { router } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-// Remplacement des emojis par des icônes lucide
-import { Lock, Library, Bell, ShieldUser, ChevronRight, LogIn } from 'lucide-react-native';
+import { Lock, Library, Bell, ShieldUser, ChevronRight, LogIn, UserCheck } from 'lucide-react-native';
 
 export default function ProfileTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -15,19 +15,26 @@ export default function ProfileTabScreen() {
 
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   const [critiquesCount, setCritiquesCount] = useState(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
-    // GET /users/{id}/follow-stats — abonnés / abonnements
     apiFetch<{ followers: number; following: number }>(`/users/${user.id}/follow-stats`)
       .then(setFollowStats)
       .catch(() => {});
-    // GET /users/{id}/ratings — nombre de critiques rédigées
-    // Le backend retourne { critiques: [...], pagination: {...} }
     apiFetch<{ critiques: unknown[]; pagination: unknown }>(`/users/${user.id}/ratings`, { token })
       .then((data) => setCritiquesCount(Array.isArray(data.critiques) ? data.critiques.length : 0))
       .catch(() => {});
   }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      apiFetch<{ id: number }[]>('/follow-requests', { token })
+        .then((data) => setPendingRequestsCount(Array.isArray(data) ? data.length : 0))
+        .catch(() => {});
+    }, [token])
+  );
 
   if (loading) return null;
 
@@ -105,6 +112,14 @@ export default function ProfileTabScreen() {
           onPress={() => router.push('/(private)/notifications')}
           colors={colors}
         />
+        <MenuItem
+          icon={<UserCheck size={20} color={colors.tint} />}
+          label="Demandes d'abonnement"
+          description={pendingRequestsCount > 0 ? `${pendingRequestsCount} demande${pendingRequestsCount > 1 ? 's' : ''} en attente` : 'Gérer les demandes reçues'}
+          onPress={() => router.push('/(private)/follow-requests')}
+          colors={colors}
+          badge={pendingRequestsCount > 0 ? pendingRequestsCount : undefined}
+        />
         {user.role_id >= 2 && (
           <MenuItem
             icon={<ShieldUser size={20} color={colors.tint} />}
@@ -134,12 +149,14 @@ function MenuItem({
   description,
   onPress,
   colors,
+  badge,
 }: {
   icon: React.ReactNode;
   label: string;
   description: string;
   onPress: () => void;
   colors: typeof Colors.light;
+  badge?: number;
 }) {
   return (
     <TouchableOpacity
@@ -153,6 +170,11 @@ function MenuItem({
         <Text style={[styles.menuLabel, { color: colors.text }]}>{label}</Text>
         <Text style={[styles.menuDesc, { color: colors.icon }]}>{description}</Text>
       </View>
+      {badge !== undefined && (
+        <View style={[styles.badge, { backgroundColor: colors.tint }]}>
+          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+        </View>
+      )}
       <ChevronRight size={18} color={colors.icon} strokeWidth={2} />
     </TouchableOpacity>
   );
@@ -226,4 +248,13 @@ const styles = StyleSheet.create({
   menuText: { flex: 1, gap: 2 },
   menuLabel: { fontSize: 15, fontWeight: '600' },
   menuDesc: { fontSize: 12 },
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: { color: 'white', fontSize: 12, fontWeight: '700' },
 });

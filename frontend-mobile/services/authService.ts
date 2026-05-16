@@ -11,7 +11,9 @@ export interface AppUser {
   email: string;
   role_id: number;
   status: string;
+  public: number; // 1 = public, 0 = privé
   created_at: string;
+  is_private?: boolean; // présent quand on consulte un compte privé
 }
 
 export const authService = {
@@ -51,7 +53,7 @@ export const authService = {
   updateProfile: async (
     token: string,
     userId: number,
-    updates: Partial<Pick<AppUser, 'prenom' | 'nom' | 'pseudo' | 'bio'>>
+    updates: Partial<Pick<AppUser, 'prenom' | 'nom' | 'pseudo' | 'bio' | 'public'>>
   ): Promise<AppUser> => {
     return apiFetch<AppUser>(`/users/${userId}`, {
       method: 'PUT',

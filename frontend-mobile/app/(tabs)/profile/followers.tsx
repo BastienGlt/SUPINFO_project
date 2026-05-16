@@ -26,8 +26,17 @@ export default function FollowersScreen() {
 
   useEffect(() => {
     if (!user) return;
-    apiFetch<FollowUser[]>(`/users/${user.id}/followers`, { token })
-      .then((data) => setFollowers(Array.isArray(data) ? data : []))
+    apiFetch<Record<string, unknown>[]>(`/users/${user.id}/followers`, { token })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setFollowers(list.map((item) => ({
+          id: (item.follower_id ?? item.id) as number,
+          pseudo: (item.follower_pseudo ?? item.pseudo ?? '') as string,
+          prenom: (item.follower_prenom ?? item.prenom ?? '') as string,
+          nom: (item.follower_nom ?? item.nom ?? '') as string,
+          photo: (item.follower_photo ?? item.photo) as string | undefined,
+        })));
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user?.id]);

@@ -1,6 +1,6 @@
 import {
   View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Alert,
-  TextInput, ActivityIndicator,
+  TextInput, ActivityIndicator, Switch,
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 import {
   Library, Bell, ChevronRight, LogOut, Mail, CalendarDays, ShieldCheck,
-  Pencil, X, Check,
+  Pencil, X, Check, Globe, Lock,
 } from 'lucide-react-native';
 
 const ROLE_LABELS: Record<number, string> = { 1: 'Membre', 2: 'Modérateur', 3: 'Admin' };
@@ -27,6 +27,14 @@ export default function MyProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ prenom: '', nom: '', pseudo: '', bio: '' });
   const [saving, setSaving] = useState(false);
+
+  // Visibilité du profil
+  const [isPublic, setIsPublic] = useState(true);
+  const [visibilityLoading, setVisibilityLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) setIsPublic(user.public !== 0);
+  }, [user?.public]);
 
   useEffect(() => {
     if (!user) return;
@@ -83,6 +91,19 @@ export default function MyProfileScreen() {
       { text: 'Annuler', style: 'cancel' },
       { text: 'Déconnexion', style: 'destructive', onPress: logout },
     ]);
+  };
+
+  const handleTogglePublic = async (value: boolean) => {
+    setIsPublic(value);
+    setVisibilityLoading(true);
+    try {
+      await updateUser(user.id, { public: value ? 1 : 0 });
+    } catch {
+      setIsPublic(!value);
+      Alert.alert('Erreur', 'Impossible de modifier la visibilité du profil.');
+    } finally {
+      setVisibilityLoading(false);
+    }
   };
 
   return (
@@ -219,6 +240,38 @@ export default function MyProfileScreen() {
             })}
             colors={colors}
           />
+        </View>
+      </View>
+
+      {/* Confidentialité */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Confidentialité</Text>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLabelWrap}>
+              {isPublic
+                ? <Globe size={15} color={colors.icon} />
+                : <Lock size={15} color={colors.icon} />}
+              <View>
+                <Text style={[styles.toggleTitle, { color: colors.text }]}>
+                  {isPublic ? 'Profil public' : 'Profil privé'}
+                </Text>
+                <Text style={[styles.toggleDesc, { color: colors.icon }]}>
+                  {isPublic
+                    ? 'Tout le monde peut voir votre profil'
+                    : 'Seuls vos abonnés voient votre profil'}
+                </Text>
+              </View>
+            </View>
+            {visibilityLoading
+              ? <ActivityIndicator size="small" color={colors.tint} />
+              : <Switch
+                  value={isPublic}
+                  onValueChange={handleTogglePublic}
+                  trackColor={{ false: colors.border, true: colors.tint + '80' }}
+                  thumbColor={isPublic ? colors.tint : colors.icon}
+                />}
+          </View>
         </View>
       </View>
 
@@ -418,4 +471,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoutText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  toggleLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  toggleTitle: { fontSize: 14, fontWeight: '600' },
+  toggleDesc: { fontSize: 12, marginTop: 2 },
 });
