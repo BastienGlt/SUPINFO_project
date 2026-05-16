@@ -1,4 +1,5 @@
 const followerService = require('../services/follower.service');
+const followRequestService = require('../services/followRequest.service');
 const userService = require('../services/user.service');
 
 /**
@@ -37,6 +38,16 @@ exports.followUser = async (req, res) => {
     const alreadyFollowing = await followerService.isFollowing(currentUser.id, targetUserId);
     if (alreadyFollowing) {
       return res.status(409).json({ error: "Vous suivez déjà cet utilisateur" });
+    }
+
+    // Profil privé → demande de suivi
+    if (targetUser.public === 0) {
+      const alreadyPending = await followRequestService.hasPendingRequest(currentUser.id, targetUserId);
+      if (alreadyPending) {
+        return res.status(409).json({ error: "Une demande de suivi est déjà en attente" });
+      }
+      const request = await followRequestService.createRequest(currentUser.id, targetUserId);
+      return res.status(202).json({ status: 'pending', message: 'Demande de suivi envoyée', request_id: request.id });
     }
 
     // Appel du Service

@@ -317,6 +317,27 @@ components:
         following:
           type: integer
 
+    FollowRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        requester_id:
+          type: integer
+          description: ID de l'utilisateur qui demande à suivre
+        pseudo:
+          type: string
+        prenom:
+          type: string
+        nom:
+          type: string
+        photo:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
     Notification:
       type: object
       properties:
@@ -327,7 +348,7 @@ components:
           description: ID du destinataire
         type:
           type: string
-          enum: [like, commentaire, follow]
+          enum: [like, commentaire, follow, follow_request]
           description: Type d'événement qui a déclenché la notification
         source_id:
           type: integer
@@ -483,6 +504,8 @@ tags:
     description: Gestion des utilisateurs
   - name: Followers
     description: Système de follow/unfollow
+  - name: Follow Requests
+    description: Demandes de suivi pour les comptes privés
   - name: Critiques
     description: Notes et critiques des oeuvres
   - name: Commentaires
@@ -880,6 +903,9 @@ paths:
     post:
       tags: [Followers]
       summary: Suivre un utilisateur
+      description: |
+        Si le profil cible est **public**, crée l'abonnement immédiatement (201).
+        Si le profil cible est **privé**, envoie une demande de suivi en attente (202).
       security:
         - BearerAuth: []
       parameters:
@@ -891,11 +917,30 @@ paths:
           description: ID de l'utilisateur à suivre
       responses:
         '201':
-          description: Abonnement créé
+          description: Abonnement créé (profil public)
           content:
             application/json:
               schema:
                 type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '202':
+          description: Demande de suivi envoyée (profil privé)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: pending
+                  message:
+                    type: string
+                  request_id:
+                    type: integer
         '400':
           description: Impossible de se suivre soi-même
           content:
@@ -915,7 +960,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Déjà abonné
+          description: Déjà abonné ou demande déjà en attente
           content:
             application/json:
               schema:
@@ -1168,6 +1213,161 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== FOLLOW REQUESTS ====================
+
+  /follow-requests:
+    post:
+      tags: [Follow Requests]
+      summary: Envoyer une demande de suivi
+      description: Envoie une demande de suivi à un compte privé. Déclenche une notification au destinataire.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id]
+              properties:
+                target_id:
+                  type: integer
+                  description: ID de l'utilisateur à qui envoyer la demande
+      responses:
+        '201':
+          description: Demande envoyée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                    example: pending
+        '400':
+          description: target_id manquant ou auto-demande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Demande déjà en attente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Follow Requests]
+      summary: Voir ses demandes de suivi reçues
+      description: Retourne les demandes de suivi en attente reçues par l'utilisateur connecté.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des demandes en attente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FollowRequest'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /follow-requests/{id}:
+    patch:
+      tags: [Follow Requests]
+      summary: Accepter ou refuser une demande de suivi
+      description: |
+        Accepter (`accept`) insère la relation dans `followers` et notifie le demandeur.
+        Refuser (`reject`) met à jour le statut sans créer de follow.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la demande de suivi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [accept, reject]
+      responses:
+        '200':
+          description: Demande traitée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [accepted, rejected]
+        '400':
+          description: Action invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Demande non trouvée ou déjà traitée
           content:
             application/json:
               schema:
