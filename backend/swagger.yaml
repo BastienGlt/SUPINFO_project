@@ -38,9 +38,32 @@ components:
           type: string
         role_id:
           type: integer
+        public:
+          type: integer
+          enum: [0, 1]
+          description: "1 = compte public (défaut), 0 = compte privé"
         created_at:
           type: string
           format: date-time
+
+    UserPrivate:
+      type: object
+      description: Réponse réduite retournée quand le compte est privé (public=0)
+      properties:
+        id:
+          type: integer
+        pseudo:
+          type: string
+        prenom:
+          type: string
+        nom:
+          type: string
+        photo:
+          type: string
+          nullable: true
+        is_private:
+          type: boolean
+          example: true
 
     UserCreate:
       type: object
@@ -71,6 +94,10 @@ components:
           type: string
         photo:
           type: string
+        public:
+          type: integer
+          enum: [0, 1]
+          description: "1 = compte public, 0 = compte privé"
 
     Rating:
       type: object
@@ -514,6 +541,10 @@ paths:
                     bio:
                       type: string
                       nullable: true
+                    public:
+                      type: integer
+                      enum: [0, 1]
+                      description: "1 = public, 0 = privé"
         '400':
           description: Paramètre search manquant ou vide
           content:
@@ -609,6 +640,10 @@ paths:
     get:
       tags: [Users]
       summary: Récupérer un utilisateur par ID
+      description: |
+        Retourne le profil d'un utilisateur. Si le compte est privé (`public=0`),
+        seuls les champs de base sont retournés avec `is_private: true`.
+        Le front-end doit afficher "Ce compte est privé" dans ce cas.
       parameters:
         - name: id
           in: path
@@ -617,11 +652,34 @@ paths:
             type: integer
       responses:
         '200':
-          description: Utilisateur trouvé
+          description: Utilisateur trouvé (public ou privé)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                oneOf:
+                  - $ref: '#/components/schemas/User'
+                  - $ref: '#/components/schemas/UserPrivate'
+              examples:
+                compte_public:
+                  summary: Compte public
+                  value:
+                    id: 1
+                    pseudo: bastien
+                    prenom: Bastien
+                    nom: Dupont
+                    bio: "Fan de jeux vidéo"
+                    photo: "https://..."
+                    role_id: 1
+                    public: 1
+                compte_prive:
+                  summary: Compte privé
+                  value:
+                    id: 2
+                    pseudo: user_prive
+                    prenom: Jean
+                    nom: Martin
+                    photo: null
+                    is_private: true
         '400':
           description: ID invalide
           content:
@@ -911,6 +969,7 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les abonnés d'un utilisateur
+      description: Retourne 403 si le compte est privé (`public=0`).
       parameters:
         - name: id
           in: path
@@ -932,6 +991,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: Compte privé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Ce compte est privé
+                  is_private:
+                    type: boolean
+                    example: true
         '404':
           description: Utilisateur non trouvé
           content:
@@ -949,6 +1021,7 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les abonnements d'un utilisateur
+      description: Retourne 403 si le compte est privé (`public=0`).
       parameters:
         - name: id
           in: path
@@ -970,6 +1043,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: Compte privé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Ce compte est privé
+                  is_private:
+                    type: boolean
+                    example: true
         '404':
           description: Utilisateur non trouvé
           content:
@@ -987,6 +1073,7 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les statistiques de suivi d'un utilisateur
+      description: Retourne 403 si le compte est privé (`public=0`).
       parameters:
         - name: id
           in: path
@@ -1006,6 +1093,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: Compte privé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Ce compte est privé
+                  is_private:
+                    type: boolean
+                    example: true
         '404':
           description: Utilisateur non trouvé
           content:
