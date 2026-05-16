@@ -5,7 +5,7 @@ info:
   description: API critique de jeux vidéo pour le projet Supinfo
 
 servers:
-  - url: http://localhost:5000
+  - url: https://api-supinfo.bastien-guillemet.fr
     description: Serveur de développement
 
 components:

@@ -32,8 +32,8 @@ exports.getUserById = async (id) => {
  */
 exports.searchUsersByPseudo = async (pseudo) => {
   const [rows] = await db.query(
-    'SELECT id, pseudo, prenom, nom, photo, bio, `public` FROM users WHERE pseudo LIKE ? AND status = ? LIMIT 20',
-    [`%${pseudo}%`, 'active']
+    'SELECT id, pseudo, prenom, nom, photo, bio, `public` FROM users WHERE pseudo LIKE ? LIMIT 20',
+    [`%${pseudo}%`]
   );
   return rows;
 };
