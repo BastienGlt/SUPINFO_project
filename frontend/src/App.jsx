@@ -11,6 +11,7 @@ import ProfilePage from './routes/ProfilePage';
 import BibliothequePage from './routes/BibliothequePage';
 import MessagesPage from './routes/MessagesPage';
 import CompleteProfilePage from './routes/CompleteProfilePage';
+import GamePage from './routes/GamePage';
 
 function AuthRedirect({ children }) {
   const { isAuthenticated, isNewUser, user, loading } = useAuth();
@@ -41,6 +42,7 @@ function AppLayout() {
           <AuthRedirect>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/game/:rawgId" element={<GamePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/complete-profile" element={<CompleteProfilePage />} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

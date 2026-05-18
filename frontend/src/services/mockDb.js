@@ -13,7 +13,6 @@ export const DB = {
             prenom: 'Jean', 
             nom: 'Dupont', 
             pseudo: 'GamerPro123', 
-            // Hash pour 'password123' sera écrasé par authService au lancement pour sécurité
             password_hash: '', 
             photo: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=200', 
             bio: 'Tryharder sur les Souls-like et fan de RPG occidentaux.',
@@ -39,7 +38,7 @@ export const DB = {
     ],
 
     followers: [
-        { user_sub: 2, user_follow: 1, created_at: '2023-03-01T09:00:00Z' } // Alice suit Jean
+        { user_sub: 2, user_follow: 1, created_at: '2023-03-01T09:00:00Z' } 
     ],
 
     oeuvres: [

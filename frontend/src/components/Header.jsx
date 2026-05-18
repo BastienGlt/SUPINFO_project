@@ -5,6 +5,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { rawgService } from '../services/rawgService';
 import { createBibliothequeService } from '../services/bibliothequeService';
 import { Search, X, Loader, LogIn } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Header() {
     const { user, isAuthenticated } = useAuth();
@@ -46,20 +47,26 @@ export default function Header() {
     }, [query]);
 
     const handleAdd = async (game, statut) => {
-        if (!isAuthenticated) return;
-        setAddingId(game.id);
-        try {
-            const service = createBibliothequeService(getAccessTokenSilently);
-            await service.addItem(String(game.id), statut);
-            setQuery('');
-            setIsOpen(false);
-            setResults([]);
-        } catch (err) {
-            alert('Erreur : ' + err.message);
-        } finally {
-            setAddingId(null);
-        }
+    if (!isAuthenticated) return;
+    setAddingId(game.id);
+    try {
+        const service = createBibliothequeService(getAccessTokenSilently);
+        await service.addItem({
+            api_reference_id: String(game.id),
+            titre: game.name,
+            description: game.description_raw || game.slug || 'Pas de description',
+        }, statut);
+        setQuery('');
+        setIsOpen(false);
+        setResults([]);
+    } catch (err) {
+        alert('Erreur : ' + err.message);
+    } finally {
+        setAddingId(null);
+    }
     };
+
+    const navigate = useNavigate();
 
     return (
         <header className="header">
@@ -86,31 +93,32 @@ export default function Header() {
                 {isOpen && results.length > 0 && (
                     <div className="search-dropdown">
                         {results.map(game => (
-                            <div key={game.id} className="search-result-item">
-                                {game.background_image && (
-                                    <img src={game.background_image} alt="" className="search-result-img" />
-                                )}
-                                <div className="search-result-info">
-                                    <div className="search-result-title">{game.name}</div>
-                                    <div className="search-result-meta">
-                                        {game.released || '?'} — ⭐ {game.rating}/5
-                                    </div>
-                                </div>
-                                {isAuthenticated && (
-                                    <div className="search-actions">
-                                        {addingId === game.id ? (
-                                            <Loader size={14} className="spinner" style={{ color: 'var(--text-muted)' }} />
-                                        ) : (
-                                            <>
-                                                <button className="search-action-btn envie" onClick={() => handleAdd(game, 3)}>Envie</button>
-                                                <button className="search-action-btn joue" onClick={() => handleAdd(game, 1)}>Joue</button>
-                                                <button className="search-action-btn termine" onClick={() => handleAdd(game, 2)}>Fini</button>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                            <div key={game.id} className="search-result-item"
+                                onClick={() => { navigate(`/game/${game.id}`); setQuery(''); setIsOpen(false); setResults([]); }}>
+                                    {game.background_image && (
+                                     <img src={game.background_image} alt="" className="search-result-img" />
+                                    )}
+                            <div className="search-result-info">
+                            <div className="search-result-title">{game.name}</div>
+                            <div className="search-result-meta">
+                        {game.released || '?'} — ⭐ {game.rating}/5
+            </div>
+        </div>
+        {isAuthenticated && (
+            <div className="search-actions" onClick={e => e.stopPropagation()}>
+                {addingId === game.id ? (
+                    <Loader size={14} className="spinner" style={{ color: 'var(--text-muted)' }} />
+                ) : (
+                    <>
+                        <button className="search-action-btn envie" onClick={() => handleAdd(game, 3)}>Envie</button>
+                        <button className="search-action-btn joue" onClick={() => handleAdd(game, 1)}>Joue</button>
+                        <button className="search-action-btn termine" onClick={() => handleAdd(game, 2)}>Fini</button>
+                    </>
+                )}
+            </div>
+        )}
+    </div>
+))}
                     </div>
                 )}
             </div>

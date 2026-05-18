@@ -1,10 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const authService = {
-  /**
-   * GET /users/me — vérifie si l'utilisateur Auth0 existe en base.
-   * Retourne { exists: true, user } ou { exists: false, prefill }.
-   */
+
   getMe: async (getAccessTokenSilently) => {
     const token = await getAccessTokenSilently();
     const res = await fetch(`${API_URL}/users/me`, {
@@ -16,9 +13,7 @@ export const authService = {
     throw new Error(data.error || 'Erreur serveur');
   },
 
-  /**
-   * POST /users/create — crée le profil lors de la première connexion.
-   */
+
   createProfile: async (getAccessTokenSilently, { prenom, nom, pseudo, bio }) => {
     const token = await getAccessTokenSilently();
     const res = await fetch(`${API_URL}/users/create`, {
@@ -34,9 +29,7 @@ export const authService = {
     return data;
   },
 
-  /**
-   * PUT /users/:id — met à jour les informations du profil.
-   */
+
   updateProfile: async (getAccessTokenSilently, userId, updates) => {
     const token = await getAccessTokenSilently();
     const res = await fetch(`${API_URL}/users/${userId}`, {
