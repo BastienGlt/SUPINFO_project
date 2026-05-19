@@ -4036,7 +4036,7 @@ paths:
     put:
       tags: [Modération]
       summary: Mettre à jour le statut d'un signalement
-      description: Permet de marquer un signalement comme traité ou rejeté.
+      description: Permet de marquer un signalement comme en attente, en examen, modéré ou rejeté.
       security:
         - BearerAuth: []
       parameters:
@@ -4057,7 +4057,7 @@ paths:
               properties:
                 statut:
                   type: string
-                  enum: [en_attente, traite, rejete]
+                  enum: [en_attente, en_examen, modere, rejete]
       responses:
         '200':
           description: Signalement mis à jour

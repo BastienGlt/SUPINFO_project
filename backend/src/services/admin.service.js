@@ -274,7 +274,7 @@ exports.getSignalementById = async (signalementId) => {
 /**
  * Met à jour le statut d'un signalement — modérateur+.
  * @param {number} signalementId
- * @param {string} statut - 'en_attente' | 'traite' | 'rejete'
+ * @param {string} statut - 'en_attente' | 'en_examen' | 'modere' | 'rejete'
  * @returns {boolean}
  */
 exports.updateSignalementStatut = async (signalementId, statut) => {

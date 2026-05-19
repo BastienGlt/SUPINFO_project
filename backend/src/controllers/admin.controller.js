@@ -451,7 +451,7 @@ exports.deleteStatut = async (req, res) => {
 
 // ==================== SIGNALEMENTS ====================
 
-const STATUTS_SIGNALEMENT = ['en_attente', 'traite', 'rejete'];
+const STATUTS_SIGNALEMENT = ['en_attente', 'en_examen', 'modere', 'rejete'];
 
 /**
  * GET /admin/signalements
@@ -507,7 +507,7 @@ exports.updateSignalementStatut = async (req, res) => {
 
     const { statut } = req.body;
     if (!statut || !STATUTS_SIGNALEMENT.includes(statut)) {
-      return res.status(400).json({ error: "Le statut doit être 'en_attente', 'traite' ou 'rejete'" });
+      return res.status(400).json({ error: "Le statut doit être 'en_attente', 'en_examen', 'modere' ou 'rejete'" });
     }
 
     const signalement = await adminService.getSignalementById(signalementId);
