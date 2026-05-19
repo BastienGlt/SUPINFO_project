@@ -197,26 +197,36 @@ export default function GamePage() {
 
     // ── Charger les critiques quand on a l'oeuvre_id ──
     useEffect(() => {
-        if (!oeuvreId) return;
-        const loadRatings = async () => {
-            try {
-                const critiqueService = createCritiqueService(getAccessTokenSilently);
-                const [ratingsData, stats] = await Promise.all([
-                    critiqueService.getRatings(oeuvreId),
-                    critiqueService.getRatingStats(oeuvreId),
-                ]);
-                const list = ratingsData.ratings || ratingsData || [];
-                setRatings(list);
-                setRatingStats(stats);
-                if (user) {
-                    const mine = list.find(r => r.user_id === user.id);
-                    if (mine) setMyRating(mine);
-                }
-            } catch (err) {
-                console.error('Erreur critiques:', err);
+    if (!oeuvreId) return;
+    const loadRatings = async () => {
+        try {
+            const critiqueService = createCritiqueService(getAccessTokenSilently);
+            const [ratingsData, stats] = await Promise.all([
+                critiqueService.getRatings(oeuvreId),
+                critiqueService.getRatingStats(oeuvreId),
+            ]);
+            // Le backend peut renvoyer un tableau, ou un objet avec .ratings, .critiques, .data
+            const list = Array.isArray(ratingsData)
+                ? ratingsData
+                : Array.isArray(ratingsData?.ratings)
+                    ? ratingsData.ratings
+                    : Array.isArray(ratingsData?.critiques)
+                        ? ratingsData.critiques
+                        : Array.isArray(ratingsData?.data)
+                            ? ratingsData.data
+                            : [];
+            console.log('Ratings brut:', ratingsData, '→ list:', list);
+            setRatings(list);
+            setRatingStats(stats);
+            if (user) {
+                const mine = list.find(r => r.user_id === user.id);
+                if (mine) setMyRating(mine);
             }
-        };
-        loadRatings();
+        } catch (err) {
+            console.error('Erreur critiques:', err);
+        }
+    };
+    loadRatings();
     }, [oeuvreId, user]);
 
     // ── Ajouter à la bibliothèque ──
@@ -240,32 +250,47 @@ export default function GamePage() {
 
     // ── Soumettre une critique ──
     const handleSubmitRating = async () => {
-        if (formNote === 0) return alert('Choisis une note');
-        if (!oeuvreId) return alert('Ajoute d\'abord le jeu à ta bibliothèque');
-        setSubmitting(true);
-        try {
-            const critiqueService = createCritiqueService(getAccessTokenSilently);
-            if (myRating) {
-                await critiqueService.updateRating(oeuvreId, formNote, formContenu);
-            } else {
-                await critiqueService.createRating(oeuvreId, formNote, formContenu);
-            }
-            // Recharger
-            const [ratingsData, stats] = await Promise.all([
-                critiqueService.getRatings(oeuvreId),
-                critiqueService.getRatingStats(oeuvreId),
-            ]);
-            const list = ratingsData.ratings || ratingsData || [];
-            setRatings(list);
-            setRatingStats(stats);
-            const mine = list.find(r => r.user_id === user.id);
-            if (mine) setMyRating(mine);
-            setShowForm(false);
-        } catch (err) {
-            alert('Erreur : ' + err.message);
-        } finally {
-            setSubmitting(false);
+    if (formNote === 0) return alert('Choisis une note');
+    if (!oeuvreId) return alert('Ajoute d\'abord le jeu à ta bibliothèque');
+    setSubmitting(true);
+    try {
+        const critiqueService = createCritiqueService(getAccessTokenSilently);
+        const gameInfo = {
+            titre: game.name,
+            description: game.description_raw || 'Pas de description',
+            api_reference_id: String(rawgId),
+        };
+        if (myRating) {
+            await critiqueService.updateRating(oeuvreId, formNote, formContenu, gameInfo);
+        } else {
+            await critiqueService.createRating(oeuvreId, formNote, formContenu, gameInfo);
         }
+        // Recharger
+        const [ratingsData, stats] = await Promise.all([
+            critiqueService.getRatings(oeuvreId),
+            critiqueService.getRatingStats(oeuvreId),
+        ]);
+        const list = Array.isArray(ratingsData)
+            ? ratingsData
+            : Array.isArray(ratingsData?.ratings)
+                ? ratingsData.ratings
+                : Array.isArray(ratingsData?.critiques)
+                    ? ratingsData.critiques
+                    : Array.isArray(ratingsData?.data)
+                        ? ratingsData.data
+                        : [];
+        setRatings(list);
+        setRatingStats(stats);
+        const mine = list.find(r => r.user_id === user.id);
+        if (mine) setMyRating(mine);
+        setShowForm(false);
+        setFormNote(0);
+        setFormContenu('');
+    } catch (err) {
+        alert('Erreur : ' + err.message);
+    } finally {
+        setSubmitting(false);
+    }
     };
 
     // ── Like une critique ──
