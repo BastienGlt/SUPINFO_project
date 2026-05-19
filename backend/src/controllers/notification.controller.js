@@ -103,6 +103,36 @@ exports.markAllAsRead = async (req, res) => {
 };
 
 /**
+ * DELETE /notifications/:id
+ * Supprime une notification de l'utilisateur connecté.
+ */
+exports.deleteNotification = async (req, res) => {
+  try {
+    const notifId = parseInt(req.params.id);
+    if (isNaN(notifId) || notifId <= 0) {
+      return res.status(400).json({ error: "ID notification invalide" });
+    }
+
+    const auth0Id = req.auth.payload.sub;
+    const currentUser = await userService.getUserByAuth0Id(auth0Id);
+    if (!currentUser) {
+      return res.status(401).json({ error: "Utilisateur non authentifié" });
+    }
+
+    const deleted = await notificationService.deleteNotification(notifId, currentUser.id);
+    if (!deleted) {
+      return res.status(404).json({ error: "Notification introuvable" });
+    }
+
+    res.json({ message: "Notification supprimée" });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+/**
  * GET /notifications/stream
  * Ouvre une connexion SSE persistante.
  * Le client reçoit les nouvelles notifications en temps réel sans polling.
