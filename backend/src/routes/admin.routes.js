@@ -86,4 +86,18 @@ router.put('/statuts/:id', checkJwt, checkAdmin, adminController.updateStatut);
 // Supprimer un statut
 router.delete('/statuts/:id', checkJwt, checkAdmin, adminController.deleteStatut);
 
+// ==================== SIGNALEMENTS (modérateur+) ====================
+
+// Lister tous les signalements
+router.get('/signalements', checkJwt, checkModerator, adminController.getAllSignalements);
+
+// Détail d'un signalement
+router.get('/signalements/:id', checkJwt, checkModerator, adminController.getSignalementById);
+
+// Mettre à jour le statut d'un signalement
+router.put('/signalements/:id/statut', checkJwt, checkModerator, adminController.updateSignalementStatut);
+
+// Supprimer un signalement
+router.delete('/signalements/:id', checkJwt, checkModerator, adminController.deleteSignalement);
+
 module.exports = router;

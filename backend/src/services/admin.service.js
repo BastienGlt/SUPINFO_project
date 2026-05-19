@@ -233,6 +233,68 @@ exports.getWarnedUsers = async () => {
   return rows;
 };
 
+// ==================== SIGNALEMENTS ====================
+
+/**
+ * Récupère tous les signalements — modérateur+.
+ * @param {Object} filters - { statut, type_contenu }
+ * @returns {Array}
+ */
+exports.getAllSignalements = async (filters = {}) => {
+  const conditions = [];
+  const values = [];
+
+  if (filters.statut) {
+    conditions.push('s.statut = ?');
+    values.push(filters.statut);
+  }
+  if (filters.type_contenu) {
+    conditions.push('s.type_contenu = ?');
+    values.push(filters.type_contenu);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [rows] = await db.query(
+    `SELECT * FROM v_signalements s ${where} ORDER BY s.created_at DESC`,
+    values
+  );
+  return rows;
+};
+
+/**
+ * Récupère un signalement par son ID — modérateur+.
+ * @param {number} signalementId
+ * @returns {Object|null}
+ */
+exports.getSignalementById = async (signalementId) => {
+  const [rows] = await db.query('SELECT * FROM v_signalements WHERE id = ?', [signalementId]);
+  return rows.length > 0 ? rows[0] : null;
+};
+
+/**
+ * Met à jour le statut d'un signalement — modérateur+.
+ * @param {number} signalementId
+ * @param {string} statut - 'en_attente' | 'traite' | 'rejete'
+ * @returns {boolean}
+ */
+exports.updateSignalementStatut = async (signalementId, statut) => {
+  const [result] = await db.query(
+    'UPDATE signalements SET statut = ? WHERE id = ?',
+    [statut, signalementId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Supprime un signalement — modérateur+.
+ * @param {number} signalementId
+ * @returns {boolean}
+ */
+exports.deleteSignalement = async (signalementId) => {
+  const [result] = await db.query('DELETE FROM signalements WHERE id = ?', [signalementId]);
+  return result.affectedRows > 0;
+};
+
 // ==================== STATUTS ====================
 
 /**
