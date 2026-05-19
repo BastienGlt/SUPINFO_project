@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, ScrollView,
+  ActivityIndicator, Alert, ScrollView, RefreshControl,
 } from 'react-native';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -37,24 +37,35 @@ export default function AdminCritiquesScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingAll, setLoadingAll] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const isAdmin = user?.role_id === 3;
+
+  const fetchData = useCallback(async () => {
+    if (!token) return;
+    const fetches: Promise<void>[] = [
+      apiFetch<AdminCritique[]>('/admin/critiques/hidden', { token }).then(setHidden).catch(() => {}),
+    ];
+    if (isAdmin) {
+      fetches.push(
+        apiFetch<AdminCritique[]>('/admin/critiques/featured', { token }).then(setFeatured).catch(() => {})
+      );
+    }
+    await Promise.all(fetches);
+  }, [token, isAdmin]);
 
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
       setLoading(true);
-      const fetches: Promise<void>[] = [
-        apiFetch<AdminCritique[]>('/admin/critiques/hidden', { token }).then(setHidden).catch(() => {}),
-      ];
-      if (isAdmin) {
-        fetches.push(
-          apiFetch<AdminCritique[]>('/admin/critiques/featured', { token }).then(setFeatured).catch(() => {})
-        );
-      }
-      Promise.all(fetches).finally(() => setLoading(false));
-    }, [token, isAdmin])
+      fetchData().finally(() => setLoading(false));
+    }, [token, fetchData])
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData().finally(() => setRefreshing(false));
+  }, [fetchData]);
 
   const toggleAllCritiques = () => {
     if (showAll) { setShowAll(false); return; }
@@ -66,10 +77,15 @@ export default function AdminCritiquesScreen() {
   };
 
   const unhide = (c: AdminCritique) => {
-    apiFetch(`/admin/critiques/${c.id}/hide`, { method: 'DELETE', token }).catch(() => {});
+    const prevHidden = hidden;
+    const prevAll = allCritiques;
     const updated = { ...c, is_hidden: false };
     setHidden(prev => prev.filter(x => x.id !== c.id));
     setAllCritiques(prev => prev.map(x => x.id === c.id ? updated : x));
+    apiFetch(`/admin/critiques/${c.id}/hide`, { method: 'DELETE', token }).catch(() => {
+      setHidden(prevHidden);
+      setAllCritiques(prevAll);
+    });
   };
 
   const hide = (c: AdminCritique) => {
@@ -78,28 +94,45 @@ export default function AdminCritiquesScreen() {
       {
         text: 'Masquer', style: 'destructive',
         onPress: () => {
-          apiFetch(`/admin/critiques/${c.id}/hide`, { method: 'POST', token }).catch(() => {});
+          const prevHidden = hidden;
+          const prevFeatured = featured;
+          const prevAll = allCritiques;
           const updated = { ...c, is_hidden: true, is_featured: false };
           setFeatured(prev => prev.filter(x => x.id !== c.id));
           setHidden(prev => prev.some(x => x.id === c.id) ? prev : [...prev, updated]);
           setAllCritiques(prev => prev.map(x => x.id === c.id ? updated : x));
+          apiFetch(`/admin/critiques/${c.id}/hide`, { method: 'POST', token }).catch(() => {
+            setHidden(prevHidden);
+            setFeatured(prevFeatured);
+            setAllCritiques(prevAll);
+          });
         },
       },
     ]);
   };
 
   const feature = (c: AdminCritique) => {
-    apiFetch(`/admin/critiques/${c.id}/feature`, { method: 'POST', token }).catch(() => {});
+    const prevFeatured = featured;
+    const prevAll = allCritiques;
     const updated = { ...c, is_featured: true };
     setFeatured(prev => prev.some(x => x.id === c.id) ? prev : [...prev, updated]);
     setAllCritiques(prev => prev.map(x => x.id === c.id ? updated : x));
+    apiFetch(`/admin/critiques/${c.id}/feature`, { method: 'POST', token }).catch(() => {
+      setFeatured(prevFeatured);
+      setAllCritiques(prevAll);
+    });
   };
 
   const unfeature = (c: AdminCritique) => {
-    apiFetch(`/admin/critiques/${c.id}/feature`, { method: 'DELETE', token }).catch(() => {});
+    const prevFeatured = featured;
+    const prevAll = allCritiques;
     const updated = { ...c, is_featured: false };
     setFeatured(prev => prev.filter(x => x.id !== c.id));
     setAllCritiques(prev => prev.map(x => x.id === c.id ? updated : x));
+    apiFetch(`/admin/critiques/${c.id}/feature`, { method: 'DELETE', token }).catch(() => {
+      setFeatured(prevFeatured);
+      setAllCritiques(prevAll);
+    });
   };
 
   const deleteCritique = (c: AdminCritique) => {
@@ -108,10 +141,17 @@ export default function AdminCritiquesScreen() {
       {
         text: 'Supprimer', style: 'destructive',
         onPress: () => {
-          apiFetch(`/admin/critiques/${c.id}`, { method: 'DELETE', token }).catch(() => {});
+          const prevHidden = hidden;
+          const prevFeatured = featured;
+          const prevAll = allCritiques;
           setHidden(prev => prev.filter(x => x.id !== c.id));
           setFeatured(prev => prev.filter(x => x.id !== c.id));
           setAllCritiques(prev => prev.filter(x => x.id !== c.id));
+          apiFetch(`/admin/critiques/${c.id}`, { method: 'DELETE', token }).catch(() => {
+            setHidden(prevHidden);
+            setFeatured(prevFeatured);
+            setAllCritiques(prevAll);
+          });
         },
       },
     ]);
@@ -126,7 +166,9 @@ export default function AdminCritiquesScreen() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} colors={[colors.tint]} />}
+    >
 
       {/* Bouton toggle — toutes les critiques */}
       <TouchableOpacity

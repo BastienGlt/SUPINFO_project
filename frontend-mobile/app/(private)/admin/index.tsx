@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { Users, FileText, Tag, Shield, ChevronRight } from 'lucide-react-native';
+import { Users, FileText, Tag, Shield, ChevronRight, Flag } from 'lucide-react-native';
 
 export default function AdminDashboard() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -40,6 +40,13 @@ export default function AdminDashboard() {
         title="Critiques"
         desc="Masquées, mises en avant, suppression"
         onPress={() => router.push('/(private)/admin/critiques')}
+        colors={colors}
+      />
+      <NavCard
+        icon={<Flag size={22} color={colors.tint} strokeWidth={2} />}
+        title="Signalements"
+        desc="Signalements en attente et traités"
+        onPress={() => router.push('/(private)/admin/signalements')}
         colors={colors}
       />
 

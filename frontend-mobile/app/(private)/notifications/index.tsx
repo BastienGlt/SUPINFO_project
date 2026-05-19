@@ -1,12 +1,12 @@
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 // Remplacement des emojis par des icônes lucide
-import { Heart, UserPlus, MessageCircle, Star, Bell, CheckCheck } from 'lucide-react-native';
+import { Heart, UserPlus, MessageCircle, Star, Bell, CheckCheck, Trash2 } from 'lucide-react-native';
 
 // Icônes lucide par type de notification (cf. Swagger: type = like | follow | commentaire | feature)
 function NotifIcon({ type, color }: { type: string; color: string }) {
@@ -70,15 +70,23 @@ export default function NotificationsScreen() {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchNotifs = useCallback(() => {
+    if (!token) { setLoading(false); return Promise.resolve(); }
+    return apiFetch<{ notifications: Notification[] }>('/notifications', { token })
+      .then((data) => setNotifications(data.notifications))
+      .catch(() => {});
+  }, [token]);
 
   useEffect(() => {
-    if (!token) { setLoading(false); return; }
-    // GET /notifications — liste paginée, max 30 par défaut
-    apiFetch<{ notifications: Notification[] }>('/notifications', { token })
-      .then((data) => setNotifications(data.notifications))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [token]);
+    fetchNotifs().finally(() => setLoading(false));
+  }, [fetchNotifs]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchNotifs().finally(() => setRefreshing(false));
+  }, [fetchNotifs]);
 
   const unreadCount = notifications.filter((n) => !n.lu).length;
 
@@ -87,6 +95,18 @@ export default function NotificationsScreen() {
     if (!token) return;
     apiFetch('/notifications/read-all', { method: 'PUT', token }).catch(() => {});
     setNotifications((prev) => prev.map((n) => ({ ...n, lu: true })));
+  };
+
+  // DELETE /notifications/{id} — supprimer une notification
+  const handleDelete = (id: number) => {
+    if (!token) return;
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    apiFetch(`/notifications/${id}`, { method: 'DELETE', token }).catch(() => {
+      // Restaure en cas d'erreur
+      apiFetch<{ notifications: Notification[] }>('/notifications', { token })
+        .then((data) => setNotifications(data.notifications))
+        .catch(() => {});
+    });
   };
 
   // PUT /notifications/{id}/read — marquer comme lue + naviguer vers la source
@@ -128,6 +148,7 @@ export default function NotificationsScreen() {
         data={notifications}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ padding: 16, gap: 10 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} colors={[colors.tint]} />}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Bell size={40} color={colors.icon} strokeWidth={1.5} />
@@ -151,6 +172,7 @@ export default function NotificationsScreen() {
               {/* Icône dans un carré coloré par type */}
               <View style={[styles.notifIconWrap, { backgroundColor: typeColor + '18' }]}>
                 <NotifIcon type={item.type} color={typeColor} />
+                {!item.lu && <View style={[styles.dot, { backgroundColor: colors.tint }]} />}
               </View>
 
               <View style={styles.notifContent}>
@@ -167,8 +189,13 @@ export default function NotificationsScreen() {
                 </Text>
               </View>
 
-              {/* Point bleu pour les non lues */}
-              {!item.lu && <View style={[styles.dot, { backgroundColor: colors.tint }]} />}
+              <TouchableOpacity
+                onPress={() => handleDelete(item.id)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.6}
+              >
+                <Trash2 size={16} color={colors.icon} strokeWidth={2} />
+              </TouchableOpacity>
             </TouchableOpacity>
           );
         }}
@@ -207,7 +234,7 @@ const styles = StyleSheet.create({
   notifContent: { flex: 1, gap: 4 },
   notifText: { fontSize: 14, lineHeight: 20 },
   notifDate: { fontSize: 12 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4, position: 'absolute', top: 4, right: 4 },
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   empty: { fontSize: 14 },
 });

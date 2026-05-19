@@ -1,5 +1,6 @@
 import {
   View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity,
+  Modal, Pressable, Alert, RefreshControl,
 } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -8,7 +9,15 @@ import { Colors } from '@/constants/theme';
 import { authService, type AppUser } from '@/services/authService';
 import { apiFetch } from '@/services/apiService';
 import { useAuth } from '@/hooks/use-auth';
-import { UserPlus, UserMinus, ShieldCheck, Lock, Clock } from 'lucide-react-native';
+import { UserPlus, UserMinus, ShieldCheck, Lock, Clock, Flag, X, CheckCircle } from 'lucide-react-native';
+
+const MOTIFS = [
+  { key: 'insultes', label: 'Insultes / Harcèlement' },
+  { key: 'spam', label: 'Spam' },
+  { key: 'contenu_adulte', label: 'Contenu inapproprié' },
+  { key: 'usurpation', label: "Usurpation d'identité" },
+  { key: 'autre', label: 'Autre' },
+];
 
 const ROLE_LABELS: Record<number, string> = { 1: 'Membre', 2: 'Modérateur', 3: 'Admin' };
 
@@ -43,11 +52,17 @@ export default function PublicUserProfileScreen() {
   const [ratingsTotal, setRatingsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // État du bouton follow
   const [isFollowing, setIsFollowing] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+
+  const [reportVisible, setReportVisible] = useState(false);
+  const [selectedMotif, setSelectedMotif] = useState<string | null>(null);
+  const [reportSent, setReportSent] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
 
   useEffect(() => {
     const userId = parseInt(id ?? '0', 10);
@@ -79,7 +94,32 @@ export default function PublicUserProfileScreen() {
       .finally(() => setLoading(false));
   }, [id, token]);
 
-  // Rafraîchit le statut follow à chaque fois que l'écran prend le focus
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    const userId = parseInt(id ?? '0', 10);
+    if (!userId) { setRefreshing(false); return; }
+    authService.getUserById(userId)
+      .then((u) => {
+        setProfileUser(u);
+        if (u.is_private) {
+          setIsPrivate(true);
+        } else {
+          Promise.allSettled([
+            apiFetch<{ followers: number; following: number }>(`/users/${userId}/follow-stats`),
+            apiFetch<RatingsResponse>(`/users/${userId}/ratings`),
+          ]).then(([statsResult, ratingsResult]) => {
+            if (statsResult.status === 'fulfilled') setFollowStats(statsResult.value);
+            if (ratingsResult.status === 'fulfilled') {
+              const data = ratingsResult.value;
+              setRatings(Array.isArray(data.critiques) ? data.critiques : []);
+              setRatingsTotal(data.pagination?.total ?? data.critiques?.length ?? 0);
+            }
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setRefreshing(false));
+  }, [id]);
   useFocusEffect(
     useCallback(() => {
       const userId = parseInt(id ?? '0', 10);
@@ -135,6 +175,23 @@ export default function PublicUserProfileScreen() {
     }
   }, [token, profileUser, isFollowing, isPending]);
 
+  const handleReport = useCallback(async () => {
+    if (!token || !profileUser || !selectedMotif) return;
+    setReportLoading(true);
+    try {
+      await apiFetch('/signalements', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ type_contenu: 'profil', contenu_id: profileUser.id, motif: selectedMotif }),
+      });
+      setReportSent(true);
+    } catch {
+      Alert.alert('Erreur', 'Impossible d\'envoyer le signalement. Réessayez plus tard.');
+    } finally {
+      setReportLoading(false);
+    }
+  }, [token, profileUser, selectedMotif]);
+
   if (loading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.background }]}>
@@ -156,7 +213,9 @@ export default function PublicUserProfileScreen() {
   const isOwnProfile = currentUser?.id === profileUser.id;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} colors={[colors.tint]} />}
+    >
       {/* En-tête profil */}
       <View style={styles.profileHeader}>
         {profileUser.photo ? (
@@ -214,7 +273,90 @@ export default function PublicUserProfileScreen() {
             )}
           </TouchableOpacity>
         )}
+
+        {token && !isOwnProfile && (
+          <TouchableOpacity
+            style={[styles.reportBtn, { borderColor: colors.border }]}
+            onPress={() => { setReportVisible(true); setReportSent(false); setSelectedMotif(null); }}
+            activeOpacity={0.7}
+          >
+            <Flag size={13} color={colors.icon} strokeWidth={2} />
+            <Text style={[styles.reportBtnText, { color: colors.icon }]}>Signaler</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Modal signalement */}
+      <Modal
+        visible={reportVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setReportVisible(false)}
+      >
+        <Pressable style={stylesReport.overlay} onPress={() => setReportVisible(false)}>
+          <Pressable style={[stylesReport.sheet, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={stylesReport.header}>
+              <Text style={[stylesReport.title, { color: colors.text }]}>Signaler @{profileUser?.pseudo}</Text>
+              <TouchableOpacity onPress={() => setReportVisible(false)} activeOpacity={0.7}>
+                <X size={20} color={colors.icon} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            {reportSent ? (
+              <View style={stylesReport.successBox}>
+                <CheckCircle size={32} color="#22c55e" strokeWidth={1.5} />
+                <Text style={[stylesReport.successText, { color: colors.text }]}>Signalement envoyé</Text>
+                <Text style={[stylesReport.successDesc, { color: colors.icon }]}>
+                  Notre équipe examinera ce signalement. Merci.
+                </Text>
+                <TouchableOpacity
+                  style={[stylesReport.sendBtn, { backgroundColor: colors.tint }]}
+                  onPress={() => setReportVisible(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={stylesReport.sendBtnText}>Fermer</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={[stylesReport.subtitle, { color: colors.icon }]}>Pourquoi signalez-vous ce compte ?</Text>
+                {MOTIFS.map(m => (
+                  <TouchableOpacity
+                    key={m.key}
+                    style={[
+                      stylesReport.motifRow,
+                      { borderColor: selectedMotif === m.key ? colors.tint : colors.border },
+                      selectedMotif === m.key && { backgroundColor: colors.tint + '10' },
+                    ]}
+                    onPress={() => setSelectedMotif(m.key)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[
+                      stylesReport.radio,
+                      { borderColor: selectedMotif === m.key ? colors.tint : colors.border },
+                      selectedMotif === m.key && { backgroundColor: colors.tint },
+                    ]} />
+                    <Text style={[stylesReport.motifLabel, { color: colors.text }]}>{m.label}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  style={[
+                    stylesReport.sendBtn,
+                    { backgroundColor: selectedMotif ? colors.tint : colors.border },
+                  ]}
+                  onPress={handleReport}
+                  disabled={!selectedMotif || reportLoading}
+                  activeOpacity={0.8}
+                >
+                  {reportLoading
+                    ? <ActivityIndicator size="small" color="white" />
+                    : <Text style={stylesReport.sendBtnText}>Envoyer le signalement</Text>}
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Stats + contenu : masqués si compte privé */}
       {isPrivate ? (
@@ -302,7 +444,7 @@ export default function PublicUserProfileScreen() {
                       {r.oeuvre_titre ?? `Jeu #${r.oeuvre_id}`}
                     </Text>
                     <View style={[styles.noteBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
-                      <Text style={[styles.noteText, { color: colors.tint }]}>{r.note}/20</Text>
+                      <Text style={[styles.noteText, { color: colors.tint }]}>{r.note}/5</Text>
                     </View>
                   </View>
                   {r.contenu ? (
@@ -359,6 +501,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   followBtnText: { fontSize: 14, fontWeight: '700' },
+  reportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
+  reportBtnText: { fontSize: 12, fontWeight: '600' },
   // Stats
   statsRow: {
     flexDirection: 'row',
@@ -401,4 +554,45 @@ const styles = StyleSheet.create({
   },
   privateTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
   privateDesc: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
+});
+
+const stylesReport = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: '#00000060', justifyContent: 'flex-end' },
+  sheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 10,
+  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  title: { fontSize: 16, fontWeight: '700' },
+  subtitle: { fontSize: 13, marginBottom: 4 },
+  motifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+  },
+  motifLabel: { fontSize: 14, flex: 1 },
+  sendBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  sendBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  successBox: { alignItems: 'center', gap: 10, paddingVertical: 16 },
+  successText: { fontSize: 16, fontWeight: '700' },
+  successDesc: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
 });

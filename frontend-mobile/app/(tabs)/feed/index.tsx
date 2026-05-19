@@ -1,6 +1,6 @@
 import {
   FlatList, View, Text, StyleSheet, TouchableOpacity, Image,
-  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform,
+  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
 import { useState, useCallback, useRef } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -41,6 +41,7 @@ export default function FeedScreen() {
 
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Like : set d'IDs likés localement (API ne renvoie pas de champ `liked`)
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
@@ -86,44 +87,50 @@ export default function FeedScreen() {
   }, []);
 
   // Charge le feed au montage et à chaque retour sur l'écran (pour actualiser les compteurs)
+  const doFetch = useCallback(async () => {
+    if (!token) return;
+    const data = await apiFetch<{ feed: FeedItem[] }>('/feed', { token });
+    const items = data.feed ?? [];
+    const critiques = items.filter((f) => f.type === 'critique');
+    const perCritique = await Promise.all(
+      critiques.map((f) =>
+        Promise.all([
+          apiFetch<{ count: number }>(`/commentaires/critiques/${f.id}/count`)
+            .then((r) => Number(r?.count) || 0)
+            .catch(() => 0),
+          apiFetch<{ likeCount: number }>(`/critiques/${f.id}/likes`)
+            .then((r) => Number(r?.likeCount) || 0)
+            .catch(() => 0),
+          // Détecter si l'utilisateur a déjà liké : 409 = oui, 201 = non (on annule)
+          apiFetch(`/critiques/${f.id}/like`, { method: 'POST', token })
+            .then(() => {
+              apiFetch(`/critiques/${f.id}/like`, { method: 'DELETE', token }).catch(() => {});
+              return false;
+            })
+            .catch((err: unknown) => (err as { status?: number })?.status === 409),
+        ]).then(([commentsCount, likesCount, isLiked]) => ({ id: f.id, commentsCount, likesCount, isLiked }))
+      )
+    );
+    const dataMap = Object.fromEntries(perCritique.map((c) => [c.id, c]));
+    setLikedIds(new Set(perCritique.filter((c) => c.isLiked).map((c) => c.id)));
+    setFeed(items.map((f) =>
+      f.type === 'critique'
+        ? { ...f, comments_count: dataMap[f.id]?.commentsCount ?? f.comments_count, likes_count: dataMap[f.id]?.likesCount ?? f.likes_count }
+        : f
+    ));
+  }, [token]);
+
   useFocusEffect(
     useCallback(() => {
       if (!token) { setLoading(false); return; }
-      apiFetch<{ feed: FeedItem[] }>('/feed', { token })
-        .then(async (data) => {
-          const items = data.feed ?? [];
-          const critiques = items.filter((f) => f.type === 'critique');
-          const perCritique = await Promise.all(
-            critiques.map((f) =>
-              Promise.all([
-                apiFetch<{ count: number }>(`/commentaires/critiques/${f.id}/count`)
-                  .then((r) => Number(r?.count) || 0)
-                  .catch(() => 0),
-                apiFetch<{ likeCount: number }>(`/critiques/${f.id}/likes`)
-                  .then((r) => Number(r?.likeCount) || 0)
-                  .catch(() => 0),
-                // Détecter si l'utilisateur a déjà liké : 409 = oui, 201 = non (on annule)
-                apiFetch(`/critiques/${f.id}/like`, { method: 'POST', token })
-                  .then(() => {
-                    apiFetch(`/critiques/${f.id}/like`, { method: 'DELETE', token }).catch(() => {});
-                    return false;
-                  })
-                  .catch((err: unknown) => (err as { status?: number })?.status === 409),
-              ]).then(([commentsCount, likesCount, isLiked]) => ({ id: f.id, commentsCount, likesCount, isLiked }))
-            )
-          );
-          const dataMap = Object.fromEntries(perCritique.map((c) => [c.id, c]));
-          setLikedIds(new Set(perCritique.filter((c) => c.isLiked).map((c) => c.id)));
-          setFeed(items.map((f) =>
-            f.type === 'critique'
-              ? { ...f, comments_count: dataMap[f.id]?.commentsCount ?? f.comments_count, likes_count: dataMap[f.id]?.likesCount ?? f.likes_count }
-              : f
-          ));
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }, [token])
+      doFetch().catch(() => {}).finally(() => setLoading(false));
+    }, [token, doFetch])
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    doFetch().catch(() => {}).finally(() => setRefreshing(false));
+  }, [doFetch]);
 
   // POST /critiques/{id}/like — liker
   // DELETE /critiques/{id}/like — unliker
@@ -217,6 +224,7 @@ export default function FeedScreen() {
         contentContainerStyle={[styles.list, { backgroundColor: colors.background }]}
         style={{ backgroundColor: colors.background }}
         keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} colors={[colors.tint]} />}
         ListHeaderComponent={
           <View>
             {/* Barre de recherche utilisateur */}

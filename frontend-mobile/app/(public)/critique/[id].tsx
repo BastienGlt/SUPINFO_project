@@ -174,7 +174,7 @@ export default function CritiqueDetailScreen() {
         </View>
         {note ? (
           <View style={[styles.noteBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
-            <Text style={[styles.noteText, { color: colors.tint }]}>{note}/20</Text>
+            <Text style={[styles.noteText, { color: colors.tint }]}>{note}/5</Text>
           </View>
         ) : null}
       </View>

@@ -1,5 +1,5 @@
-import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { useState, useCallback } from 'react';
 import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -16,25 +16,30 @@ export default function ProfileTabScreen() {
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
   const [critiquesCount, setCritiquesCount] = useState(0);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    apiFetch<{ followers: number; following: number }>(`/users/${user.id}/follow-stats`)
-      .then(setFollowStats)
-      .catch(() => {});
-    apiFetch<{ critiques: unknown[]; pagination: unknown }>(`/users/${user.id}/ratings`, { token })
-      .then((data) => setCritiquesCount(Array.isArray(data.critiques) ? data.critiques.length : 0))
-      .catch(() => {});
-  }, [user?.id]);
+  const fetchProfileData = useCallback(async () => {
+    if (!user || !token) return;
+    await Promise.allSettled([
+      apiFetch<{ followers: number; following: number }>(`/users/${user.id}/follow-stats`, { token })
+        .then(setFollowStats),
+      apiFetch<{ critiques: unknown[]; pagination: { total: number } }>(`/users/${user.id}/ratings`, { token })
+        .then((data) => setCritiquesCount(data.pagination?.total ?? (Array.isArray(data.critiques) ? data.critiques.length : 0))),
+      apiFetch<{ id: number }[]>('/follow-requests', { token })
+        .then((data) => setPendingRequestsCount(Array.isArray(data) ? data.length : 0)),
+    ]);
+  }, [user?.id, token]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!token) return;
-      apiFetch<{ id: number }[]>('/follow-requests', { token })
-        .then((data) => setPendingRequestsCount(Array.isArray(data) ? data.length : 0))
-        .catch(() => {});
-    }, [token])
+      fetchProfileData().catch(() => {});
+    }, [fetchProfileData])
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchProfileData().catch(() => {}).finally(() => setRefreshing(false));
+  }, [fetchProfileData]);
 
   if (loading) return null;
 
@@ -62,7 +67,9 @@ export default function ProfileTabScreen() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} colors={[colors.tint]} />}
+    >
       {/* En-tête profil — cliquable pour ouvrir le profil complet */}
       <TouchableOpacity
         style={[styles.profileHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}

@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
@@ -30,14 +30,23 @@ export default function MesCritiquesScreen() {
 
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchRatings = useCallback(() => {
+    if (!user) return Promise.resolve();
+    return apiFetch<RatingsResponse>(`/users/${user.id}/ratings`, { token })
+      .then((data) => setRatings(Array.isArray(data.critiques) ? data.critiques : []))
+      .catch(() => {});
+  }, [user?.id, token]);
 
   useEffect(() => {
-    if (!user) return;
-    apiFetch<RatingsResponse>(`/users/${user.id}/ratings`, { token })
-      .then((data) => setRatings(Array.isArray(data.critiques) ? data.critiques : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [user?.id]);
+    fetchRatings().finally(() => setLoading(false));
+  }, [fetchRatings]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchRatings().finally(() => setRefreshing(false));
+  }, [fetchRatings]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -62,6 +71,7 @@ export default function MesCritiquesScreen() {
           data={ratings}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.tint} colors={[colors.tint]} />}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.critiqueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -85,7 +95,7 @@ export default function MesCritiquesScreen() {
                   {item.oeuvre_titre ?? `Jeu #${item.oeuvre_id}`}
                 </Text>
                 <View style={[styles.noteBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
-                  <Text style={[styles.noteText, { color: colors.tint }]}>{item.note}/20</Text>
+                  <Text style={[styles.noteText, { color: colors.tint }]}>{item.note}/5</Text>
                 </View>
               </View>
               {item.contenu ? (
