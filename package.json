@@ -1,0 +1,13 @@
+{
+  "name": "supinfo-project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "mobile": "npm run lan --prefix frontend-mobile",
+    "tunnel": "npm run tunnel --prefix frontend-mobile",
+    "install": "npm install --prefix frontend-mobile"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
