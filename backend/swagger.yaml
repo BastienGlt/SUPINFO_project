@@ -5,7 +5,7 @@ info:
   description: API critique de jeux vidéo pour le projet Supinfo
 
 servers:
-  - url: http://localhost:5000
+  - url: https://api-supinfo.bastien-guillemet.fr
     description: Serveur de développement
 
 components:
@@ -38,9 +38,32 @@ components:
           type: string
         role_id:
           type: integer
+        public:
+          type: integer
+          enum: [0, 1]
+          description: "1 = compte public (défaut), 0 = compte privé"
         created_at:
           type: string
           format: date-time
+
+    UserPrivate:
+      type: object
+      description: Réponse réduite retournée quand le compte est privé (public=0)
+      properties:
+        id:
+          type: integer
+        pseudo:
+          type: string
+        prenom:
+          type: string
+        nom:
+          type: string
+        photo:
+          type: string
+          nullable: true
+        is_private:
+          type: boolean
+          example: true
 
     UserCreate:
       type: object
@@ -71,6 +94,10 @@ components:
           type: string
         photo:
           type: string
+        public:
+          type: integer
+          enum: [0, 1]
+          description: "1 = compte public, 0 = compte privé"
 
     Rating:
       type: object
@@ -290,6 +317,27 @@ components:
         following:
           type: integer
 
+    FollowRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        requester_id:
+          type: integer
+          description: ID de l'utilisateur qui demande à suivre
+        pseudo:
+          type: string
+        prenom:
+          type: string
+        nom:
+          type: string
+        photo:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
     Notification:
       type: object
       properties:
@@ -300,7 +348,7 @@ components:
           description: ID du destinataire
         type:
           type: string
-          enum: [like, commentaire, follow]
+          enum: [like, commentaire, follow, follow_request]
           description: Type d'événement qui a déclenché la notification
         source_id:
           type: integer
@@ -449,6 +497,52 @@ components:
         message:
           type: string
 
+    Signalement:
+      type: object
+      properties:
+        id:
+          type: integer
+        type_contenu:
+          type: string
+          enum: [profil, commentaire, critique]
+        contenu_id:
+          type: integer
+        motif:
+          type: string
+          maxLength: 100
+        statut:
+          type: string
+          example: en_attente
+        created_at:
+          type: string
+          format: date-time
+        signaleur_id:
+          type: integer
+        signaleur_pseudo:
+          type: string
+        signaleur_photo:
+          type: string
+          nullable: true
+
+    SignalementCreate:
+      type: object
+      required:
+        - motif
+        - type_contenu
+        - contenu_id
+      properties:
+        motif:
+          type: string
+          maxLength: 100
+          description: Raison du signalement
+        type_contenu:
+          type: string
+          enum: [profil, commentaire, critique]
+          description: Type du contenu signalé
+        contenu_id:
+          type: integer
+          description: ID du contenu signalé
+
 tags:
   - name: Oeuvres
     description: Référentiel d'oeuvres (résolution automatique via api_reference_id)
@@ -456,6 +550,8 @@ tags:
     description: Gestion des utilisateurs
   - name: Followers
     description: Système de follow/unfollow
+  - name: Follow Requests
+    description: Demandes de suivi pour les comptes privés
   - name: Critiques
     description: Notes et critiques des oeuvres
   - name: Commentaires
@@ -472,10 +568,66 @@ tags:
     description: Actions réservées aux administrateurs (role_id=3)
   - name: Modération
     description: Actions accessibles aux modérateurs et administrateurs (role_id>=2)
+  - name: Signalements
+    description: Signalement de contenus (profil, commentaire, critique)
 
 paths:
 
   # ==================== USERS ====================
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Rechercher des utilisateurs par pseudo
+      description: Retourne la liste des utilisateurs dont le pseudo correspond à la recherche (correspondance partielle), tous statuts confondus. Limité à 20 résultats.
+      parameters:
+        - name: search
+          in: query
+          required: true
+          description: Pseudo ou partie du pseudo à rechercher
+          schema:
+            type: string
+            example: bastien
+      responses:
+        '200':
+          description: Liste des utilisateurs correspondants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    pseudo:
+                      type: string
+                    prenom:
+                      type: string
+                    nom:
+                      type: string
+                    photo:
+                      type: string
+                      nullable: true
+                    bio:
+                      type: string
+                      nullable: true
+                    public:
+                      type: integer
+                      enum: [0, 1]
+                      description: "1 = public, 0 = privé"
+        '400':
+          description: Paramètre search manquant ou vide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /users/me:
     get:
@@ -559,6 +711,10 @@ paths:
     get:
       tags: [Users]
       summary: Récupérer un utilisateur par ID
+      description: |
+        Retourne le profil d'un utilisateur. Si le compte est privé (`public=0`),
+        seuls les champs de base sont retournés avec `is_private: true`.
+        Le front-end doit afficher "Ce compte est privé" dans ce cas.
       parameters:
         - name: id
           in: path
@@ -567,11 +723,34 @@ paths:
             type: integer
       responses:
         '200':
-          description: Utilisateur trouvé
+          description: Utilisateur trouvé (public ou privé)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                oneOf:
+                  - $ref: '#/components/schemas/User'
+                  - $ref: '#/components/schemas/UserPrivate'
+              examples:
+                compte_public:
+                  summary: Compte public
+                  value:
+                    id: 1
+                    pseudo: bastien
+                    prenom: Bastien
+                    nom: Dupont
+                    bio: "Fan de jeux vidéo"
+                    photo: "https://..."
+                    role_id: 1
+                    public: 1
+                compte_prive:
+                  summary: Compte privé
+                  value:
+                    id: 2
+                    pseudo: user_prive
+                    prenom: Jean
+                    nom: Martin
+                    photo: null
+                    is_private: true
         '400':
           description: ID invalide
           content:
@@ -772,6 +951,9 @@ paths:
     post:
       tags: [Followers]
       summary: Suivre un utilisateur
+      description: |
+        Si le profil cible est **public**, crée l'abonnement immédiatement (201).
+        Si le profil cible est **privé**, envoie une demande de suivi en attente (202).
       security:
         - BearerAuth: []
       parameters:
@@ -783,11 +965,30 @@ paths:
           description: ID de l'utilisateur à suivre
       responses:
         '201':
-          description: Abonnement créé
+          description: Abonnement créé (profil public)
           content:
             application/json:
               schema:
                 type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '202':
+          description: Demande de suivi envoyée (profil privé)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: pending
+                  message:
+                    type: string
+                  request_id:
+                    type: integer
         '400':
           description: Impossible de se suivre soi-même
           content:
@@ -807,7 +1008,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Déjà abonné
+          description: Déjà abonné ou demande déjà en attente
           content:
             application/json:
               schema:
@@ -861,6 +1062,13 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les abonnés d'un utilisateur
+      description: |
+        Accessible sans authentification pour les profils publics.
+        Le propriétaire (token JWT requis) peut accéder à ses abonnés même si son compte est privé.
+        Retourne 403 pour tout autre visiteur sur un compte privé.
+      security:
+        - BearerAuth: []
+        - {}
       parameters:
         - name: id
           in: path
@@ -882,6 +1090,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: Compte privé (non accessible au visiteur)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Ce compte est privé
+                  is_private:
+                    type: boolean
+                    example: true
         '404':
           description: Utilisateur non trouvé
           content:
@@ -899,6 +1120,13 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les abonnements d'un utilisateur
+      description: |
+        Accessible sans authentification pour les profils publics.
+        Le propriétaire (token JWT requis) peut accéder à ses abonnements même si son compte est privé.
+        Retourne 403 pour tout autre visiteur sur un compte privé.
+      security:
+        - BearerAuth: []
+        - {}
       parameters:
         - name: id
           in: path
@@ -920,6 +1148,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: Compte privé (non accessible au visiteur)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Ce compte est privé
+                  is_private:
+                    type: boolean
+                    example: true
         '404':
           description: Utilisateur non trouvé
           content:
@@ -937,6 +1178,13 @@ paths:
     get:
       tags: [Followers]
       summary: Récupérer les statistiques de suivi d'un utilisateur
+      description: |
+        Accessible sans authentification pour les profils publics.
+        Le propriétaire (token JWT requis) peut accéder à ses statistiques même si son compte est privé.
+        Retourne 403 pour tout autre visiteur sur un compte privé.
+      security:
+        - BearerAuth: []
+        - {}
       parameters:
         - name: id
           in: path
@@ -956,6 +1204,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: Compte privé (non accessible au visiteur)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Ce compte est privé
+                  is_private:
+                    type: boolean
+                    example: true
         '404':
           description: Utilisateur non trouvé
           content:
@@ -1000,6 +1261,161 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== FOLLOW REQUESTS ====================
+
+  /follow-requests:
+    post:
+      tags: [Follow Requests]
+      summary: Envoyer une demande de suivi
+      description: Envoie une demande de suivi à un compte privé. Déclenche une notification au destinataire.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id]
+              properties:
+                target_id:
+                  type: integer
+                  description: ID de l'utilisateur à qui envoyer la demande
+      responses:
+        '201':
+          description: Demande envoyée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                    example: pending
+        '400':
+          description: target_id manquant ou auto-demande
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Demande déjà en attente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Follow Requests]
+      summary: Voir ses demandes de suivi reçues
+      description: Retourne les demandes de suivi en attente reçues par l'utilisateur connecté.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des demandes en attente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FollowRequest'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /follow-requests/{id}:
+    patch:
+      tags: [Follow Requests]
+      summary: Accepter ou refuser une demande de suivi
+      description: |
+        Accepter (`accept`) insère la relation dans `followers` et notifie le demandeur.
+        Refuser (`reject`) met à jour le statut sans créer de follow.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la demande de suivi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [accept, reject]
+      responses:
+        '200':
+          description: Demande traitée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [accepted, rejected]
+        '400':
+          description: Action invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Demande non trouvée ou déjà traitée
           content:
             application/json:
               schema:
@@ -2467,6 +2883,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /notifications/{id}:
+    delete:
+      tags: [Notifications]
+      summary: Supprimer une notification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la notification à supprimer
+      responses:
+        '200':
+          description: Notification supprimée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Notification introuvable ou n'appartient pas à l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   # ==================== FEED ====================
 
   /feed:
@@ -2843,6 +3304,41 @@ paths:
 
   # ==================== MODÉRATION ====================
 
+  /admin/critiques:
+    get:
+      tags: [Modération]
+      summary: Lister toutes les critiques
+      description: Retourne toutes les critiques (visibles et masquées). Accessible aux modérateurs et administrateurs.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste de toutes les critiques
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /admin/critiques/hidden:
     get:
       tags: [Modération]
@@ -3019,6 +3515,41 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Commentaire non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users:
+    get:
+      tags: [Modération]
+      summary: Lister tous les utilisateurs
+      description: Retourne tous les utilisateurs avec leur rôle et statut. Accessible aux modérateurs et administrateurs.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste de tous les utilisateurs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
           content:
             application/json:
               schema:
@@ -3346,6 +3877,259 @@ paths:
                 $ref: '#/components/schemas/Error'
         '409':
           description: Statut encore utilisé par des items de bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== SIGNALEMENTS ====================
+
+  /signalements:
+    post:
+      tags: [Signalements]
+      summary: Signaler un contenu
+      description: Permet à un utilisateur authentifié de signaler un profil, un commentaire ou une critique.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignalementCreate'
+      responses:
+        '201':
+          description: Signalement créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Signalement'
+        '400':
+          description: Données invalides (motif manquant, type_contenu invalide, contenu_id manquant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/signalements:
+    get:
+      tags: [Modération]
+      summary: Lister tous les signalements
+      description: Retourne tous les signalements, avec filtres optionnels par statut et type de contenu. Accessible aux modérateurs et administrateurs.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: statut
+          schema:
+            type: string
+            enum: [en_attente, traite, rejete]
+          description: Filtrer par statut
+        - in: query
+          name: type_contenu
+          schema:
+            type: string
+            enum: [profil, commentaire, critique]
+          description: Filtrer par type de contenu signalé
+      responses:
+        '200':
+          description: Liste des signalements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Signalement'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (modérateur+ requis)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/signalements/{id}:
+    get:
+      tags: [Modération]
+      summary: Détail d'un signalement
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID du signalement
+      responses:
+        '200':
+          description: Détail du signalement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Signalement'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (modérateur+ requis)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Signalement non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Modération]
+      summary: Supprimer un signalement
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID du signalement
+      responses:
+        '200':
+          description: Signalement supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (modérateur+ requis)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Signalement non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/signalements/{id}/statut:
+    put:
+      tags: [Modération]
+      summary: Mettre à jour le statut d'un signalement
+      description: Permet de marquer un signalement comme en attente, en examen, modéré ou rejeté.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID du signalement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - statut
+              properties:
+                statut:
+                  type: string
+                  enum: [en_attente, en_examen, modere, rejete]
+      responses:
+        '200':
+          description: Signalement mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Signalement'
+        '400':
+          description: ID invalide ou statut invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (modérateur+ requis)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Signalement non trouvé
           content:
             application/json:
               schema:

@@ -23,4 +23,6 @@ router.get('/', checkJwt, notificationController.getNotifications);
 // Marquer une notification spécifique comme lue
 router.put('/:id/read', checkJwt, notificationController.markAsRead);
 
+// Supprimer une notification
+router.delete('/:id', checkJwt, notificationController.deleteNotification);
 module.exports = router;

@@ -25,6 +25,7 @@ app.use(checkActive);
 
 const userRoutes = require('./src/routes/user.routes');
 const followerRoutes = require('./src/routes/follower.routes');
+const followRequestRoutes = require('./src/routes/followRequest.routes');
 const critiqueRoutes = require('./src/routes/critique.routes');
 const commentaireRoutes = require('./src/routes/commentaire.routes');
 const bibliothequeRoutes = require('./src/routes/bibliotheque.routes');
@@ -32,9 +33,11 @@ const listeRoutes = require('./src/routes/liste.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 const feedRoutes = require('./src/routes/feed.routes');
 const adminRoutes = require('./src/routes/admin.routes');
+const signalementRoutes = require('./src/routes/signalement.routes');
 
 app.use('/users', userRoutes);
 app.use('/users', followerRoutes);
+app.use('/follow-requests', followRequestRoutes);
 app.use('/critiques', critiqueRoutes);
 app.use('/commentaires', commentaireRoutes);
 app.use('/bibliotheque', bibliothequeRoutes);
@@ -42,6 +45,7 @@ app.use('/listes', listeRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/feed', feedRoutes);
 app.use('/admin', adminRoutes);
+app.use('/signalements', signalementRoutes);
 
 // --- Health check ---
 app.get('/health', (req, res) => {

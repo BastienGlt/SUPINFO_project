@@ -19,6 +19,17 @@ const db = require('../../config/db');
 // ==================== CRITIQUES ====================
 
 /**
+ * Récupère toutes les critiques — modérateur+.
+ * @returns {Array}
+ */
+exports.getAllCritiques = async () => {
+  const [rows] = await db.query(
+    'SELECT * FROM v_critiques_complete ORDER BY created_at DESC'
+  );
+  return rows;
+};
+
+/**
  * Récupère une critique par son ID.
  * @param {number} critiqueId
  * @returns {Object|null}
@@ -71,7 +82,7 @@ exports.unhideCritique = async (critiqueId) => {
  */
 exports.getHiddenCritiques = async () => {
   const [rows] = await db.query(
-    'SELECT * FROM v_critiques_complete WHERE hidden = TRUE ORDER BY updated_at DESC'
+    'SELECT v.* FROM v_critiques_complete v JOIN critiques c ON c.id = v.id WHERE c.hidden = TRUE ORDER BY v.updated_at DESC'
   );
   return rows;
 };
@@ -108,7 +119,7 @@ exports.unfeatureCritique = async (critiqueId) => {
  */
 exports.getFeaturedCritiques = async () => {
   const [rows] = await db.query(
-    'SELECT * FROM v_critiques_complete WHERE featured = TRUE ORDER BY created_at DESC'
+    'SELECT v.* FROM v_critiques_complete v JOIN critiques c ON c.id = v.id WHERE c.featured = TRUE ORDER BY v.created_at DESC'
   );
   return rows;
 };
@@ -190,6 +201,17 @@ exports.unwarnUser = async (userId) => {
 };
 
 /**
+ * Récupère tous les utilisateurs — modérateur+.
+ * @returns {Array}
+ */
+exports.getAllUsers = async () => {
+  const [rows] = await db.query(
+    'SELECT id, pseudo, email, prenom, nom, photo, role_id, status, created_at, updated_at FROM users ORDER BY created_at DESC'
+  );
+  return rows;
+};
+
+/**
  * Récupère tous les utilisateurs bannis — admin uniquement.
  * @returns {Array}
  */
@@ -209,6 +231,68 @@ exports.getWarnedUsers = async () => {
     "SELECT id, pseudo, email, prenom, nom, photo, status, created_at, updated_at FROM users WHERE status = 'warned' ORDER BY updated_at DESC"
   );
   return rows;
+};
+
+// ==================== SIGNALEMENTS ====================
+
+/**
+ * Récupère tous les signalements — modérateur+.
+ * @param {Object} filters - { statut, type_contenu }
+ * @returns {Array}
+ */
+exports.getAllSignalements = async (filters = {}) => {
+  const conditions = [];
+  const values = [];
+
+  if (filters.statut) {
+    conditions.push('s.statut = ?');
+    values.push(filters.statut);
+  }
+  if (filters.type_contenu) {
+    conditions.push('s.type_contenu = ?');
+    values.push(filters.type_contenu);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [rows] = await db.query(
+    `SELECT * FROM v_signalements s ${where} ORDER BY s.created_at DESC`,
+    values
+  );
+  return rows;
+};
+
+/**
+ * Récupère un signalement par son ID — modérateur+.
+ * @param {number} signalementId
+ * @returns {Object|null}
+ */
+exports.getSignalementById = async (signalementId) => {
+  const [rows] = await db.query('SELECT * FROM v_signalements WHERE id = ?', [signalementId]);
+  return rows.length > 0 ? rows[0] : null;
+};
+
+/**
+ * Met à jour le statut d'un signalement — modérateur+.
+ * @param {number} signalementId
+ * @param {string} statut - 'en_attente' | 'en_examen' | 'modere' | 'rejete'
+ * @returns {boolean}
+ */
+exports.updateSignalementStatut = async (signalementId, statut) => {
+  const [result] = await db.query(
+    'UPDATE signalements SET statut = ? WHERE id = ?',
+    [statut, signalementId]
+  );
+  return result.affectedRows > 0;
+};
+
+/**
+ * Supprime un signalement — modérateur+.
+ * @param {number} signalementId
+ * @returns {boolean}
+ */
+exports.deleteSignalement = async (signalementId) => {
+  const [result] = await db.query('DELETE FROM signalements WHERE id = ?', [signalementId]);
+  return result.affectedRows > 0;
 };
 
 // ==================== STATUTS ====================

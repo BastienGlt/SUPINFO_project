@@ -141,6 +141,20 @@ exports.unfeatureCritique = async (req, res) => {
 };
 
 /**
+ * GET /admin/critiques
+ * Liste toutes les critiques.
+ */
+exports.getAllCritiques = async (req, res) => {
+  try {
+    const critiques = await adminService.getAllCritiques();
+    res.json(critiques);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des critiques' });
+  }
+};
+
+/**
  * GET /admin/critiques/featured
  * Liste toutes les critiques mises en avant.
  */
@@ -151,6 +165,20 @@ exports.getFeaturedCritiques = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erreur lors de la récupération des critiques en avant' });
+  }
+};
+
+/**
+ * GET /admin/users
+ * Liste tous les utilisateurs.
+ */
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await adminService.getAllUsers();
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs' });
   }
 };
 
@@ -418,5 +446,104 @@ exports.deleteStatut = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erreur lors de la suppression du statut' });
+  }
+};
+
+// ==================== SIGNALEMENTS ====================
+
+const STATUTS_SIGNALEMENT = ['en_attente', 'en_examen', 'modere', 'rejete'];
+
+/**
+ * GET /admin/signalements
+ * Liste tous les signalements (modérateur+).
+ */
+exports.getAllSignalements = async (req, res) => {
+  try {
+    const filters = {};
+    if (req.query.statut) filters.statut = req.query.statut;
+    if (req.query.type_contenu) filters.type_contenu = req.query.type_contenu;
+
+    const signalements = await adminService.getAllSignalements(filters);
+    res.json(signalements);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des signalements' });
+  }
+};
+
+/**
+ * GET /admin/signalements/:id
+ * Détail d'un signalement (modérateur+).
+ */
+exports.getSignalementById = async (req, res) => {
+  try {
+    const signalementId = parseInt(req.params.id);
+    if (isNaN(signalementId)) {
+      return res.status(400).json({ error: 'ID invalide' });
+    }
+
+    const signalement = await adminService.getSignalementById(signalementId);
+    if (!signalement) {
+      return res.status(404).json({ error: 'Signalement non trouvé' });
+    }
+
+    res.json(signalement);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du signalement' });
+  }
+};
+
+/**
+ * PUT /admin/signalements/:id/statut
+ * Met à jour le statut d'un signalement (modérateur+).
+ */
+exports.updateSignalementStatut = async (req, res) => {
+  try {
+    const signalementId = parseInt(req.params.id);
+    if (isNaN(signalementId)) {
+      return res.status(400).json({ error: 'ID invalide' });
+    }
+
+    const { statut } = req.body;
+    if (!statut || !STATUTS_SIGNALEMENT.includes(statut)) {
+      return res.status(400).json({ error: "Le statut doit être 'en_attente', 'en_examen', 'modere' ou 'rejete'" });
+    }
+
+    const signalement = await adminService.getSignalementById(signalementId);
+    if (!signalement) {
+      return res.status(404).json({ error: 'Signalement non trouvé' });
+    }
+
+    await adminService.updateSignalementStatut(signalementId, statut);
+    const updated = await adminService.getSignalementById(signalementId);
+    res.json(updated);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour du signalement' });
+  }
+};
+
+/**
+ * DELETE /admin/signalements/:id
+ * Supprime un signalement (modérateur+).
+ */
+exports.deleteSignalement = async (req, res) => {
+  try {
+    const signalementId = parseInt(req.params.id);
+    if (isNaN(signalementId)) {
+      return res.status(400).json({ error: 'ID invalide' });
+    }
+
+    const signalement = await adminService.getSignalementById(signalementId);
+    if (!signalement) {
+      return res.status(404).json({ error: 'Signalement non trouvé' });
+    }
+
+    await adminService.deleteSignalement(signalementId);
+    res.json({ message: 'Signalement supprimé avec succès' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la suppression du signalement' });
   }
 };
