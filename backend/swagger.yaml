@@ -1,0 +1,3358 @@
+openapi: 3.0.0
+info:
+  title: Supinfo Projet API
+  version: 1.0.0
+  description: API critique de jeux vidéo pour le projet Supinfo
+
+servers:
+  - url: http://localhost:5000
+    description: Serveur de développement
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT Auth0
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        auth0_id:
+          type: string
+        prenom:
+          type: string
+        nom:
+          type: string
+        pseudo:
+          type: string
+        email:
+          type: string
+        bio:
+          type: string
+        photo:
+          type: string
+        role_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    UserCreate:
+      type: object
+      required:
+        - prenom
+        - nom
+        - pseudo
+      properties:
+        prenom:
+          type: string
+        nom:
+          type: string
+        pseudo:
+          type: string
+        bio:
+          type: string
+
+    UserUpdate:
+      type: object
+      properties:
+        prenom:
+          type: string
+        nom:
+          type: string
+        pseudo:
+          type: string
+        bio:
+          type: string
+        photo:
+          type: string
+
+    Rating:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        oeuvre_id:
+          type: integer
+        note:
+          type: number
+          minimum: 0
+          maximum: 5
+        contenu:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RatingCreate:
+      type: object
+      required:
+        - note
+        - titre
+        - description
+      properties:
+        note:
+          type: number
+          minimum: 0
+          maximum: 5
+          description: Note entre 0 et 5
+        contenu:
+          type: string
+          description: Texte de la critique (optionnel)
+        titre:
+          type: string
+          description: Titre de l'oeuvre (requis pour la créer en base si elle n'existe pas encore)
+        description:
+          type: string
+          description: Description de l'oeuvre (requis pour la créer en base si elle n'existe pas encore)
+
+    RatingStats:
+      type: object
+      properties:
+        oeuvre_id:
+          type: integer
+        moyenne:
+          type: number
+        total:
+          type: integer
+        distribution:
+          type: object
+
+    Commentaire:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        critique_id:
+          type: integer
+        contenu:
+          type: string
+          maxLength: 2000
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CommentaireCreate:
+      type: object
+      required:
+        - contenu
+      properties:
+        contenu:
+          type: string
+          maxLength: 2000
+
+    Liste:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        nom:
+          type: string
+        description:
+          type: string
+        visibilite:
+          type: string
+          enum: [PUBLIQUE, PRIVEE]
+        created_at:
+          type: string
+          format: date-time
+
+    ListeCreate:
+      type: object
+      required:
+        - nom
+      properties:
+        nom:
+          type: string
+        description:
+          type: string
+        visibilite:
+          type: string
+          enum: [PUBLIQUE, PRIVEE]
+          default: PRIVEE
+
+    ListeUpdate:
+      type: object
+      properties:
+        nom:
+          type: string
+        description:
+          type: string
+        visibilite:
+          type: string
+          enum: [PUBLIQUE, PRIVEE]
+
+    Statut:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          example: A_VOIR
+        libele:
+          type: string
+          example: À voir
+
+    BibliothequeItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        oeuvre_id:
+          type: integer
+        titre:
+          type: string
+        description:
+          type: string
+        api_reference_id:
+          type: string
+        statut:
+          $ref: '#/components/schemas/Statut'
+        updated_at:
+          type: string
+          format: date-time
+
+    BibliothequeItemCreate:
+      type: object
+      required:
+        - api_reference_id
+        - titre
+        - description
+      properties:
+        api_reference_id:
+          type: string
+          description: Identifiant dans l'API externe. L'oeuvre est créée en base si elle n'existe pas encore.
+        titre:
+          type: string
+        description:
+          type: string
+        statut_id:
+          type: integer
+          description: "ID du statut souhaité (ex: 1=A_VOIR, 2=EN_COURS, 3=VU)"
+          default: 1
+
+    BibliothequeItemUpdate:
+      type: object
+      properties:
+        statut_id:
+          type: integer
+          description: "ID du statut souhaité (ex: 1=A_VOIR, 2=EN_COURS, 3=VU)"
+
+    BibliothequeStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Nombre total d'items dans la bibliothèque
+        oeuvres_uniques:
+          type: integer
+          description: Nombre d'oeuvres distinctes
+        derniere_mise_a_jour:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date de la dernière modification
+        par_statut:
+          type: object
+          description: Répartition du nombre d'items par statut
+          additionalProperties:
+            type: integer
+          example:
+            A_VOIR: 5
+            EN_COURS: 3
+            VU: 4
+
+    FollowStats:
+      type: object
+      properties:
+        followers:
+          type: integer
+        following:
+          type: integer
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+          description: ID du destinataire
+        type:
+          type: string
+          enum: [like, commentaire, follow]
+          description: Type d'événement qui a déclenché la notification
+        source_id:
+          type: integer
+          description: ID de la ressource liée (critique_id pour like/commentaire, user_id pour follow)
+        lu:
+          type: boolean
+          description: Notification lue ou non
+        created_at:
+          type: string
+          format: date-time
+        from_user_id:
+          type: integer
+          description: ID de l'utilisateur qui a déclenché l'action
+        from_pseudo:
+          type: string
+          description: Pseudo de l'utilisateur émetteur
+        from_photo:
+          type: string
+          nullable: true
+          description: Photo de l'utilisateur émetteur
+        oeuvre_id:
+          type: integer
+          nullable: true
+          description: |
+            ID de l'oeuvre liée. Renseigné uniquement pour les types `like` et `commentaire`
+            (source_id = critique_id → oeuvre_id récupéré via JOIN). Null pour `follow`.
+
+    NotificationList:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        unreadCount:
+          type: integer
+        pagination:
+          type: object
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+            total:
+              type: integer
+
+    FeedItem:
+      type: object
+      description: Entrée du fil d'actualité. Les champs disponibles varient selon le type.
+      properties:
+        type:
+          type: string
+          enum: [critique, commentaire, liste]
+          description: Nature de l'activité
+        id:
+          type: integer
+          description: ID de la ressource (critique, commentaire ou liste)
+        created_at:
+          type: string
+          format: date-time
+        author_id:
+          type: integer
+        author_pseudo:
+          type: string
+        author_photo:
+          type: string
+          nullable: true
+        contenu:
+          type: string
+          nullable: true
+          description: Texte de la critique, du commentaire ou description de la liste
+        note:
+          type: number
+          nullable: true
+          description: Note (uniquement pour type=critique)
+        oeuvre_titre:
+          type: string
+          nullable: true
+          description: Titre de l'oeuvre liée (critique ou commentaire)
+        oeuvre_api_ref:
+          type: string
+          nullable: true
+        liste_nom:
+          type: string
+          nullable: true
+          description: Nom de la liste (uniquement pour type=liste)
+        liste_visibilite:
+          type: string
+          nullable: true
+
+    FeedList:
+      type: object
+      properties:
+        feed:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedItem'
+        pagination:
+          type: object
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+            total:
+              type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    Oeuvre:
+      type: object
+      properties:
+        id:
+          type: integer
+        api_reference_id:
+          type: string
+          description: Identifiant de l'oeuvre dans l'API externe (ex. RAWG, IGDB, TMDB…)
+        titre:
+          type: string
+        description:
+          type: string
+
+    OeuvreRef:
+      type: object
+      description: Référence à une oeuvre via l'API externe. L'oeuvre est créée en base si elle n'existe pas encore.
+      required:
+        - api_reference_id
+        - titre
+        - description
+      properties:
+        api_reference_id:
+          type: string
+          description: Identifiant dans l'API externe
+        titre:
+          type: string
+        description:
+          type: string
+
+    Success:
+      type: object
+      properties:
+        message:
+          type: string
+
+tags:
+  - name: Oeuvres
+    description: Référentiel d'oeuvres (résolution automatique via api_reference_id)
+  - name: Users
+    description: Gestion des utilisateurs
+  - name: Followers
+    description: Système de follow/unfollow
+  - name: Critiques
+    description: Notes et critiques des oeuvres
+  - name: Commentaires
+    description: Commentaires sur les critiques
+  - name: Bibliotheque
+    description: Bibliothèque personnelle de l'utilisateur
+  - name: Listes
+    description: Listes personnalisées d'oeuvres
+  - name: Notifications
+    description: Système de notifications (likes, commentaires, follows) avec push temps réel SSE
+  - name: Feed
+    description: Fil d'actualité chronologique des utilisateurs suivis
+  - name: Admin
+    description: Actions réservées aux administrateurs (role_id=3)
+  - name: Modération
+    description: Actions accessibles aux modérateurs et administrateurs (role_id>=2)
+
+paths:
+
+  # ==================== USERS ====================
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Récupérer l'utilisateur connecté
+      description: Retourne les données de l'utilisateur authentifié. Retourne 404 avec is_new=true si le profil n'existe pas encore.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Utilisateur trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Profil non créé (nouvel utilisateur)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  is_new:
+                    type: boolean
+                  prefill:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      photo:
+                        type: string
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/create:
+    post:
+      tags: [Users]
+      summary: Créer un profil utilisateur
+      description: Crée le profil après la première connexion Auth0. L'email et la photo sont extraits du token JWT.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Profil créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Champs obligatoires manquants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Pseudo ou email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Récupérer un utilisateur par ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Utilisateur trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Users]
+      summary: Modifier un utilisateur
+      description: Nécessite d'être le propriétaire ou un admin (role_id=3).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Utilisateur mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Aucune donnée à mettre à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission refusée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Pseudo déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Users]
+      summary: Supprimer un utilisateur
+      description: Nécessite d'être le propriétaire ou un admin (role_id=3).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Utilisateur supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission refusée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}/ratings:
+    get:
+      tags: [Users]
+      summary: Récupérer toutes les notes d'un utilisateur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Liste des notes
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}/ratings/{oeuvreId}:
+    get:
+      tags: [Users]
+      summary: Récupérer la note d'un utilisateur pour une oeuvre spécifique
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: oeuvreId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Note trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rating'
+        '404':
+          description: Note non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== FOLLOWERS ====================
+
+  /users/{id}/follow:
+    post:
+      tags: [Followers]
+      summary: Suivre un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur à suivre
+      responses:
+        '201':
+          description: Abonnement créé
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Impossible de se suivre soi-même
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Déjà abonné
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Followers]
+      summary: Ne plus suivre un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur à ne plus suivre
+      responses:
+        '200':
+          description: Désabonnement réussi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Abonnement non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}/followers:
+    get:
+      tags: [Followers]
+      summary: Récupérer les abonnés d'un utilisateur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Liste des abonnés
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}/following:
+    get:
+      tags: [Followers]
+      summary: Récupérer les abonnements d'un utilisateur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Liste des abonnements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}/follow-stats:
+    get:
+      tags: [Followers]
+      summary: Récupérer les statistiques de suivi d'un utilisateur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Statistiques de suivi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowStats'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}/is-following:
+    get:
+      tags: [Followers]
+      summary: Vérifier si l'utilisateur connecté suit un autre utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur cible
+      responses:
+        '200':
+          description: Résultat de la vérification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isFollowing:
+                    type: boolean
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== CRITIQUES ====================
+
+  /critiques/{id}/ratings:
+    get:
+      tags: [Critiques]
+      summary: Récupérer toutes les notes d'une oeuvre
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: api_reference_id de l'oeuvre (référence API externe)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: DESC
+      responses:
+        '200':
+          description: Liste des notes et statistiques
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Oeuvre introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Critiques]
+      summary: Créer une note pour une oeuvre
+      description: |
+        Crée la note pour l'oeuvre identifiée par son `api_reference_id` (dans l'URL).
+        Si l'oeuvre n'existe pas encore en base, elle est automatiquement créée à partir de
+        `titre` et `description` fournis dans le corps de la requête.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: api_reference_id de l'oeuvre dans l'API externe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingCreate'
+      responses:
+        '201':
+          description: Note créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rating'
+        '400':
+          description: Note invalide ou titre/description manquants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Oeuvre déjà notée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Critiques]
+      summary: Mettre à jour une note existante pour une oeuvre
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: api_reference_id de l'oeuvre dans l'API externe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingCreate'
+      responses:
+        '200':
+          description: Note mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rating'
+        '400':
+          description: Note invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Note non trouvée (utiliser POST) ou oeuvre introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /critiques/{id}/ratings/stats:
+    get:
+      tags: [Critiques]
+      summary: Récupérer les statistiques de notation d'une oeuvre
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: api_reference_id de l'oeuvre dans l'API externe
+      responses:
+        '200':
+          description: Statistiques de notation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingStats'
+        '404':
+          description: Oeuvre introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /critiques/{id}:
+    delete:
+      tags: [Critiques]
+      summary: Supprimer une critique/note
+      description: Seul l'auteur peut supprimer sa note.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Note supprimée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Note non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /critiques/{id}/likes:
+    get:
+      tags: [Critiques]
+      summary: Récupérer le nombre de likes d'une critique
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Nombre de likes de la critique
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likeCount:
+                    type: integer
+                    description: Nombre total de likes
+                    example: 42
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /critiques/{id}/like:
+    post:
+      tags: [Critiques]
+      summary: Liker une critique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '201':
+          description: Like ajouté
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Critique déjà likée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Critiques]
+      summary: Retirer le like d'une critique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Like retiré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Like non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== COMMENTAIRES ====================
+
+  /commentaires/critiques/{id}:
+    post:
+      tags: [Commentaires]
+      summary: Créer un commentaire sur une critique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentaireCreate'
+      responses:
+        '201':
+          description: Commentaire créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Commentaire'
+        '400':
+          description: Contenu invalide ou trop long
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Commentaires]
+      summary: Récupérer tous les commentaires d'une critique
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: ASC
+      responses:
+        '200':
+          description: Liste des commentaires
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /commentaires/critiques/{id}/count:
+    get:
+      tags: [Commentaires]
+      summary: Obtenir le nombre de commentaires d'une critique
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Nombre de commentaires
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /commentaires/users/{id}:
+    get:
+      tags: [Commentaires]
+      summary: Récupérer tous les commentaires d'un utilisateur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Liste des commentaires
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /commentaires/{id}:
+    put:
+      tags: [Commentaires]
+      summary: Mettre à jour un commentaire
+      description: Seul l'auteur peut modifier son commentaire.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du commentaire
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentaireCreate'
+      responses:
+        '200':
+          description: Commentaire mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Commentaire'
+        '400':
+          description: Contenu invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Commentaires]
+      summary: Supprimer un commentaire
+      description: Seul l'auteur peut supprimer son commentaire.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du commentaire
+      responses:
+        '200':
+          description: Commentaire supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== BIBLIOTHEQUE ====================
+
+  /bibliotheque/stats:
+    get:
+      tags: [Bibliotheque]
+      summary: Statistiques de la bibliothèque de l'utilisateur connecté
+      description: Retourne le total d'items, le nombre d'oeuvres uniques, la date de dernière mise à jour et la répartition par statut.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistiques de la collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BibliothequeStats'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bibliotheque/items:
+    post:
+      tags: [Bibliotheque]
+      summary: Ajouter une oeuvre à la bibliothèque
+      description: |
+        Ajoute l'oeuvre à la bibliothèque de l'utilisateur connecté.
+        Si l'oeuvre n'existe pas encore en base, elle est automatiquement créée à partir de
+        `api_reference_id`, `titre` et `description`.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BibliothequeItemCreate'
+      responses:
+        '201':
+          description: Oeuvre ajoutée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  item_id:
+                    type: integer
+                  oeuvre:
+                    $ref: '#/components/schemas/Oeuvre'
+        '400':
+          description: Données invalides ou champs manquants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Bibliotheque]
+      summary: Récupérer la bibliothèque de l'utilisateur connecté
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: statut_id
+          in: query
+          schema:
+            type: integer
+          description: Filtrer par ID de statut
+      responses:
+        '200':
+          description: Liste des items de la bibliothèque
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BibliothequeItem'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bibliotheque/items/user/{userId}:
+    get:
+      tags: [Bibliotheque]
+      summary: Récupérer la bibliothèque d'un utilisateur spécifique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur
+        - name: statut_id
+          in: query
+          schema:
+            type: integer
+          description: Filtrer par ID de statut
+      responses:
+        '200':
+          description: Liste des items de la bibliothèque
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BibliothequeItem'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bibliotheque/items/{id}:
+    put:
+      tags: [Bibliotheque]
+      summary: Mettre à jour un item de la bibliothèque
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BibliothequeItemUpdate'
+      responses:
+        '200':
+          description: Item mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Corps de la requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Bibliotheque]
+      summary: Supprimer un item de la bibliothèque
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'item
+      responses:
+        '200':
+          description: Item supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== LISTES ====================
+
+  /listes/public:
+    get:
+      tags: [Listes]
+      summary: Récupérer les listes publiques
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Liste des listes publiques
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Liste'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listes/{id}/public:
+    get:
+      tags: [Listes]
+      summary: Récupérer une liste publique spécifique sans authentification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la liste
+      responses:
+        '200':
+          description: Détails de la liste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liste'
+        '404':
+          description: Liste non trouvée ou accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listes:
+    post:
+      tags: [Listes]
+      summary: Créer une liste
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListeCreate'
+      responses:
+        '201':
+          description: Liste créée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  liste_id:
+                    type: integer
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Listes]
+      summary: Récupérer les listes de l'utilisateur connecté
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des listes de l'utilisateur
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Liste'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listes/user/{userId}:
+    get:
+      tags: [Listes]
+      summary: Récupérer les listes d'un utilisateur spécifique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur
+      responses:
+        '200':
+          description: Liste des listes de l'utilisateur
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Liste'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listes/{id}:
+    get:
+      tags: [Listes]
+      summary: Récupérer une liste spécifique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la liste
+      responses:
+        '200':
+          description: Détails de la liste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liste'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Liste non trouvée ou accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Listes]
+      summary: Mettre à jour une liste
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la liste
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListeUpdate'
+      responses:
+        '200':
+          description: Liste mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Visibilité invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Liste non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Listes]
+      summary: Supprimer une liste
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la liste
+      responses:
+        '200':
+          description: Liste supprimée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Liste non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listes/{id}/oeuvres:
+    get:
+      tags: [Listes]
+      summary: Récupérer les oeuvres d'une liste
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la liste
+      responses:
+        '200':
+          description: Liste des oeuvres
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Liste non trouvée ou accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Listes]
+      summary: Ajouter une oeuvre à une liste
+      description: |
+        Ajoute l'oeuvre à la liste. Si l'oeuvre n'existe pas encore en base, elle est
+        automatiquement créée à partir de `api_reference_id`, `titre` et `description`.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la liste
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OeuvreRef'
+      responses:
+        '201':
+          description: Oeuvre ajoutée à la liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  oeuvre:
+                    $ref: '#/components/schemas/Oeuvre'
+        '400':
+          description: Champs manquants ou invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listes/{id}/oeuvres/{oeuvreId}:
+    delete:
+      tags: [Listes]
+      summary: Retirer une oeuvre d'une liste
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la liste
+        - name: oeuvreId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'oeuvre
+      responses:
+        '200':
+          description: Oeuvre retirée de la liste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Oeuvre non trouvée dans la liste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== NOTIFICATIONS ====================
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Récupérer les notifications de l'utilisateur connecté
+      description: Retourne la liste paginée des notifications avec le nombre de non-lues.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 100
+          description: Nombre de notifications à retourner
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Décalage pour la pagination
+      responses:
+        '200':
+          description: Liste des notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationList'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Nombre de notifications non lues
+      description: Retourne uniquement le compteur de notifications non lues. Utile pour afficher un badge.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Compteur de non-lues
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unreadCount:
+                    type: integer
+                    example: 3
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: Marquer toutes les notifications comme lues
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Toutes les notifications marquées comme lues
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "5 notification(s) marquée(s) comme lues"
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/stream:
+    get:
+      tags: [Notifications]
+      summary: Connexion SSE — réception des notifications en temps réel
+      description: |
+        Ouvre une connexion **Server-Sent Events** persistante. Le serveur pousse
+        un événement `notification` dès qu'une nouvelle notification est créée pour l'utilisateur.
+
+        **Format des événements reçus :**
+        ```
+        event: connected
+        data: {"userId": 42}
+
+        event: notification
+        data: {"id":1,"type":"like","from_pseudo":"alice",...}
+
+        : ping
+        ```
+
+        Le client doit se reconnecter automatiquement si la connexion est interrompue
+        (comportement natif de l'API `EventSource`).
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Flux SSE ouvert
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Non authentifié
+        '500':
+          description: Erreur serveur
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: Marquer une notification spécifique comme lue
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la notification
+      responses:
+        '200':
+          description: Notification marquée comme lue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Notification introuvable ou n'appartient pas à l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== FEED ====================
+
+  /feed:
+    get:
+      tags: [Feed]
+      summary: Fil d'actualité chronologique
+      description: |
+        Retourne les activités récentes des utilisateurs suivis, triées du plus récent
+        au plus ancien. Agrège trois types d'événements :
+        - `critique` : nouvelle note publiée
+        - `commentaire` : nouveau commentaire posté
+        - `liste` : nouvelle liste publique créée
+
+        Si l'utilisateur ne suit personne, le feed est vide.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+          description: Nombre d'entrées à retourner
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Décalage pour la pagination
+      responses:
+        '200':
+          description: Fil d'actualité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedList'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== ADMIN ====================
+
+  /admin/critiques/featured:
+    get:
+      tags: [Admin]
+      summary: Lister les critiques mises en avant
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des critiques en avant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (non admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/critiques/{id}:
+    delete:
+      tags: [Modération]
+      summary: Supprimer n'importe quelle critique
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Critique supprimée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (non admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Critique non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/critiques/{id}/feature:
+    post:
+      tags: [Admin]
+      summary: Mettre une critique en avant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Critique mise en avant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (non admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Critique non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Admin]
+      summary: Retirer une critique de la mise en avant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Critique retirée de la mise en avant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (non admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Critique non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/banned:
+    get:
+      tags: [Admin]
+      summary: Lister les utilisateurs bannis
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des utilisateurs bannis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (non admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/ban:
+    put:
+      tags: [Admin]
+      summary: Bannir un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur à bannir
+      responses:
+        '200':
+          description: Utilisateur banni
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (non admin ou tentative de bannir un admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/unban:
+    put:
+      tags: [Admin]
+      summary: Débannir un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur à débannir
+      responses:
+        '200':
+          description: Utilisateur débanni
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (non admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== MODÉRATION ====================
+
+  /admin/critiques/hidden:
+    get:
+      tags: [Modération]
+      summary: Lister les critiques masquées
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des critiques masquées
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/critiques/{id}/hide:
+    post:
+      tags: [Modération]
+      summary: Masquer une critique
+      description: La critique reste en base mais n'est plus visible publiquement.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Critique masquée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Critique non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Modération]
+      summary: Rendre une critique visible (annuler le masquage)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la critique
+      responses:
+        '200':
+          description: Critique rendue visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Critique non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/commentaires/{id}:
+    delete:
+      tags: [Modération]
+      summary: Supprimer n'importe quel commentaire
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du commentaire
+      responses:
+        '200':
+          description: Commentaire supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Commentaire non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/warned:
+    get:
+      tags: [Modération]
+      summary: Lister les utilisateurs avertis
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des utilisateurs avertis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/warn:
+    put:
+      tags: [Modération]
+      summary: Émettre un avertissement à un utilisateur
+      description: Moins sévère que le ban. Passe le statut de l'utilisateur à `warned`.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur
+      responses:
+        '200':
+          description: Utilisateur averti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé ou tentative d'avertir un modérateur/admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/unwarn:
+    put:
+      tags: [Modération]
+      summary: Retirer l'avertissement d'un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de l'utilisateur
+      responses:
+        '200':
+          description: Avertissement retiré
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (rôle insuffisant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/statuts:
+    get:
+      tags: [Admin]
+      summary: Lister tous les statuts de bibliothèque (public)
+      responses:
+        '200':
+          description: Liste des statuts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Statut'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Admin]
+      summary: Créer un nouveau statut de bibliothèque
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, libele]
+              properties:
+                code:
+                  type: string
+                  example: ABANDONNE
+                libele:
+                  type: string
+                  example: Abandonné
+      responses:
+        '201':
+          description: Statut créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statut'
+        '400':
+          description: Champs manquants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (admin uniquement)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/statuts/{id}:
+    put:
+      tags: [Admin]
+      summary: Modifier un statut de bibliothèque
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du statut
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: EN_PAUSE
+                libele:
+                  type: string
+                  example: En pause
+      responses:
+        '200':
+          description: Statut mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statut'
+        '400':
+          description: ID invalide ou aucun champ fourni
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (admin uniquement)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Statut non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Admin]
+      summary: Supprimer un statut de bibliothèque
+      description: Échoue avec 409 si des items de bibliothèque utilisent encore ce statut.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du statut
+      responses:
+        '200':
+          description: Statut supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: ID invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès refusé (admin uniquement)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Statut non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Statut encore utilisé par des items de bibliothèque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

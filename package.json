@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "dev": "npm run dev --prefix backend",
+    "start": "npm run start --prefix backend",
     "mobile": "npm run lan --prefix frontend-mobile",
     "tunnel": "npm run tunnel --prefix frontend-mobile",
-    "install": "npm install --prefix frontend-mobile"
+    "install:backend": "npm install --prefix backend",
+    "install:mobile": "npm install --prefix frontend-mobile",
+    "install": "npm run install:backend && npm run install:mobile"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

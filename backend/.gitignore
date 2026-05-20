@@ -37,9 +37,6 @@ coverage/
 *.tmp
 *.temp
 .cache/
-tmpclaude*
-nul
+
 CLAUDE.md
 database.sql
-rawg.yaml
-swagger.yaml
