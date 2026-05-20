@@ -1,6 +1,9 @@
 const db = require('../../config/db');
 const notificationService = require('./notification.service');
 
+const RATINGS_ORDER_BY = new Set(['id', 'created_at', 'updated_at', 'note']);
+const ORDER_DIRECTION = new Set(['ASC', 'DESC']);
+
 /**
  * Service : Logique métier pour le système de notation des œuvres
  * Gère les notes et critiques associées aux œuvres
@@ -85,13 +88,16 @@ exports.getRatingByUserAndOeuvre = async (userId, oeuvreId) => {
  */
 exports.getRatingsByOeuvre = async (oeuvreId, options = {}) => {
   const { limit = 20, offset = 0, orderBy = 'created_at', order = 'DESC' } = options;
+  const safeOrderBy = RATINGS_ORDER_BY.has(orderBy) ? orderBy : 'created_at';
+  const normalizedOrder = typeof order === 'string' ? order.toUpperCase() : 'DESC';
+  const safeOrder = ORDER_DIRECTION.has(normalizedOrder) ? normalizedOrder : 'DESC';
   
   // Récupérer les critiques
   const sql = `
     SELECT *
     FROM v_critiques_complete
     WHERE oeuvre_id = ?
-    ORDER BY ${orderBy} ${order}
+    ORDER BY ${safeOrderBy} ${safeOrder}
     LIMIT ? OFFSET ?
   `;
   const [critiques] = await db.query(sql, [oeuvreId, limit, offset]);
