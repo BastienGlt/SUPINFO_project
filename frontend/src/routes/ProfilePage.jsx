@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { createFollowerService } from '../services/followerService';
-import { LogOut } from 'lucide-react';
+import { LogOut, Users } from 'lucide-react';
 
 const ROLE_LABELS = { 1: 'Admin', 2: 'Membre' };
 
@@ -13,7 +14,7 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user?.id) return;
+        if (!user?.id) { setLoading(false); return; }
         const service = createFollowerService(getAccessTokenSilently);
         service.getFollowStats(user.id)
             .then(setStats)
@@ -21,9 +22,10 @@ export default function ProfilePage() {
             .finally(() => setLoading(false));
     }, [user?.id]);
 
-    const roleLabel = ROLE_LABELS[user.role_id] || 'Membre';
-
     if (loading) return <div className="page-container">Chargement...</div>;
+    if (!user) return <div className="page-container">Impossible de charger le profil.</div>;
+
+    const roleLabel = ROLE_LABELS[user.role_id] || 'Membre';
 
     return (
         <div className="page-container">
@@ -34,14 +36,14 @@ export default function ProfilePage() {
                     <h1>{user.prenom} {user.nom}</h1>
                     <h3 className="pseudo">@{user.pseudo}</h3>
                     <div className="stats-row">
-                        <div className="stat">
+                        <Link to={`/followers/${user.id}?tab=followers`} className="stat" style={{ textDecoration: 'none', cursor: 'pointer' }}>
                             <span className="val">{stats.followers}</span>
                             <span className="label">Abonnés</span>
-                        </div>
-                        <div className="stat">
+                        </Link>
+                        <Link to={`/followers/${user.id}?tab=following`} className="stat" style={{ textDecoration: 'none', cursor: 'pointer' }}>
                             <span className="val">{stats.following}</span>
                             <span className="label">Abonnements</span>
-                        </div>
+                        </Link>
                         <div className="stat">
                             <span className="val">{roleLabel}</span>
                             <span className="label">Rôle</span>
