@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Sparkles } from 'lucide-react-native';
 
 export default function CompleteProfileScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { completeProfile } = useAuth();
 
@@ -37,7 +37,7 @@ export default function CompleteProfileScreen() {
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       {/* En-tête avec icône Sparkles */}
       <View style={styles.headerWrap}>
-        <View style={[styles.iconWrap, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
+        <View style={[styles.iconWrap, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
           <Sparkles size={32} color={colors.tint} strokeWidth={1.5} />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>Bienvenue !</Text>
@@ -103,7 +103,7 @@ function Field({
   ...props
 }: {
   label: string;
-  colors: typeof Colors.light;
+  colors: typeof Colors.dark;
   style?: object;
 } & React.ComponentProps<typeof TextInput>) {
   return (

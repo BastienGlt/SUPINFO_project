@@ -27,7 +27,7 @@ interface AdminCritique {
 }
 
 export default function AdminCritiquesScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { user, token } = useAuth();
 
@@ -172,7 +172,7 @@ export default function AdminCritiquesScreen() {
 
       {/* Bouton toggle — toutes les critiques */}
       <TouchableOpacity
-        style={[styles.toggleBtn, { backgroundColor: colors.tint + '14', borderColor: colors.tint + '30' }]}
+        style={[styles.toggleBtn, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}
         onPress={toggleAllCritiques}
         activeOpacity={0.75}
         disabled={loadingAll}
@@ -270,7 +270,7 @@ export default function AdminCritiquesScreen() {
 
 function SectionHeaderView({
   icon, title, colors,
-}: { icon: React.ReactNode; title: string; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; title: string; colors: typeof Colors.dark }) {
   return (
     <View style={styles.sectionHeader}>
       {icon}
@@ -281,7 +281,7 @@ function SectionHeaderView({
 
 function EmptyCard({
   icon, text, colors,
-}: { icon: React.ReactNode; text: string; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; text: string; colors: typeof Colors.dark }) {
   return (
     <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {icon}
@@ -296,7 +296,7 @@ function CritiqueCard({
   c: AdminCritique;
   type: 'all' | 'hidden' | 'featured';
   isAdmin: boolean;
-  colors: typeof Colors.light;
+  colors: typeof Colors.dark;
   onUnhide: (c: AdminCritique) => void;
   onHide: (c: AdminCritique) => void;
   onFeature: (c: AdminCritique) => void;
@@ -347,13 +347,13 @@ function CritiqueCard({
       <View style={styles.actions}>
         {/* Actions selon le type de section ou l'état réel pour 'all' */}
         {isHidden && (
-          <ActionBtn label="Afficher" icon={<Eye size={13} color={colors.tint} strokeWidth={2.5} />} color={colors.tint} onPress={() => onUnhide(c)} bg={colors.tint + '12'} />
+          <ActionBtn label="Afficher" icon={<Eye size={13} color={colors.tint} strokeWidth={2.5} />} color={colors.tint} onPress={() => onUnhide(c)} bg={colors.tintDim} />
         )}
         {!isHidden && (
           <ActionBtn label="Masquer" icon={<EyeOff size={13} color="#f59e0b" strokeWidth={2.5} />} color="#f59e0b" onPress={() => onHide(c)} bg="#f59e0b12" />
         )}
         {isAdmin && !isFeatured && !isHidden && (
-          <ActionBtn label="Mettre en avant" icon={<Star size={13} color={colors.tint} strokeWidth={2.5} />} color={colors.tint} onPress={() => onFeature(c)} bg={colors.tint + '12'} />
+          <ActionBtn label="Mettre en avant" icon={<Star size={13} color={colors.tint} strokeWidth={2.5} />} color={colors.tint} onPress={() => onFeature(c)} bg={colors.tintDim} />
         )}
         {isAdmin && isFeatured && (
           <ActionBtn label="Retirer" icon={<StarOff size={13} color={colors.icon} strokeWidth={2.5} />} color={colors.icon} onPress={() => onUnfeature(c)} bg={colors.border} />

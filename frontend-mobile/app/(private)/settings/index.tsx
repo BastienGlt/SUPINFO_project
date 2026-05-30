@@ -22,7 +22,7 @@ const LEGAL_LINKS = {
 const ROLE_LABELS: Record<number, string> = { 1: 'Membre', 2: 'Modérateur', 3: 'Admin' };
 
 export default function MyProfileScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { user, logout, updateUser } = useAuth();
 
@@ -119,7 +119,7 @@ export default function MyProfileScreen() {
         {user.photo ? (
           <Image source={{ uri: user.photo }} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.tint + '25' }]}>
+          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.tintDim }]}>
             <Text style={[styles.avatarInitial, { color: colors.tint }]}>
               {user.prenom?.[0]?.toUpperCase() ?? '?'}
             </Text>
@@ -191,7 +191,7 @@ export default function MyProfileScreen() {
               {user.prenom} {user.nom}
             </Text>
             <Text style={[styles.pseudo, { color: colors.tint }]}>@{user.pseudo}</Text>
-            <View style={[styles.roleBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
+            <View style={[styles.roleBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
               <ShieldCheck size={12} color={colors.tint} strokeWidth={2.5} />
               <Text style={[styles.roleText, { color: colors.tint }]}>{role}</Text>
             </View>
@@ -340,7 +340,7 @@ function EditInput({
   colors,
   style,
   ...props
-}: { colors: typeof Colors.light; style?: object } & React.ComponentProps<typeof TextInput>) {
+}: { colors: typeof Colors.dark; style?: object } & React.ComponentProps<typeof TextInput>) {
   return (
     <TextInput
       {...props}
@@ -361,7 +361,7 @@ const editInputStyle = StyleSheet.create({
   },
 });
 
-function StatItem({ label, value, colors }: { label: string; value: number; colors: typeof Colors.light }) {
+function StatItem({ label, value, colors }: { label: string; value: number; colors: typeof Colors.dark }) {
   return (
     <View style={styles.statItem}>
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
@@ -372,7 +372,7 @@ function StatItem({ label, value, colors }: { label: string; value: number; colo
 
 function InfoRow({
   icon, label, value, colors,
-}: { icon: React.ReactNode; label: string; value: string; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; label: string; value: string; colors: typeof Colors.dark }) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoLabelWrap}>
@@ -386,7 +386,7 @@ function InfoRow({
 
 function LegalLink({
   icon, label, onPress, colors,
-}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.dark }) {
   return (
     <TouchableOpacity style={styles.legalRow} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.infoLabelWrap}>
@@ -400,14 +400,14 @@ function LegalLink({
 
 function QuickLink({
   icon, label, onPress, colors,
-}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.dark }) {
   return (
     <TouchableOpacity
       style={[styles.quickLinkCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.quickLinkIconWrap, { backgroundColor: colors.tint + '14' }]}>{icon}</View>
+      <View style={[styles.quickLinkIconWrap, { backgroundColor: colors.tintDim }]}>{icon}</View>
       <Text style={[styles.quickLinkText, { color: colors.text }]}>{label}</Text>
       <ChevronRight size={18} color={colors.icon} strokeWidth={2} />
     </TouchableOpacity>

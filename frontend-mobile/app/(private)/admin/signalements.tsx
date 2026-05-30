@@ -40,7 +40,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function AdminSignalementsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { token } = useAuth();
 
@@ -107,7 +107,7 @@ export default function AdminSignalementsScreen() {
           ))}
 
         <TouchableOpacity
-          style={[styles.toggleBtn, { backgroundColor: colors.tint + '14', borderColor: colors.tint + '30' }]}
+          style={[styles.toggleBtn, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}
           onPress={() => setShowResolved(v => !v)}
           activeOpacity={0.75}
         >
@@ -201,7 +201,7 @@ export default function AdminSignalementsScreen() {
                           label="Rouvrir"
                           icon={<Flag size={13} color={colors.tint} strokeWidth={2.5} />}
                           color={colors.tint}
-                          bg={colors.tint + '12'}
+                          bg={colors.tintDim}
                           onPress={() => updateStatut(cur, 'en_attente')}
                         />
                       )}
@@ -226,7 +226,7 @@ const STATUT_DISPLAY: Record<string, { label: string; color: string }> = {
 function DetailRow({ label, value, colors, accent }: {
   label: string;
   value: string;
-  colors: typeof Colors.light;
+  colors: typeof Colors.dark;
   accent?: string;
 }) {
   return (
@@ -239,7 +239,7 @@ function DetailRow({ label, value, colors, accent }: {
 
 function SignalementCard({ s, colors, onPress }: {
   s: Signalement;
-  colors: typeof Colors.light;
+  colors: typeof Colors.dark;
   onPress: () => void;
 }) {
   const statut = STATUT_DISPLAY[s.statut];
@@ -252,7 +252,7 @@ function SignalementCard({ s, colors, onPress }: {
       activeOpacity={0.75}
     >
       <View style={styles.cardTop}>
-        <View style={[styles.typeIcon, { backgroundColor: colors.tint + '14' }]}>
+        <View style={[styles.typeIcon, { backgroundColor: colors.tintDim }]}>
           {s.type_contenu === 'profil'
             ? <User size={16} color={colors.tint} strokeWidth={2} />
             : <FileText size={16} color={colors.tint} strokeWidth={2} />}
@@ -276,7 +276,7 @@ function SignalementCard({ s, colors, onPress }: {
   );
 }
 
-function SectionHeaderView({ icon, title, colors }: { icon: React.ReactNode; title: string; colors: typeof Colors.light }) {
+function SectionHeaderView({ icon, title, colors }: { icon: React.ReactNode; title: string; colors: typeof Colors.dark }) {
   return (
     <View style={styles.sectionHeader}>
       {icon}
@@ -285,7 +285,7 @@ function SectionHeaderView({ icon, title, colors }: { icon: React.ReactNode; tit
   );
 }
 
-function EmptyCard({ icon, text, colors }: { icon: React.ReactNode; text: string; colors: typeof Colors.light }) {
+function EmptyCard({ icon, text, colors }: { icon: React.ReactNode; text: string; colors: typeof Colors.dark }) {
   return (
     <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {icon}

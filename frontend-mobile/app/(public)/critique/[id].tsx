@@ -55,7 +55,7 @@ export default function CritiqueDetailScreen() {
       likes_count?: string;
     }>();
 
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { token, user } = useAuth();
   const navigation = useNavigation();
@@ -160,7 +160,7 @@ export default function CritiqueDetailScreen() {
         {author_photo ? (
           <Image source={{ uri: author_photo }} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatarFallback, { backgroundColor: colors.tint + '25' }]}>
+          <View style={[styles.avatarFallback, { backgroundColor: colors.tintDim }]}>
             <Text style={{ color: colors.tint, fontWeight: '700', fontSize: 16 }}>
               {author_pseudo?.[0]?.toUpperCase()}
             </Text>
@@ -173,7 +173,7 @@ export default function CritiqueDetailScreen() {
           <Text style={[styles.authorName, { color: colors.icon }]}>par @{author_pseudo}</Text>
         </View>
         {note ? (
-          <View style={[styles.noteBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
+          <View style={[styles.noteBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
             <Text style={[styles.noteText, { color: colors.tint }]}>{note}/5</Text>
           </View>
         ) : null}
@@ -226,7 +226,7 @@ export default function CritiqueDetailScreen() {
                 {item.auteur_photo ? (
                   <Image source={{ uri: item.auteur_photo }} style={styles.commentAvatar} />
                 ) : (
-                  <View style={[styles.commentAvatarFallback, { backgroundColor: colors.tint + '25' }]}>
+                  <View style={[styles.commentAvatarFallback, { backgroundColor: colors.tintDim }]}>
                     <Text style={{ color: colors.tint, fontWeight: '700', fontSize: 12 }}>
                       {item.auteur_pseudo?.[0]?.toUpperCase()}
                     </Text>

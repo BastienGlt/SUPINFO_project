@@ -20,7 +20,7 @@ interface FollowRequest {
 }
 
 export default function FollowRequestsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const router = useRouter();
   const { token } = useAuth();
@@ -90,7 +90,7 @@ export default function FollowRequestsScreen() {
                 {item.photo ? (
                   <Image source={{ uri: item.photo }} style={styles.avatar} />
                 ) : (
-                  <View style={[styles.avatarFallback, { backgroundColor: colors.tint + '25' }]}>
+                  <View style={[styles.avatarFallback, { backgroundColor: colors.tintDim }]}>
                     <Text style={{ color: colors.tint, fontSize: 18, fontWeight: '700' }}>
                       {item.prenom?.[0]?.toUpperCase()}
                     </Text>
