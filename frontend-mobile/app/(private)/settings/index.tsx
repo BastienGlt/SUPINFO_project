@@ -1,6 +1,6 @@
 import {
   View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Alert,
-  TextInput, ActivityIndicator, Switch,
+  TextInput, ActivityIndicator, Switch, Linking,
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
@@ -10,8 +10,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 import {
   Library, Bell, ChevronRight, LogOut, Mail, CalendarDays, ShieldCheck,
-  Pencil, X, Check, Globe, Lock,
+  Pencil, X, Check, Globe, Lock, ShieldIcon, FileText, Info,
 } from 'lucide-react-native';
+
+const LEGAL_LINKS = {
+  privacy: 'https://example.com/politique-de-confidentialite',
+  terms: 'https://example.com/conditions-utilisation',
+  legal: 'https://example.com/mentions-legales',
+};
 
 const ROLE_LABELS: Record<number, string> = { 1: 'Membre', 2: 'Modérateur', 3: 'Admin' };
 
@@ -294,6 +300,33 @@ export default function MyProfileScreen() {
         </View>
       </View>
 
+      {/* Informations légales */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Informations légales</Text>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <LegalLink
+            icon={<ShieldIcon size={15} color={colors.icon} />}
+            label="Politique de confidentialité"
+            onPress={() => Linking.openURL(LEGAL_LINKS.privacy)}
+            colors={colors}
+          />
+          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
+          <LegalLink
+            icon={<FileText size={15} color={colors.icon} />}
+            label="Conditions d'utilisation"
+            onPress={() => Linking.openURL(LEGAL_LINKS.terms)}
+            colors={colors}
+          />
+          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
+          <LegalLink
+            icon={<Info size={15} color={colors.icon} />}
+            label="Mentions légales"
+            onPress={() => Linking.openURL(LEGAL_LINKS.legal)}
+            colors={colors}
+          />
+        </View>
+      </View>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
         <LogOut size={18} color="white" strokeWidth={2.5} />
         <Text style={styles.logoutText}>Se déconnecter</Text>
@@ -348,6 +381,20 @@ function InfoRow({
       </View>
       <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>{value}</Text>
     </View>
+  );
+}
+
+function LegalLink({
+  icon, label, onPress, colors,
+}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.light }) {
+  return (
+    <TouchableOpacity style={styles.legalRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.infoLabelWrap}>
+        {icon}
+        <Text style={[styles.infoLabel, { color: colors.text }]}>{label}</Text>
+      </View>
+      <ChevronRight size={15} color={colors.icon} strokeWidth={2} />
+    </TouchableOpacity>
   );
 }
 
@@ -447,6 +494,13 @@ const styles = StyleSheet.create({
   infoLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   infoLabel: { fontSize: 14 },
   infoValue: { fontSize: 14, fontWeight: '500', flex: 1, textAlign: 'right' },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
   quickLinks: { gap: 10 },
   quickLinkCard: {
     flexDirection: 'row',
