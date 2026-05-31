@@ -63,7 +63,7 @@ function buildNotifText(n: Notification): string {
 }
 
 export default function NotificationsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { token } = useAuth();
   const router = useRouter();
@@ -163,8 +163,8 @@ export default function NotificationsScreen() {
               style={[
                 styles.notifCard,
                 {
-                  backgroundColor: item.lu ? colors.surface : colors.tint + '12',
-                  borderColor: item.lu ? colors.border : colors.tint + '45',
+                  backgroundColor: item.lu ? colors.surface : colors.tintDim,
+                  borderColor: item.lu ? colors.border : colors.tintBorder,
                 },
               ]}
               activeOpacity={0.7}

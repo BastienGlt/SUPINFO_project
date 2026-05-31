@@ -7,11 +7,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 import { CheckCircle2, Gamepad2, Bookmark, Library, Trash2, RefreshCw, Search, X } from 'lucide-react-native';
 
-// Config visuelle uniquement — clé = code du statut en BDD
-const STATUS_CONFIG: Record<string, { color: string; bg: string; darkBg: string }> = {
-  VU:       { color: '#22c55e', bg: '#f0fdf4', darkBg: '#14532d22' },
-  EN_COURS: { color: '#3b82f6', bg: '#eff6ff', darkBg: '#1e3a5f22' },
-  A_VOIR:   { color: '#f59e0b', bg: '#fffbeb', darkBg: '#78350f22' },
+const STATUS_CONFIG: Record<string, { color: string; darkBg: string }> = {
+  VU:       { color: '#22c55e', darkBg: '#14532d22' },
+  EN_COURS: { color: '#3b82f6', darkBg: '#1e3a5f22' },
+  A_VOIR:   { color: '#f59e0b', darkBg: '#78350f22' },
 };
 
 // Ordre du cycle UI
@@ -45,7 +44,7 @@ interface BiblioItem {
 }
 
 export default function BibliothequeScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { token } = useAuth();
   const router = useRouter();
@@ -208,7 +207,7 @@ export default function BibliothequeScreen() {
         {statuts.map((statut) => {
           const cfg = STATUS_CONFIG[statut.code];
           const color = cfg?.color ?? colors.tint;
-          const bgColor = cfg ? (colorScheme === 'dark' ? cfg.darkBg : cfg.bg) : colors.surface;
+          const bgColor = cfg ? cfg.darkBg : colors.surface;
           return (
             <View key={statut.id} style={[styles.summaryBadge, { backgroundColor: bgColor, borderColor: color + '50' }]}>
               <StatusIcon code={statut.code} color={color} />
@@ -236,7 +235,7 @@ export default function BibliothequeScreen() {
         renderItem={({ item }) => {
           const cfg = STATUS_CONFIG[item.statut.code];
           const color = cfg?.color ?? colors.tint;
-          const bgColor = cfg ? (colorScheme === 'dark' ? cfg.darkBg : cfg.bg) : colors.surface;
+          const bgColor = cfg ? cfg.darkBg : colors.surface;
           const isUpdating = updatingIds.has(item.id);
 
           return (

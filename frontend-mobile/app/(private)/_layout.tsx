@@ -7,7 +7,7 @@ import { Colors } from '@/constants/theme';
 
 export default function PrivateLayout() {
   const { user, isNewUser, loading } = useAuth();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
 
   useEffect(() => {
     if (loading) return;

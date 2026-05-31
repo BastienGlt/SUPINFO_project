@@ -23,7 +23,7 @@ interface RatingsResponse {
 
 export default function PublicCritiquesScreen() {
   const { id, pseudo, photo } = useLocalSearchParams<{ id: string; pseudo?: string; photo?: string }>();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const router = useRouter();
 
@@ -98,7 +98,7 @@ export default function PublicCritiquesScreen() {
                 <Text style={[styles.critiqueGame, { color: colors.text }]} numberOfLines={1}>
                   {item.oeuvre_titre ?? `Jeu #${item.oeuvre_id}`}
                 </Text>
-                <View style={[styles.noteBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
+                <View style={[styles.noteBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
                   <Text style={[styles.noteText, { color: colors.tint }]}>{item.note}/5</Text>
                 </View>
               </View>

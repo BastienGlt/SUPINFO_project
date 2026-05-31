@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Users, FileText, Tag, Shield, ChevronRight, Flag } from 'lucide-react-native';
 
 export default function AdminDashboard() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { user } = useAuth();
   const router = useRouter();
@@ -73,7 +73,7 @@ function NavCard({
   title: string;
   desc: string;
   onPress: () => void;
-  colors: typeof Colors.light;
+  colors: typeof Colors.dark;
 }) {
   return (
     <TouchableOpacity
@@ -81,7 +81,7 @@ function NavCard({
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <View style={[styles.iconWrap, { backgroundColor: colors.tint + '14' }]}>{icon}</View>
+      <View style={[styles.iconWrap, { backgroundColor: colors.tintDim }]}>{icon}</View>
       <View style={styles.cardText}>
         <Text style={[styles.cardTitle, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.cardDesc, { color: colors.icon }]}>{desc}</Text>
