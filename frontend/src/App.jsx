@@ -13,21 +13,14 @@ import BibliothequePage from './routes/BibliothequePage';
 import MessagesPage from './routes/MessagesPage';
 import CompleteProfilePage from './routes/CompleteProfilePage';
 import GamePage from './routes/GamePage';
+import AdminPage from './routes/AdminPage';
 
 function AuthRedirect({ children }) {
   const { isAuthenticated, isNewUser, user, loading } = useAuth();
   const location = useLocation();
-
   if (loading) return <div className="page-container">Chargement...</div>;
-
-  if (isAuthenticated && isNewUser && location.pathname !== '/complete-profile') {
-    return <Navigate to="/complete-profile" replace />;
-  }
-
-  if (isAuthenticated && user && location.pathname === '/login') {
-    return <Navigate to="/profile" replace />;
-  }
-
+  if (isAuthenticated && isNewUser && location.pathname !== '/complete-profile') return <Navigate to="/complete-profile" replace />;
+  if (isAuthenticated && user && location.pathname === '/login') return <Navigate to="/profile" replace />;
   return children;
 }
 
@@ -40,6 +33,8 @@ function AppLayout() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/game/:rawgId" element={<GamePage />} />
+            <Route path="/oeuvre/:oeuvreId" element={<GamePage />} />
+            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/complete-profile" element={<CompleteProfilePage />} />
             <Route path="/user/:userId" element={<UserProfilePage />} />

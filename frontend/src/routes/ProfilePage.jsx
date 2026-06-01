@@ -3,9 +3,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { createFollowerService } from '../services/followerService';
-import { LogOut, Users } from 'lucide-react';
+import { LogOut, Shield } from 'lucide-react';
 
-const ROLE_LABELS = { 1: 'Admin', 2: 'Membre' };
+const ROLE_LABELS = { 1: 'Membre', 2: 'Modérateur', 3: 'Administrateur' };
 
 export default function ProfilePage() {
     const { user, logout } = useAuth();
@@ -26,6 +26,7 @@ export default function ProfilePage() {
     if (!user) return <div className="page-container">Impossible de charger le profil.</div>;
 
     const roleLabel = ROLE_LABELS[user.role_id] || 'Membre';
+    const isModOrAdmin = user.role_id >= 2;
 
     return (
         <div className="page-container">
@@ -45,7 +46,7 @@ export default function ProfilePage() {
                             <span className="label">Abonnements</span>
                         </Link>
                         <div className="stat">
-                            <span className="val">{roleLabel}</span>
+                            <span className="val" style={{ color: isModOrAdmin ? 'var(--accent)' : 'var(--primary)' }}>{roleLabel}</span>
                             <span className="label">Rôle</span>
                         </div>
                     </div>
@@ -57,6 +58,20 @@ export default function ProfilePage() {
                         <p><strong>Email :</strong> {user.email}</p>
                         <p><strong>Inscrit le :</strong> {new Date(user.created_at).toLocaleDateString()}</p>
                     </div>
+
+                    {isModOrAdmin && (
+                        <Link to="/admin" style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            width: '100%', padding: '0.8rem',
+                            background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                            color: 'white', borderRadius: '8px', textDecoration: 'none',
+                            fontWeight: 700, fontFamily: 'Rajdhani, sans-serif', fontSize: '1rem',
+                            marginBottom: '0.5rem',
+                        }}>
+                            <Shield size={18} /> Panneau d'administration
+                        </Link>
+                    )}
+
                     <button onClick={logout} className="btn-danger full-width">
                         <LogOut size={16}/> Se déconnecter
                     </button>
