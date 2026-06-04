@@ -4,7 +4,9 @@ import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
 import ProtectedRoute from './components/ProtectedRoute';
+import NotificationsPage from './routes/NotificationsPage';
 import HomePage from './routes/HomePage';
+import ListesPage from './routes/ListesPage';
 import LoginPage from './routes/LoginPage';
 import ProfilePage from './routes/ProfilePage';
 import UserProfilePage from './routes/UserProfilePage';
@@ -36,6 +38,8 @@ function AppLayout() {
             <Route path="/oeuvre/:oeuvreId" element={<GamePage />} />
             <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/listes" element={<ProtectedRoute><ListesPage /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/complete-profile" element={<CompleteProfilePage />} />
             <Route path="/user/:userId" element={<UserProfilePage />} />
             <Route path="/followers/:userId" element={<FollowListPage />} />

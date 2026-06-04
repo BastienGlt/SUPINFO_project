@@ -4,12 +4,12 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../hooks/useAuth';
 import ReportButton from '../components/ReportButton';
 import { createAdminService } from '../services/adminService';
-import { Shield, EyeOff, Award, Trash2 } from 'lucide-react';
 import { rawgService } from '../services/rawgService';
 import { createCritiqueService } from '../services/critiqueService';
 import { createCommentaireService } from '../services/commentaireService';
 import { createBibliothequeService } from '../services/bibliothequeService';
-import { Star, Heart, MessageCircle, Plus, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { createListeService } from '../services/listeService';
+import { Star, Heart, MessageCircle, Plus, Send, ChevronDown, ChevronUp, EyeOff, Award, Trash2, List } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -85,7 +85,123 @@ function CommentSection({ critiqueId, getAccessTokenSilently, isAuthenticated })
     );
 }
 
-// Fetch public des critiques
+function AddToListButton({ oeuvreId, getAccessTokenSilently, effectiveRawgId, rawgId, gameTitle, gameDescription }) {
+    const [listes, setListes] = useState([]);
+    const [listesWithGame, setListesWithGame] = useState(new Set());
+    const [open, setOpen] = useState(false);
+    const [adding, setAdding] = useState(null);
+    const [loadingListes, setLoadingListes] = useState(false);
+
+    useEffect(() => {
+        if (!open) return;
+        const load = async () => {
+            setLoadingListes(true);
+            try {
+                const service = createListeService(getAccessTokenSilently);
+                const data = await service.getMyLists();
+                const allListes = Array.isArray(data) ? data : data?.listes || [];
+                setListes(allListes);
+
+                // Vérifier quelles listes contiennent déjà ce jeu
+                const inListes = new Set();
+                await Promise.all(allListes.map(async (l) => {
+                    try {
+                        const oeuvresData = await service.getListOeuvres(l.id);
+                        const oeuvres = Array.isArray(oeuvresData) ? oeuvresData : oeuvresData?.oeuvres || [];
+                        const found = oeuvres.some(o =>
+                            String(o.oeuvre_id) === String(oeuvreId) ||
+                            String(o.api_reference_id) === String(effectiveRawgId || rawgId)
+                        );
+                        if (found) inListes.add(l.id);
+                    } catch {}
+                }));
+                setListesWithGame(inListes);
+            } catch {}
+            finally { setLoadingListes(false); }
+        };
+        load();
+    }, [open, oeuvreId]);
+
+    const handleAdd = async (listeId) => {
+        setAdding(listeId);
+        try {
+            const service = createListeService(getAccessTokenSilently);
+            await service.addOeuvre(listeId, {
+                api_reference_id: String(effectiveRawgId || rawgId || ''),
+                titre: gameTitle || 'Jeu',
+                description: gameDescription || 'Pas de description',
+            });
+            setListesWithGame(prev => new Set([...prev, listeId]));
+        } catch (err) {
+            if (err.message?.includes('Duplicate')) {
+                setListesWithGame(prev => new Set([...prev, listeId]));
+            } else {
+                alert('Erreur : ' + err.message);
+            }
+        }
+        finally { setAdding(null); }
+    };
+
+    const inListCount = listesWithGame.size;
+
+    return (
+        <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1rem' }}>
+            <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <List size={18} /> Mes listes
+                {inListCount > 0 && (
+                    <span style={{
+                        background: 'var(--primary-glow)', color: 'var(--primary)',
+                        borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem', fontWeight: 700,
+                        border: '1px solid var(--primary)',
+                    }}>
+                        dans {inListCount} liste{inListCount > 1 ? 's' : ''}
+                    </span>
+                )}
+            </h3>
+            <button onClick={() => setOpen(!open)} style={{
+                width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
+                borderRadius: '8px', padding: '10px', color: 'var(--text)', cursor: 'pointer',
+                fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            }}>
+                <Plus size={16} /> {open ? 'Fermer' : 'Gérer les listes'}
+            </button>
+            {open && (
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {loadingListes ? (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '8px' }}>Chargement...</p>
+                    ) : listes.length === 0 ? (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Aucune liste. Crée-en une depuis la page Listes.</p>
+                    ) : listes.map(l => {
+                        const alreadyIn = listesWithGame.has(l.id);
+                        return (
+                            <button key={l.id}
+                                onClick={() => !alreadyIn && handleAdd(l.id)}
+                                disabled={alreadyIn || adding === l.id}
+                                style={{
+                                    background: alreadyIn ? 'var(--primary-glow)' : 'var(--bg)',
+                                    border: alreadyIn ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                    borderRadius: '8px', padding: '10px', textAlign: 'left',
+                                    color: alreadyIn ? 'var(--primary)' : 'var(--text)',
+                                    fontFamily: 'Exo 2, sans-serif', fontSize: '0.9rem',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    cursor: alreadyIn ? 'default' : 'pointer',
+                                    opacity: alreadyIn ? 1 : (adding === l.id ? 0.6 : 1),
+                                }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {alreadyIn ? '✓' : adding === l.id ? '⏳' : '+'} {l.nom}
+                                </span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                                    {alreadyIn ? 'Déjà ajouté' : l.visibilite === 'PUBLIQUE' ? '🌍' : '🔒'}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 async function fetchRatings(oeuvreId) {
     try {
         const res = await fetch(`${API_URL}/critiques/${oeuvreId}/ratings`, { headers: { 'Content-Type': 'application/json' } });
@@ -98,8 +214,8 @@ async function fetchRatings(oeuvreId) {
 export default function GamePage() {
     const params = useParams();
     const location = useLocation();
-    const rawgId = params.rawgId || null;           // /game/:rawgId
-    const urlOeuvreId = params.oeuvreId || null;    // /oeuvre/:oeuvreId
+    const rawgId = params.rawgId || null;
+    const urlOeuvreId = params.oeuvreId || null;
 
     const { user, isAuthenticated } = useAuth();
     const { getAccessTokenSilently } = useAuth0();
@@ -128,7 +244,6 @@ export default function GamePage() {
         const loadCritiques = async () => {
             let oId = oeuvreId;
 
-            // Si on vient de /game/:rawgId, trouver l'oeuvre_id via la bibliothèque
             if (!oId && rawgId && isAuthenticated) {
                 try {
                     const bibService = createBibliothequeService(getAccessTokenSilently);
@@ -143,20 +258,15 @@ export default function GamePage() {
                 } catch {}
             }
 
-            // Charger TOUTES les critiques pour cette oeuvre (public, pas de token)
             if (oId) {
                 const list = await fetchRatings(oId);
-                console.log('Toutes les critiques pour oeuvre', oId, ':', list);
                 setRatings(list);
-
-                // Trouver le rawgId dans les critiques si on ne l'a pas
                 if (!effectiveRawgId && list.length > 0) {
                     const ref = list.find(r => r.api_reference_id);
                     if (ref) setEffectiveRawgId(String(ref.api_reference_id));
                 }
             }
 
-            // Vérifier bibliothèque si on vient de /oeuvre/:oeuvreId
             if (urlOeuvreId && isAuthenticated) {
                 try {
                     const bibService = createBibliothequeService(getAccessTokenSilently);
@@ -186,10 +296,8 @@ export default function GamePage() {
             if (idToTry) {
                 try {
                     const gameData = await rawgService.getGameDetails(idToTry);
-                    // Vérifier que c'est le bon jeu si on a un titre de référence
                     const refTitle = ratings[0]?.oeuvre_titre || ratings[0]?.titre || '';
                     const isCorrect = !refTitle || gameData.name.toLowerCase().includes(refTitle.toLowerCase().substring(0, 5));
-
                     if (isCorrect) {
                         setGame(gameData);
                         const screens = await rawgService.getGameScreenshots(idToTry).catch(() => []);
@@ -200,7 +308,6 @@ export default function GamePage() {
                 } catch {}
             }
 
-            // Fallback : chercher par titre
             const title = ratings[0]?.oeuvre_titre || ratings[0]?.titre;
             if (title) {
                 try {
@@ -220,7 +327,6 @@ export default function GamePage() {
         loadGame();
     }, [effectiveRawgId, ratings.length]);
 
-    // Mettre à jour myRating
     useEffect(() => {
         if (user && ratings.length > 0) {
             setMyRating(ratings.find(r => r.user_id === user.id) || null);
@@ -305,7 +411,8 @@ export default function GamePage() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: game ? '1fr 320px' : '1fr', gap: '2rem', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: game || isAuthenticated ? '1fr 320px' : '1fr', gap: '2rem', alignItems: 'start' }}>
+                {/* COLONNE GAUCHE */}
                 <div>
                     {game?.description_raw && (
                         <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1.5rem' }}>
@@ -355,53 +462,55 @@ export default function GamePage() {
                         {ratings.length === 0 && <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Aucun avis pour le moment.</p>}
 
                         {ratings.map(r => (
-                        <div key={r.id} style={{ padding: '1rem 0', borderBottom: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{r.pseudo || r.prenom || 'Utilisateur'}</span>
-                <StarRating value={r.note} readOnly size={14} />
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(r.created_at).toLocaleDateString()}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {isAuthenticated && (
-                    <button onClick={() => handleLike(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: r.liked ? 'var(--danger)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
-                        <Heart size={14} fill={r.liked ? 'var(--danger)' : 'none'} /> {r.likes_count || 0}
-                    </button>
-                )}
-                <ReportButton critiqueId={r.id} contenu={r.contenu} />
-                {user?.role_id >= 2 && (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                        {user.role_id === 3 && (
-                            <button title="Coup de cœur" onClick={async () => {
-                                try { const s = createAdminService(getAccessTokenSilently); await s.feature(r.id); alert('Critique mise en avant !'); } catch (e) { alert(e.message); }
-                            }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)' }}>
-                                <Award size={14} />
-                            </button>
-                        )}
-                        <button title="Masquer" onClick={async () => {
-                            try { const s = createAdminService(getAccessTokenSilently); await s.hide(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
-                        }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}>
-                            <EyeOff size={14} />
-                        </button>
-                        <button title="Supprimer" onClick={async () => {
-                            if (!confirm('Supprimer cette critique ?')) return;
-                            try { const s = createAdminService(getAccessTokenSilently); await s.deleteCritique(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
-                        }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
-                            <Trash2 size={14} />
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
-        {r.contenu && <p style={{ marginTop: '8px', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>{r.contenu}</p>}
-        <CommentSection critiqueId={r.id} getAccessTokenSilently={getAccessTokenSilently} isAuthenticated={isAuthenticated} />
-    </div>
-                ))}
+                            <div key={r.id} style={{ padding: '1rem 0', borderBottom: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontWeight: 700, color: 'var(--text)' }}>{r.pseudo || r.prenom || 'Utilisateur'}</span>
+                                        <StarRating value={r.note} readOnly size={14} />
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(r.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {isAuthenticated && (
+                                            <button onClick={() => handleLike(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: r.liked ? 'var(--danger)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                                                <Heart size={14} fill={r.liked ? 'var(--danger)' : 'none'} /> {r.likes_count || 0}
+                                            </button>
+                                        )}
+                                        <ReportButton critiqueId={r.id} contenu={r.contenu} />
+                                        {user?.role_id >= 2 && (
+                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                {user.role_id === 3 && (
+                                                    <button title="Coup de cœur" onClick={async () => {
+                                                        try { const s = createAdminService(getAccessTokenSilently); await s.feature(r.id); alert('Critique mise en avant !'); } catch (e) { alert(e.message); }
+                                                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)' }}>
+                                                        <Award size={14} />
+                                                    </button>
+                                                )}
+                                                <button title="Masquer" onClick={async () => {
+                                                    try { const s = createAdminService(getAccessTokenSilently); await s.hide(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
+                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}>
+                                                    <EyeOff size={14} />
+                                                </button>
+                                                <button title="Supprimer" onClick={async () => {
+                                                    if (!confirm('Supprimer cette critique ?')) return;
+                                                    try { const s = createAdminService(getAccessTokenSilently); await s.deleteCritique(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
+                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                {r.contenu && <p style={{ marginTop: '8px', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>{r.contenu}</p>}
+                                <CommentSection critiqueId={r.id} getAccessTokenSilently={getAccessTokenSilently} isAuthenticated={isAuthenticated} />
+                            </div>
+                        ))}
                     </div>
                 </div>
 
+                {/* COLONNE DROITE */}
                 {(game || isAuthenticated) && (
                     <div>
+                        {/* Ma Bibliothèque */}
                         {isAuthenticated && (
                             <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1rem' }}>
                                 <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '1.1rem' }}>Ma Bibliothèque</h3>
@@ -421,6 +530,20 @@ export default function GamePage() {
                                 )}
                             </div>
                         )}
+
+                        {/* Ajouter à une liste */}
+                        {isAuthenticated && oeuvreId && (
+                            <AddToListButton
+                                oeuvreId={oeuvreId}
+                                getAccessTokenSilently={getAccessTokenSilently}
+                                effectiveRawgId={effectiveRawgId}
+                                rawgId={rawgId}
+                                gameTitle={gameTitle}
+                                gameDescription={game?.description_raw}
+                            />
+                        )}
+
+                        {/* Infos RAWG */}
                         {game && (
                             <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem' }}>
                                 <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '1.1rem' }}>Infos</h3>
