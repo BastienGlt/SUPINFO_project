@@ -1,49 +1,115 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../hooks/useAuth';
-import { Heart, MessageCircle, Star, TrendingUp, Gamepad2 } from 'lucide-react';
+import { createFeedService } from '../services/feedService';
+import { Heart, MessageCircle, Star, TrendingUp, Gamepad2, Users } from 'lucide-react';
 import AdvancedSearch from '../components/AdvancedSearch';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+async function loadPublicCritiques() {
+    const critiques = [];
+    const ids = Array.from({ length: 50 }, (_, i) => i + 1);
+    const results = await Promise.all(
+        ids.map(id =>
+            fetch(`${API_URL}/critiques/${id}/ratings`, { headers: { 'Content-Type': 'application/json' } })
+            .then(res => res.ok ? res.json() : null)
+            .catch(() => null)
+        )
+    );
+    for (let i = 0; i < results.length; i++) {
+        if (!results[i]) continue;
+        const list = Array.isArray(results[i]) ? results[i]
+            : Array.isArray(results[i]?.critiques) ? results[i].critiques : [];
+        list.forEach(c => { c._loaded_oeuvre_id = ids[i]; });
+        critiques.push(...list);
+    }
+    return critiques.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 20);
+}
+
+function CritiqueCard({ post, onClick }) {
+    return (
+        <div className="card" style={{ cursor: 'pointer' }} onClick={onClick}>
+            <div className="card-header">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ color: 'white', fontSize: '1.1rem' }}>
+                        {post.oeuvre_titre || post.titre || 'Sans titre'}
+                    </h3>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        par <span style={{ color: 'var(--primary)' }}>{post.pseudo || post.prenom || 'Anonyme'}</span>
+                        {post.created_at && <> · {new Date(post.created_at).toLocaleDateString()}</>}
+                    </span>
+                </div>
+                {post.note != null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--primary-glow)', border: '1px solid var(--primary)', borderRadius: '8px', padding: '4px 10px' }}>
+                        <Star size={14} fill="var(--primary)" color="var(--primary)" />
+                        <span style={{ fontWeight: 700, color: 'var(--primary)', fontFamily: 'Rajdhani, sans-serif' }}>{post.note}/5</span>
+                    </div>
+                )}
+            </div>
+            {post.contenu && (
+                <p style={{ margin: '0.8rem 0', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                    "{post.contenu}"
+                </p>
+            )}
+            <div className="card-footer">
+                <span className="icon-text"><Heart size={14} /> {post.likes_count || 0}</span>
+                <span className="icon-text"><MessageCircle size={14} /> {post.comments_count || 0}</span>
+            </div>
+        </div>
+    );
+}
+
 export default function HomePage() {
     const { isAuthenticated } = useAuth();
+    const { getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
-    const [critiques, setCritiques] = useState([]);
-    const [loading, setLoading] = useState(true);
 
+    const [feed, setFeed] = useState([]);
+    const [critiques, setCritiques] = useState([]);
+    const [loadingFeed, setLoadingFeed] = useState(true);
+    const [loadingCritiques, setLoadingCritiques] = useState(true);
+
+    // Charger le feed des follows (connecté uniquement)
     useEffect(() => {
+        if (!isAuthenticated) { setLoadingFeed(false); return; }
         const load = async () => {
             try {
-                const allCritiques = [];
-                const ids = Array.from({ length: 50 }, (_, i) => i + 1);
-                const results = await Promise.all(
-                    ids.map(id =>
-                        fetch(`${API_URL}/critiques/${id}/ratings`, { headers: { 'Content-Type': 'application/json' } })
-                        .then(res => res.ok ? res.json() : null)
-                        .catch(() => null)
-                    )
-                );
-                for (let i = 0; i < results.length; i++) {
-                    if (!results[i]) continue;
-                    const list = Array.isArray(results[i]) ? results[i]
-                        : Array.isArray(results[i]?.critiques) ? results[i].critiques : [];
-                    list.forEach(c => { c._loaded_oeuvre_id = ids[i]; });
-                    allCritiques.push(...list);
-                }
-                setCritiques(allCritiques.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 20));
-            } catch (err) { console.error('Erreur:', err); }
-            finally { setLoading(false); }
+                const service = createFeedService(getAccessTokenSilently);
+                const data = await service.getFeed();
+                const list = Array.isArray(data) ? data
+                    : Array.isArray(data?.feed) ? data.feed
+                    : Array.isArray(data?.activities) ? data.activities
+                    : [];
+                setFeed(list);
+            } catch (err) { console.error('Erreur feed:', err); }
+            finally { setLoadingFeed(false); }
         };
         load();
+    }, [isAuthenticated]);
+
+    // Charger les critiques publiques (toujours)
+    useEffect(() => {
+        loadPublicCritiques()
+            .then(setCritiques)
+            .catch(err => console.error('Erreur critiques:', err))
+            .finally(() => setLoadingCritiques(false));
     }, []);
 
     const handleClick = (post) => {
-        navigate(`/oeuvre/${post._loaded_oeuvre_id || post.oeuvre_id}`);
+        const oeuvreId = post._loaded_oeuvre_id || post.oeuvre_id;
+        if (oeuvreId) navigate(`/oeuvre/${oeuvreId}`);
+    };
+
+    const handleFeedClick = (post) => {
+        if (post.oeuvre_id) navigate(`/oeuvre/${post.oeuvre_id}`);
+        else if (post.api_reference_id) navigate(`/game/${post.api_reference_id}`);
     };
 
     return (
         <div className="page-container">
+            {/* Hero */}
             <div className="hero">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <Gamepad2 size={32} style={{ color: 'var(--primary)' }} />
@@ -53,7 +119,7 @@ export default function HomePage() {
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
                     {isAuthenticated
-                        ? 'Voici les derniers avis de la communauté.'
+                        ? 'Voici les dernières activités de la communauté.'
                         : 'Découvrez les derniers avis de la communauté gaming. Connectez-vous pour participer !'}
                 </p>
                 {!isAuthenticated && (
@@ -68,17 +134,45 @@ export default function HomePage() {
                 )}
             </div>
 
-            {/* RECHERCHE AVANCÉE */}
             <AdvancedSearch />
 
-            {/* DERNIERS AVIS */}
+            {/* FIL D'ACTUALITÉ DES FOLLOWS */}
+            {isAuthenticated && (
+                <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
+                        <Users size={20} style={{ color: 'var(--primary)' }} />
+                        <h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Fil d'actualité</h2>
+                    </div>
+
+                    {loadingFeed ? (
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Chargement du fil...</p>
+                    ) : feed.length === 0 ? (
+                        <div style={{
+                            background: 'var(--bg-card)', border: '1px solid var(--border)',
+                            borderRadius: '12px', padding: '2rem', textAlign: 'center', marginBottom: '2rem',
+                        }}>
+                            <p style={{ color: 'var(--text-muted)' }}>
+                                Aucune activité de tes abonnements. Suis des utilisateurs pour voir leurs avis ici !
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="grid" style={{ marginBottom: '2rem' }}>
+                            {feed.map((post, index) => (
+                                <CritiqueCard key={post.id || `feed-${index}`} post={post} onClick={() => handleFeedClick(post)} />
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* DERNIERS AVIS PUBLICS */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
                 <TrendingUp size={20} style={{ color: 'var(--primary)' }} />
                 <h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Derniers avis</h2>
             </div>
 
-            {loading ? (
-                <div className="page-container">Chargement des avis...</div>
+            {loadingCritiques ? (
+                <p style={{ color: 'var(--text-muted)' }}>Chargement des avis...</p>
             ) : critiques.length === 0 ? (
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '3rem', textAlign: 'center' }}>
                     <p style={{ color: 'var(--text-muted)' }}>Aucun avis pour le moment.</p>
@@ -86,32 +180,7 @@ export default function HomePage() {
             ) : (
                 <div className="grid">
                     {critiques.map((post, index) => (
-                        <div key={post.id || index} className="card" style={{ cursor: 'pointer' }} onClick={() => handleClick(post)}>
-                            <div className="card-header">
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h3 style={{ color: 'white', fontSize: '1.1rem' }}>{post.oeuvre_titre || post.titre || 'Sans titre'}</h3>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                        par <span style={{ color: 'var(--primary)' }}>{post.pseudo || post.prenom || 'Anonyme'}</span>
-                                        {post.created_at && <> · {new Date(post.created_at).toLocaleDateString()}</>}
-                                    </span>
-                                </div>
-                                {post.note != null && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--primary-glow)', border: '1px solid var(--primary)', borderRadius: '8px', padding: '4px 10px' }}>
-                                        <Star size={14} fill="var(--primary)" color="var(--primary)" />
-                                        <span style={{ fontWeight: 700, color: 'var(--primary)', fontFamily: 'Rajdhani, sans-serif' }}>{post.note}/5</span>
-                                    </div>
-                                )}
-                            </div>
-                            {post.contenu && (
-                                <p style={{ margin: '0.8rem 0', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                                    "{post.contenu}"
-                                </p>
-                            )}
-                            <div className="card-footer">
-                                <span className="icon-text"><Heart size={14} /> {post.likes_count || 0}</span>
-                                <span className="icon-text"><MessageCircle size={14} /> {post.comments_count || 0}</span>
-                            </div>
-                        </div>
+                        <CritiqueCard key={post.id || `pub-${index}`} post={post} onClick={() => handleClick(post)} />
                     ))}
                 </div>
             )}

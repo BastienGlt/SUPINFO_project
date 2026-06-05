@@ -101,8 +101,6 @@ function AddToListButton({ oeuvreId, getAccessTokenSilently, effectiveRawgId, ra
                 const data = await service.getMyLists();
                 const allListes = Array.isArray(data) ? data : data?.listes || [];
                 setListes(allListes);
-
-                // Vérifier quelles listes contiennent déjà ce jeu
                 const inListes = new Set();
                 await Promise.all(allListes.map(async (l) => {
                     try {
@@ -443,7 +441,7 @@ export default function GamePage() {
 
                         {showForm && (
                             <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Mon avis</h3>
+                                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>{myRating ? 'Modifier mon avis' : 'Mon avis'}</h3>
                                 <div style={{ marginBottom: '1rem' }}>
                                     <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '6px' }}>Note</label>
                                     <StarRating value={formNote} onChange={setFormNote} size={28} />
@@ -454,56 +452,86 @@ export default function GamePage() {
                                     <button onClick={handleSubmitRating} disabled={submitting} style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', border: 'none', borderRadius: '8px', padding: '10px 24px', color: 'white', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>
                                         {submitting ? 'Envoi...' : 'Publier'}
                                     </button>
-                                    <button onClick={() => setShowForm(false)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 20px', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>Annuler</button>
+                                    <button onClick={() => { setShowForm(false); setFormNote(0); setFormContenu(''); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 20px', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>Annuler</button>
                                 </div>
                             </div>
                         )}
 
                         {ratings.length === 0 && <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Aucun avis pour le moment.</p>}
 
-                        {ratings.map(r => (
-                            <div key={r.id} style={{ padding: '1rem 0', borderBottom: '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{ fontWeight: 700, color: 'var(--text)' }}>{r.pseudo || r.prenom || 'Utilisateur'}</span>
-                                        <StarRating value={r.note} readOnly size={14} />
-                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(r.created_at).toLocaleDateString()}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {isAuthenticated && (
-                                            <button onClick={() => handleLike(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: r.liked ? 'var(--danger)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
-                                                <Heart size={14} fill={r.liked ? 'var(--danger)' : 'none'} /> {r.likes_count || 0}
-                                            </button>
-                                        )}
-                                        <ReportButton critiqueId={r.id} contenu={r.contenu} />
-                                        {user?.role_id >= 2 && (
-                                            <div style={{ display: 'flex', gap: '4px' }}>
-                                                {user.role_id === 3 && (
-                                                    <button title="Coup de cœur" onClick={async () => {
-                                                        try { const s = createAdminService(getAccessTokenSilently); await s.feature(r.id); alert('Critique mise en avant !'); } catch (e) { alert(e.message); }
-                                                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)' }}>
-                                                        <Award size={14} />
+                        {ratings.map(r => {
+                            const isMine = user && r.user_id === user.id;
+                            return (
+                                <div key={r.id} style={{ padding: '1rem 0', borderBottom: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span style={{ fontWeight: 700, color: isMine ? 'var(--primary)' : 'var(--text)' }}>
+                                                {r.pseudo || r.prenom || 'Utilisateur'}
+                                                {isMine && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '6px' }}>(vous)</span>}
+                                            </span>
+                                            <StarRating value={r.note} readOnly size={14} />
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(r.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            {isAuthenticated && (
+                                                <button onClick={() => handleLike(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: r.liked ? 'var(--danger)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                                                    <Heart size={14} fill={r.liked ? 'var(--danger)' : 'none'} /> {r.likes_count || 0}
+                                                </button>
+                                            )}
+                                            {isMine && (
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <button title="Modifier" onClick={() => {
+                                                        setFormNote(r.note);
+                                                        setFormContenu(r.contenu || '');
+                                                        setMyRating(r);
+                                                        setShowForm(true);
+                                                    }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>
+                                                        Modifier
                                                     </button>
-                                                )}
-                                                <button title="Masquer" onClick={async () => {
-                                                    try { const s = createAdminService(getAccessTokenSilently); await s.hide(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
-                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}>
-                                                    <EyeOff size={14} />
-                                                </button>
-                                                <button title="Supprimer" onClick={async () => {
-                                                    if (!confirm('Supprimer cette critique ?')) return;
-                                                    try { const s = createAdminService(getAccessTokenSilently); await s.deleteCritique(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
-                                                }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        )}
+                                                    <button title="Supprimer" onClick={async () => {
+                                                        if (!confirm('Supprimer votre avis ?')) return;
+                                                        try {
+                                                            const cs = createCritiqueService(getAccessTokenSilently);
+                                                            await cs.deleteRating(r.id);
+                                                            const list = await fetchRatings(oeuvreId);
+                                                            setRatings(list);
+                                                            setMyRating(null);
+                                                        } catch (err) { alert('Erreur : ' + err.message); }
+                                                    }} style={{ background: 'none', border: '1px solid var(--danger)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>
+                                                        Supprimer
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {!isMine && <ReportButton critiqueId={r.id} contenu={r.contenu} />}
+                                            {user?.role_id >= 2 && !isMine && (
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    {user.role_id === 3 && (
+                                                        <button title="Coup de cœur" onClick={async () => {
+                                                            try { const s = createAdminService(getAccessTokenSilently); await s.feature(r.id); alert('Critique mise en avant !'); } catch (e) { alert(e.message); }
+                                                        }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)' }}>
+                                                            <Award size={14} />
+                                                        </button>
+                                                    )}
+                                                    <button title="Masquer" onClick={async () => {
+                                                        try { const s = createAdminService(getAccessTokenSilently); await s.hide(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
+                                                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}>
+                                                        <EyeOff size={14} />
+                                                    </button>
+                                                    <button title="Supprimer" onClick={async () => {
+                                                        if (!confirm('Supprimer cette critique ?')) return;
+                                                        try { const s = createAdminService(getAccessTokenSilently); await s.deleteCritique(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
+                                                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
+                                    {r.contenu && <p style={{ marginTop: '8px', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>{r.contenu}</p>}
+                                    <CommentSection critiqueId={r.id} getAccessTokenSilently={getAccessTokenSilently} isAuthenticated={isAuthenticated} />
                                 </div>
-                                {r.contenu && <p style={{ marginTop: '8px', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>{r.contenu}</p>}
-                                <CommentSection critiqueId={r.id} getAccessTokenSilently={getAccessTokenSilently} isAuthenticated={isAuthenticated} />
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
