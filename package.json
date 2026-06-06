@@ -7,9 +7,11 @@
     "start": "npm run start --prefix backend",
     "mobile": "npm run lan --prefix frontend-mobile",
     "tunnel": "npm run tunnel --prefix frontend-mobile",
+    "frontend": "npm run dev --prefix frontend",
     "install:backend": "npm install --prefix backend",
     "install:mobile": "npm install --prefix frontend-mobile",
-    "install": "npm run install:backend && npm run install:mobile"
+    "install:frontend": "npm install --prefix frontend",
+    "install": "npm run install:backend && npm run install:mobile && npm run install:frontend"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"
