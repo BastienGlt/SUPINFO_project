@@ -7,6 +7,7 @@ const app = express();
 const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const yaml = require('js-yaml');
+const initializeDatabase = require('./config/initDb');
 
 const swaggerDocument = yaml.load(fs.readFileSync('./swagger.yaml', 'utf8'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -62,6 +63,18 @@ app.use((req, res) => {
 
 // --- 3. DÉMARRAGE ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur Backend lancé sur le port ${PORT}`);
-});
+
+const startServer = async () => {
+  try {
+    await initializeDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Serveur Backend lancé sur le port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize database schema:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
