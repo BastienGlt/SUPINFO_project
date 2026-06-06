@@ -1,5 +1,6 @@
 const listeService = require('../services/liste.service');
 const userService = require('../services/user.service');
+const oeuvreService = require('../services/oeuvre.service');
 
 class ListeController {
 
@@ -145,15 +146,22 @@ class ListeController {
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
       const { id } = req.params;
-      const { oeuvre_id } = req.body;
+      const { api_reference_id, titre, description } = req.body;
 
-      if (!oeuvre_id) {
-        return res.status(400).json({ error: 'L\'ID de l\'œuvre est requis' });
+      if (!api_reference_id) {
+        return res.status(400).json({ error: 'La référence API de l\'œuvre (api_reference_id) est requise' });
       }
 
-      await listeService.addOeuvreToListe(currentUser.id, id, oeuvre_id);
+      if (!titre || !description) {
+        return res.status(400).json({ error: 'Le titre et la description de l\'œuvre sont obligatoires' });
+      }
 
-      res.status(201).json({ message: 'Œuvre ajoutée à la liste' });
+      // Crée l'œuvre en base si elle n'existe pas encore
+      const oeuvre = await oeuvreService.findOrCreate(api_reference_id, titre, description);
+
+      await listeService.addOeuvreToListe(currentUser.id, id, oeuvre.id);
+
+      res.status(201).json({ message: 'Œuvre ajoutée à la liste', oeuvre });
     } catch (error) {
       console.error('Erreur addOeuvre:', error);
       res.status(500).json({ error: error.message });

@@ -1,5 +1,6 @@
 const ratingService = require('../services/rating.service');
 const userService = require('../services/user.service');
+const oeuvreService = require('../services/oeuvre.service');
 
 /**
  * Controller : Gère les requêtes HTTP pour le système de notation des œuvres
@@ -7,16 +8,16 @@ const userService = require('../services/user.service');
  */
 
 /**
- * POST /oeuvres/:id/ratings
- * Créer une note pour une œuvre
+ * POST /critiques/:id/ratings
+ * Créer une note pour une œuvre. Crée l'œuvre en base si elle n'existe pas encore.
+ * :id = api_reference_id de l'œuvre dans l'API externe
  */
 exports.createRating = async (req, res) => {
   try {
-    const oeuvreId = parseInt(req.params.id);
-    const { note, contenu } = req.body;
+    const apiRefId = req.params.id;
+    const { note, contenu, titre, description } = req.body;
     const auth0Id = req.auth.payload.sub;
 
-    // Validation de la note
     if (note === undefined || note === null) {
       return res.status(400).json({ error: "La note est obligatoire" });
     }
@@ -25,27 +26,24 @@ exports.createRating = async (req, res) => {
       return res.status(400).json({ error: "La note doit être un nombre entre 0 et 5" });
     }
 
-    // Récupérer l'utilisateur authentifié
+    if (!titre || !description) {
+      return res.status(400).json({ error: "Le titre et la description de l'œuvre sont obligatoires" });
+    }
+
     const currentUser = await userService.getUserByAuth0Id(auth0Id);
-    
     if (!currentUser) {
       return res.status(401).json({ error: "Utilisateur non authentifié" });
     }
 
-    // Vérifier si l'utilisateur a déjà noté cette œuvre
-    const existingRating = await ratingService.getRatingByUserAndOeuvre(currentUser.id, oeuvreId);
+    // Crée l'œuvre en base si elle n'existe pas encore
+    const oeuvre = await oeuvreService.findOrCreate(apiRefId, titre, description);
+
+    const existingRating = await ratingService.getRatingByUserAndOeuvre(currentUser.id, oeuvre.id);
     if (existingRating) {
       return res.status(409).json({ error: "Vous avez déjà noté cette œuvre. Utilisez PUT pour mettre à jour." });
     }
 
-    // Créer la note
-    const rating = await ratingService.createRating(
-      currentUser.id,
-      oeuvreId,
-      note,
-      contenu
-    );
-
+    const rating = await ratingService.createRating(currentUser.id, oeuvre.id, note, contenu);
     res.status(201).json(rating);
 
   } catch (error) {
@@ -55,16 +53,15 @@ exports.createRating = async (req, res) => {
 };
 
 /**
- * PUT /oeuvres/:id/ratings
- * Mettre à jour une note existante pour une œuvre
+ * PUT /critiques/:id/ratings
+ * Mettre à jour une note existante. :id = api_reference_id de l'œuvre.
  */
 exports.updateRating = async (req, res) => {
   try {
-    const oeuvreId = parseInt(req.params.id);
+    const apiRefId = req.params.id;
     const { note, contenu } = req.body;
     const auth0Id = req.auth.payload.sub;
 
-    // Validation de la note
     if (note === undefined || note === null) {
       return res.status(400).json({ error: "La note est obligatoire" });
     }
@@ -73,27 +70,22 @@ exports.updateRating = async (req, res) => {
       return res.status(400).json({ error: "La note doit être un nombre entre 0 et 5" });
     }
 
-    // Récupérer l'utilisateur authentifié
     const currentUser = await userService.getUserByAuth0Id(auth0Id);
-    
     if (!currentUser) {
       return res.status(401).json({ error: "Utilisateur non authentifié" });
     }
 
-    // Vérifier si l'utilisateur a déjà noté cette œuvre
-    const existingRating = await ratingService.getRatingByUserAndOeuvre(currentUser.id, oeuvreId);
+    const oeuvre = await oeuvreService.findByApiRef(apiRefId);
+    if (!oeuvre) {
+      return res.status(404).json({ error: "Œuvre introuvable" });
+    }
+
+    const existingRating = await ratingService.getRatingByUserAndOeuvre(currentUser.id, oeuvre.id);
     if (!existingRating) {
       return res.status(404).json({ error: "Note non trouvée. Utilisez POST pour créer une note." });
     }
 
-    // Mettre à jour la note
-    const rating = await ratingService.updateRating(
-      currentUser.id,
-      oeuvreId,
-      note,
-      contenu
-    );
-
+    const rating = await ratingService.updateRating(currentUser.id, oeuvre.id, note, contenu);
     res.status(200).json(rating);
 
   } catch (error) {
@@ -103,13 +95,18 @@ exports.updateRating = async (req, res) => {
 };
 
 /**
- * GET /oeuvres/:id/ratings
- * Récupérer toutes les notes d'une œuvre avec statistiques
+ * GET /critiques/:id/ratings
+ * Récupérer toutes les notes d'une œuvre. :id = api_reference_id.
  */
 exports.getRatingsByOeuvre = async (req, res) => {
   try {
-    const oeuvreId = parseInt(req.params.id);
+    const apiRefId = req.params.id;
     const { limit, offset, orderBy, order } = req.query;
+
+    const oeuvre = await oeuvreService.findByApiRef(apiRefId);
+    if (!oeuvre) {
+      return res.status(404).json({ error: "Œuvre introuvable" });
+    }
 
     const options = {
       limit: limit ? parseInt(limit) : 20,
@@ -118,7 +115,7 @@ exports.getRatingsByOeuvre = async (req, res) => {
       order: order || 'DESC'
     };
 
-    const result = await ratingService.getRatingsByOeuvre(oeuvreId, options);
+    const result = await ratingService.getRatingsByOeuvre(oeuvre.id, options);
     res.status(200).json(result);
 
   } catch (error) {
@@ -128,13 +125,19 @@ exports.getRatingsByOeuvre = async (req, res) => {
 };
 
 /**
- * GET /oeuvres/:id/ratings/stats
- * Récupérer uniquement les statistiques de notation d'une œuvre
+ * GET /critiques/:id/ratings/stats
+ * Récupérer uniquement les statistiques de notation d'une œuvre. :id = api_reference_id.
  */
 exports.getOeuvreRatingStats = async (req, res) => {
   try {
-    const oeuvreId = parseInt(req.params.id);
-    const stats = await ratingService.getOeuvreRatingStats(oeuvreId);
+    const apiRefId = req.params.id;
+
+    const oeuvre = await oeuvreService.findByApiRef(apiRefId);
+    if (!oeuvre) {
+      return res.status(404).json({ error: "Œuvre introuvable" });
+    }
+
+    const stats = await ratingService.getOeuvreRatingStats(oeuvre.id);
     res.status(200).json(stats);
 
   } catch (error) {
@@ -180,6 +183,32 @@ exports.getUserRatingForOeuvre = async (req, res) => {
     if (!rating) {
       return res.status(404).json({ error: "Note non trouvée" });
     }
+
+    res.status(200).json(rating);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Impossible de récupérer la note" });
+  }
+};
+
+/**
+ * GET /critiques/:id/ratings/me
+ * Récupérer la note de l'utilisateur connecté pour une œuvre. :id = api_reference_id.
+ */
+exports.getMyRatingForOeuvre = async (req, res) => {
+  try {
+    const apiRefId = req.params.id;
+    const auth0Id = req.auth.payload.sub;
+
+    const currentUser = await userService.getUserByAuth0Id(auth0Id);
+    if (!currentUser) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    const oeuvre = await oeuvreService.findByApiRef(apiRefId);
+    if (!oeuvre) return res.status(404).json({ error: "Œuvre introuvable" });
+
+    const rating = await ratingService.getRatingByUserAndOeuvre(currentUser.id, oeuvre.id);
+    if (!rating) return res.status(404).json({ error: "Note non trouvée" });
 
     res.status(200).json(rating);
 
@@ -323,16 +352,31 @@ exports.toggleLikeCritique = async (req, res) => {
 };
 
 /**
- * PUT /oeuvres/:id/ratings/upsert
- * Créer ou mettre à jour une note (logique unifiée)
+ * GET /ratings/:id/likes
+ * Récupérer le nombre de likes d'une critique
+ */
+exports.getLikesCount = async (req, res) => {
+  try {
+    const critiqueId = parseInt(req.params.id);
+    const likeCount = await ratingService.getLikesCount(critiqueId);
+    res.status(200).json({ likeCount });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Impossible de récupérer le nombre de likes" });
+  }
+};
+
+
+/**
+ * PUT /critiques/:id/ratings/upsert
+ * Créer ou mettre à jour une note. :id = api_reference_id. Crée l'œuvre si nécessaire.
  */
 exports.upsertRating = async (req, res) => {
   try {
-    const oeuvreId = parseInt(req.params.id);
-    const { note, contenu } = req.body;
+    const apiRefId = req.params.id;
+    const { note, contenu, titre, description } = req.body;
     const auth0Id = req.auth.payload.sub;
 
-    // Validation de la note
     if (note === undefined || note === null) {
       return res.status(400).json({ error: "La note est obligatoire" });
     }
@@ -341,21 +385,19 @@ exports.upsertRating = async (req, res) => {
       return res.status(400).json({ error: "La note doit être un nombre entre 0 et 5" });
     }
 
-    // Récupérer l'utilisateur authentifié
+    if (!titre || !description) {
+      return res.status(400).json({ error: "Le titre et la description de l'œuvre sont obligatoires" });
+    }
+
     const currentUser = await userService.getUserByAuth0Id(auth0Id);
-    
     if (!currentUser) {
       return res.status(401).json({ error: "Utilisateur non authentifié" });
     }
 
-    // Créer ou mettre à jour la note
-    const rating = await ratingService.upsertRating(
-      currentUser.id,
-      oeuvreId,
-      note,
-      contenu
-    );
+    // Crée l'œuvre en base si elle n'existe pas encore
+    const oeuvre = await oeuvreService.findOrCreate(apiRefId, titre, description);
 
+    const rating = await ratingService.upsertRating(currentUser.id, oeuvre.id, note, contenu);
     res.status(200).json(rating);
 
   } catch (error) {
