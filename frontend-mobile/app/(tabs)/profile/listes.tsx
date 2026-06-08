@@ -188,7 +188,9 @@ export default function ListesScreen() {
                 }
                 activeOpacity={0.7}
               >
-                {icon && <View style={{ tintColor: isSelected ? '#fff' : colors.icon }}>{icon}</View>}
+                <View style={{ width: 14, height: 14, justifyContent: 'center', alignItems: 'center' }}>
+                  {icon && <View style={{ tintColor: isSelected ? '#fff' : colors.icon }}>{icon}</View>}
+                </View>
                 <Text style={[styles.filterBtnText, { color: isSelected ? '#fff' : colors.icon }]}>
                   {label}
                 </Text>
