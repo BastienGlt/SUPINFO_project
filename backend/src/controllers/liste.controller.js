@@ -193,8 +193,16 @@ class ListeController {
   // Obtenir les listes publiques
   async getPublicListes(req, res) {
     try {
-      const limit = parseInt(req.query.limit) || 20;
-      const offset = parseInt(req.query.offset) || 0;
+      const rawLimit = Number(req.query.limit);
+      const rawOffset = Number(req.query.offset);
+
+      const limit = Number.isInteger(rawLimit) && rawLimit > 0
+        ? Math.min(rawLimit, 100)
+        : 20;
+
+      const offset = Number.isInteger(rawOffset) && rawOffset >= 0
+        ? rawOffset
+        : 0;
 
       const listes = await listeService.getPublicListes(limit, offset);
 

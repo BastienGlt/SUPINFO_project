@@ -180,6 +180,14 @@ class ListeService {
   // ===== Listes publiques (découverte) =====
 
   async getPublicListes(limit = 20, offset = 0) {
+    const safeLimit = Number.isInteger(limit) && limit > 0
+      ? Math.min(limit, 100)
+      : 20;
+
+    const safeOffset = Number.isInteger(offset) && offset >= 0
+      ? offset
+      : 0;
+
     const query = `
       SELECT
         l.id,
@@ -197,10 +205,10 @@ class ListeService {
       WHERE l.visibilite = 'PUBLIQUE'
       GROUP BY l.id
       ORDER BY l.created_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
 
-    const [rows] = await db.execute(query, [limit, offset]);
+    const [rows] = await db.query(query);
     return rows;
   }
 

@@ -445,3 +445,13 @@ CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `v_signalements` AS select 
 /*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
+
+INSERT INTO `roles` (`id`, `label`) VALUES
+(1, 'user'),
+(2, 'moderator'),
+(3, 'admin');
+
+INSERT INTO `statuts` (`id`, `code`, `libele`) VALUES
+(1, 'joue', 'Joué'),
+(2, 'termine', 'Terminé'),
+(3, 'envie', 'Envie');
