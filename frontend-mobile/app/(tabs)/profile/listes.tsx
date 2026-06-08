@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   searchInput:  { flex: 1, fontSize: 14, paddingVertical: 8 },
   filterScroll: { height: 44, marginHorizontal: 0, marginVertical: 0, backgroundColor: 'transparent' },
   filterContainer: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 4, alignItems: 'center' },
-  filterBtn:   { height: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 12 },
+  filterBtn:   { height: 36, minWidth: 80, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12 },
   filterBtnText: { fontSize: 12, fontWeight: '600' },
   card:         { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   iconWrap:     { width: 42, height: 42, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
