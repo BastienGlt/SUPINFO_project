@@ -303,20 +303,24 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 0,
+    height: 44,
   },
   filterContainer: {
     flexDirection: 'row',
     gap: 10,
+    alignItems: 'center',
+    height: 44,
   },
   filterBtn: {
+    height: 36,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     borderRadius: 8,
-    borderWidth: 1.5,
+    borderWidth: 1,
   },
   filterBtnText: {
     fontSize: 12,
