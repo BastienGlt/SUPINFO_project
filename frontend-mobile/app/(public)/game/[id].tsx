@@ -10,7 +10,7 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { rawgFetch } from '@/services/rawgService';
 import { apiFetch } from '@/services/apiService';
-import { Star, Plus, Check, ChevronDown, Edit3, BookOpen, ChevronUp, X } from 'lucide-react-native';
+import { Star, Plus, Check, ChevronDown, Edit3, BookOpen, ChevronUp, X, List } from 'lucide-react-native';
 
 interface RawgGameDetail {
   id: number;
@@ -26,8 +26,11 @@ interface RawgGameDetail {
 
 interface RatingStats { moyenne: number; total: number; }
 interface UserRating  { id: number; note: number; contenu?: string; }
-interface Statut      { id: number; code: string; libele: string; }
-interface BiblioItem  { id: number; oeuvre_id: number; statut: Statut; api_reference_id?: string; }
+interface UserListe {
+  id: number;
+  nom: string;
+  visibilite: string;
+}
 
 function metacriticColor(score: number) {
   if (score >= 75) return '#22c55e';
@@ -55,6 +58,10 @@ export default function GameDetailScreen() {
   const [critiqueContenu, setCritiqueContenu] = useState('');
   const [savingCritique, setSavingCritique]   = useState(false);
   const [critiqueError, setCritiqueError]     = useState('');
+  const [listesModal, setListesModal]         = useState(false);
+  const [userListes, setUserListes]           = useState<UserListe[]>([]);
+  const [gameListesIds, setGameListesIds]     = useState<number[]>([]);
+  const [addingToListeId, setAddingToListeId] = useState<number | null>(null);
   const loadedRef = useRef(false);
 
   useFocusEffect(
@@ -96,8 +103,7 @@ export default function GameDetailScreen() {
     } finally { setSavingStatut(false); }
   }, [token, id, librairie, game]);
 
-  const handleSaveCritique = useCallback(async () => {
-    if (!token || !id) return;
+  const handleSaveCritique = useCallback(async () => {    if (!token || !id) return;
     const note = parseFloat(critiqueNote.replace(',', '.'));
     if (isNaN(note) || note < 0 || note > 5) { setCritiqueError('Note invalide (entre 0 et 5)'); return; }
     setSavingCritique(true); setCritiqueError('');
@@ -119,6 +125,52 @@ export default function GameDetailScreen() {
       } else { setCritiqueError(e?.error ?? e?.message ?? `Erreur ${e?.status ?? ''}`); }
     } finally { setSavingCritique(false); }
   }, [token, id, critiqueNote, critiqueContenu, userRating, game]);
+
+  const handleOpenListesModal = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await apiFetch<UserListe[]>('/listes', { token });
+      setUserListes(Array.isArray(data) ? data : []);
+
+      // Chercher les listes contenant cette oeuvre
+      const listeIds: number[] = [];
+      if (Array.isArray(data)) {
+        for (const liste of data) {
+          try {
+            const oeuvres = await apiFetch<Array<{ api_reference_id?: string; oeuvre_id?: number }>>(`/listes/${liste.id}/oeuvres`, { token });
+            if (Array.isArray(oeuvres) && oeuvres.some(o => o.api_reference_id === String(id))) {
+              listeIds.push(liste.id);
+            }
+          } catch {
+            // Ignorer les erreurs de chaque liste
+          }
+        }
+      }
+      setGameListesIds(listeIds);
+    } catch {
+      setUserListes([]);
+      setGameListesIds([]);
+    }
+    setListesModal(true);
+  }, [token, id]);
+
+  const handleAddToListe = useCallback(async (listeId: number) => {
+    if (!token || !id || !game) return;
+    setAddingToListeId(listeId);
+    try {
+      await apiFetch(`/listes/${listeId}/oeuvres`, {
+        method: 'POST', token,
+        body: JSON.stringify({
+          api_reference_id: String(id),
+          titre: game.name,
+          description: game.description_raw?.slice(0, 500) ?? '',
+        }),
+      });
+      // Ajouter l'ID de la liste à gameListesIds pour mettre à jour l'UI
+      setGameListesIds(prev => Array.from(new Set([...prev, listeId])));
+    } catch {}
+    setAddingToListeId(null);
+  }, [token, id, game]);
 
   if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}><ActivityIndicator color={colors.tint} size="large" /></View>;
   if (!game) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}><Text style={{ color: colors.icon }}>Jeu introuvable</Text></View>;
@@ -241,6 +293,15 @@ export default function GameDetailScreen() {
                   <Text style={[styles.actionBtnText, { color: colors.text }]}>Donner mon avis</Text>
                 </TouchableOpacity>
               )}
+
+              <TouchableOpacity
+                style={[styles.actionBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={handleOpenListesModal}
+                activeOpacity={0.8}
+              >
+                <List size={18} color={colors.icon} strokeWidth={2} />
+                <Text style={[styles.actionBtnText, { color: colors.text }]}>Ajouter à une liste</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -305,6 +366,44 @@ export default function GameDetailScreen() {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Listes modal */}
+      <Modal visible={listesModal} transparent animationType="slide" onRequestClose={() => setListesModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setListesModal(false)}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Ajouter à une liste</Text>
+              <TouchableOpacity onPress={() => setListesModal(false)} hitSlop={8}><X size={20} color={colors.icon} strokeWidth={2} /></TouchableOpacity>
+            </View>
+            {userListes.length === 0 ? (
+              <Text style={[styles.noListeText, { color: colors.icon }]}>Aucune liste. Créez-en une depuis votre profil.</Text>
+            ) : (
+              userListes.map(l => {
+                const isInList = gameListesIds.includes(l.id);
+                const isLoading = addingToListeId === l.id;
+                return (
+                  <TouchableOpacity
+                    key={l.id}
+                    style={[styles.statutItem, { borderColor: isInList ? colors.tintBorder : colors.border }, isInList && { backgroundColor: colors.tintDim }]}
+                    onPress={() => !isInList && handleAddToListe(l.id)}
+                    disabled={isLoading || isInList}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.listeItemContent}>
+                      <Text style={[styles.statutText, { color: isInList ? colors.tint : colors.text }]}>{l.nom}</Text>
+                      {l.visibilite === 'PRIVEE' && (
+                        <Text style={[styles.listeVisibilite, { color: colors.icon }]}>Privée</Text>
+                      )}
+                    </View>
+                    {isLoading && <ActivityIndicator size="small" color={colors.tint} />}
+                    {isInList && <Check size={16} color={colors.tint} strokeWidth={2.5} />}
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </>
   );
 }
@@ -354,4 +453,7 @@ const styles = StyleSheet.create({
   saveBtn:       { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   saveBtnText:   { color: 'white', fontWeight: '700', fontSize: 16 },
   critiqueErrorText: { fontSize: 13, fontWeight: '500', textAlign: 'center' },
+  noListeText:       { fontSize: 14, textAlign: 'center', paddingVertical: 16 },
+  listeItemContent:  { flex: 1, gap: 2 },
+  listeVisibilite:   { fontSize: 11, fontWeight: '500' },
 });

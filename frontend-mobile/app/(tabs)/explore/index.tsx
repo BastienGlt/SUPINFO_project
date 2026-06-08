@@ -1,13 +1,13 @@
 import {
   FlatList, View, Text, StyleSheet, TextInput,
-  TouchableOpacity, ActivityIndicator, Modal, Platform,
+  TouchableOpacity, ActivityIndicator, Modal, Platform, ScrollView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { Search, Gamepad2, Star, X, BookOpen, Check } from 'lucide-react-native';
+import { Search, Gamepad2, Star, X, BookOpen, Check, Settings, Minus, Plus } from 'lucide-react-native';
 import { rawgFetch } from '@/services/rawgService';
 import { apiFetch } from '@/services/apiService';
 import { useAuth } from '@/hooks/use-auth';
@@ -41,6 +41,21 @@ const STATUTS = [
   { key: 'terminé',  label: 'Terminé' },
 ] as const;
 
+const POPULAR_GENRES = [
+  { id: 4, name: 'Action' },
+  { id: 5, name: 'Sports' },
+  { id: 10, name: 'Strategy' },
+  { id: 3, name: 'Adventure' },
+  { id: 83, name: 'Arcade' },
+  { id: 1, name: 'Racing' },
+  { id: 14, name: 'Simulation' },
+  { id: 15, name: 'Sports' },
+  { id: 2, name: 'Shooter' },
+  { id: 7, name: 'Puzzle' },
+  { id: 11, name: 'Casual' },
+  { id: 59, name: 'Massively Multiplayer' },
+] as const;
+
 function metacriticColor(score: number) {
   if (score >= 75) return '#22c55e';
   if (score >= 50) return '#f59e0b';
@@ -63,6 +78,10 @@ export default function ExploreScreen() {
   const [selectedGame, setSelectedGame]   = useState<RawgGame | null>(null);
   const [statutModal, setStatutModal]     = useState(false);
   const [savingStatut, setSavingStatut]   = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
+  const [minRating, setMinRating] = useState(0);
+  const [minMetacritic, setMinMetacritic] = useState(0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryRef    = useRef('');
@@ -73,6 +92,9 @@ export default function ExploreScreen() {
     const params: Record<string, string | number> = { page_size: 20, page: pageNum };
     if (search.trim()) params.search = search.trim();
     else params.ordering = '-rating';
+    if (minRating > 0) params.min_rating = minRating;
+    if (minMetacritic > 0) params.metacritic_gte = minMetacritic;
+    if (selectedGenres.length > 0) params.genres = selectedGenres.join(',');
     rawgFetch<RawgGamesResponse>('/games', params)
       .then((data) => {
         const results = data.results ?? [];
@@ -82,7 +104,7 @@ export default function ExploreScreen() {
       })
       .catch(() => { if (!append) setGames([]); })
       .finally(() => { setLoading(false); setLoadingMore(false); });
-  }, []);
+  }, [minRating, minMetacritic, selectedGenres]);
 
   useEffect(() => { loadGames('', 1, false); }, [loadGames]);
 
@@ -119,6 +141,35 @@ export default function ExploreScreen() {
     if (!hasMore || loadingMore || loading) return;
     loadGames(queryRef.current, page + 1, true);
   }, [hasMore, loadingMore, loading, page, loadGames]);
+
+  const toggleGenre = useCallback((genreId: number) => {
+    setSelectedGenres((prev) => {
+      const next = prev.includes(genreId) ? prev.filter((g) => g !== genreId) : [...prev, genreId];
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => { loadGames(queryRef.current, 1, false); }, 400);
+      return next;
+    });
+  }, [loadGames]);
+
+  const handleRatingChange = useCallback((value: number) => {
+    setMinRating(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { loadGames(queryRef.current, 1, false); }, 400);
+  }, [loadGames]);
+
+  const handleMetacriticChange = useCallback((value: number) => {
+    setMinMetacritic(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { loadGames(queryRef.current, 1, false); }, 400);
+  }, [loadGames]);
+
+  const resetFilters = useCallback(() => {
+    setSelectedGenres([]);
+    setMinRating(0);
+    setMinMetacritic(0);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { loadGames(queryRef.current, 1, false); }, 400);
+  }, [loadGames]);
 
   const handleSetStatut = useCallback(async (statut: string) => {
     if (!token || !selectedGame) return;
@@ -217,7 +268,19 @@ export default function ExploreScreen() {
             <X size={16} color={colors.icon} strokeWidth={2} />
           </TouchableOpacity>
         )}
+        <TouchableOpacity onPress={() => setShowFilters(true)} activeOpacity={0.7} hitSlop={8}>
+          <Settings size={18} color={colors.icon} strokeWidth={2} />
+        </TouchableOpacity>
       </View>
+
+      {(selectedGenres.length > 0 || minRating > 0 || minMetacritic > 0) && (
+        <View style={[styles.activeFiltersBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.activeFiltersText, { color: colors.icon }]}>Filtres actifs</Text>
+          <TouchableOpacity onPress={resetFilters}>
+            <Text style={[styles.resetFiltersBtn, { color: colors.tint }]}>Réinitialiser</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.tint} size="large" /></View>
@@ -277,6 +340,113 @@ export default function ExploreScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <Modal visible={showFilters} transparent animationType="slide" onRequestClose={() => setShowFilters(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowFilters(false)}>
+          <View style={[styles.filtersSheet, { backgroundColor: colors.surface }]}>
+            <View style={styles.filtersHeader}>
+              <Text style={[styles.filtersTitle, { color: colors.text }]}>Filtrer les jeux</Text>
+              <TouchableOpacity onPress={() => setShowFilters(false)} hitSlop={8}>
+                <X size={20} color={colors.icon} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.filtersContent} showsVerticalScrollIndicator={false}>
+              {/* Genres Filter */}
+              <View style={styles.filterGroup}>
+                <Text style={[styles.filterLabel, { color: colors.text }]}>Genres</Text>
+                <View style={styles.genresList}>
+                  {POPULAR_GENRES.map((genre) => (
+                    <TouchableOpacity
+                      key={genre.id}
+                      style={[
+                        styles.genreChip,
+                        {
+                          backgroundColor: selectedGenres.includes(genre.id)
+                            ? colors.tint
+                            : colors.tintDim,
+                          borderColor: selectedGenres.includes(genre.id)
+                            ? colors.tint
+                            : colors.border,
+                        },
+                      ]}
+                      onPress={() => toggleGenre(genre.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.genreChipText,
+                          {
+                            color: selectedGenres.includes(genre.id)
+                              ? '#fff'
+                              : colors.text,
+                          },
+                        ]}
+                      >
+                        {genre.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Min Rating Filter */}
+              <View style={styles.filterGroup}>
+                <View style={styles.filterLabelRow}>
+                  <Text style={[styles.filterLabel, { color: colors.text }]}>Note minimale</Text>
+                  <Text style={[styles.filterValue, { color: colors.tint }]}>{minRating.toFixed(1)}</Text>
+                </View>
+                <View style={styles.controlRow}>
+                  <TouchableOpacity
+                    style={[styles.controlBtn, { backgroundColor: colors.tintDim }]}
+                    onPress={() => handleRatingChange(Math.max(0, minRating - 0.5))}
+                    activeOpacity={0.7}
+                  >
+                    <Minus size={16} color={colors.tint} strokeWidth={2} />
+                  </TouchableOpacity>
+                  <View style={[styles.valueDisplay, { backgroundColor: colors.tintDim, borderColor: colors.border }]}>
+                    <Text style={[styles.valueDisplayText, { color: colors.text }]}>{minRating.toFixed(1)} ⭐</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.controlBtn, { backgroundColor: colors.tintDim }]}
+                    onPress={() => handleRatingChange(Math.min(5, minRating + 0.5))}
+                    activeOpacity={0.7}
+                  >
+                    <Plus size={16} color={colors.tint} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Min Metacritic Filter */}
+              <View style={styles.filterGroup}>
+                <View style={styles.filterLabelRow}>
+                  <Text style={[styles.filterLabel, { color: colors.text }]}>Score Metacritic minimum</Text>
+                  <Text style={[styles.filterValue, { color: colors.tint }]}>{Math.round(minMetacritic)}</Text>
+                </View>
+                <View style={styles.controlRow}>
+                  <TouchableOpacity
+                    style={[styles.controlBtn, { backgroundColor: colors.tintDim }]}
+                    onPress={() => handleMetacriticChange(Math.max(0, minMetacritic - 10))}
+                    activeOpacity={0.7}
+                  >
+                    <Minus size={16} color={colors.tint} strokeWidth={2} />
+                  </TouchableOpacity>
+                  <View style={[styles.valueDisplay, { backgroundColor: colors.tintDim, borderColor: colors.border }]}>
+                    <Text style={[styles.valueDisplayText, { color: colors.text }]}>{Math.round(minMetacritic)} / 100</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.controlBtn, { backgroundColor: colors.tintDim }]}
+                    onPress={() => handleMetacriticChange(Math.min(100, minMetacritic + 10))}
+                    activeOpacity={0.7}
+                  >
+                    <Plus size={16} color={colors.tint} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -288,6 +458,13 @@ const styles = StyleSheet.create({
     borderRadius: 12, borderWidth: 1,
   },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  activeFiltersBar: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 8, borderWidth: 1,
+  },
+  activeFiltersText: { fontSize: 12, fontWeight: '600' },
+  resetFiltersBtn: { fontSize: 12, fontWeight: '600' },
   center:     { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText:  { fontSize: 15 },
   list:       { paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8 },
@@ -322,4 +499,23 @@ const styles = StyleSheet.create({
     borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14,
   },
   statutText: { fontSize: 15, fontWeight: '600' },
+  filtersSheet: {
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    maxHeight: '90%',
+  },
+  filtersHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingBottom: 16 },
+  filtersTitle: { fontSize: 16, fontWeight: '800' },
+  filtersContent: { paddingHorizontal: 24, gap: 24 },
+  filterGroup: { gap: 12, marginBottom: 20 },
+  filterLabel: { fontSize: 14, fontWeight: '700' },
+  filterLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  filterValue: { fontSize: 13, fontWeight: '600' },
+  genresList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  genreChip: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1 },
+  genreChipText: { fontSize: 12, fontWeight: '600' },
+  controlRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  controlBtn: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  valueDisplay: { flex: 1, borderRadius: 8, borderWidth: 1, paddingVertical: 8, alignItems: 'center', justifyContent: 'center' },
+  valueDisplayText: { fontSize: 13, fontWeight: '600' },
 });

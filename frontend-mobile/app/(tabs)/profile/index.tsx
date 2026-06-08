@@ -5,7 +5,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { Lock, Library, Bell, ShieldUser, ChevronRight, LogIn, UserCheck } from 'lucide-react-native';
+import { Lock, Library, Bell, ShieldUser, ChevronRight, LogIn, UserCheck, List } from 'lucide-react-native';
 
 export default function ProfileTabScreen() {
   const scheme = useColorScheme() ?? 'dark';
@@ -97,6 +97,7 @@ export default function ProfileTabScreen() {
       {/* Menu */}
       <View style={styles.menuSection}>
         <MenuItem icon={<Library size={20} color={colors.tint} />}   label="Ma Collection" description="Gérez vos jeux" onPress={() => router.push('/(private)/library')} colors={colors} />
+        <MenuItem icon={<List size={20} color={colors.tint} />}       label="Mes Listes" description="Vos listes thématiques" onPress={() => router.push('/(tabs)/profile/listes')} colors={colors} />
         <MenuItem icon={<Bell size={20} color={colors.tint} />}       label="Notifications"  description="Vos alertes récentes" onPress={() => router.push('/(private)/notifications')} colors={colors} />
         <MenuItem
           icon={<UserCheck size={20} color={colors.tint} />}
