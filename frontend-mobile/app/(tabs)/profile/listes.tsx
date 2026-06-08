@@ -324,12 +324,12 @@ export default function ListesScreen() {
 
 const styles = StyleSheet.create({
   container:    { padding: 16, gap: 10, paddingBottom: 40 },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 12, marginBottom: 4, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 42 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 12, marginBottom: 8, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 42 },
   searchInput:  { flex: 1, fontSize: 14, paddingVertical: 8 },
-  filterScroll: { height: 48, marginVertical: 8 },
-  filterContainer: { flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
-  filterBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
-  filterBtnText: { fontSize: 13, fontWeight: '600' },
+  filterScroll: { height: 44, marginHorizontal: 0, marginVertical: 0, backgroundColor: 'transparent' },
+  filterContainer: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 4, alignItems: 'center' },
+  filterBtn:   { height: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 12 },
+  filterBtnText: { fontSize: 12, fontWeight: '600' },
   card:         { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   iconWrap:     { width: 42, height: 42, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   cardContent:  { flex: 1, gap: 4 },
