@@ -63,6 +63,7 @@ export default function TabLayout() {
         options={{
           tabBarLabel: 'Feed',
           tabBarIcon: ({ color }) => <House size={24} color={color} />,
+          headerBackVisible: false,
         }}
       />
       <Tabs.Screen
@@ -70,6 +71,7 @@ export default function TabLayout() {
         options={{
           tabBarLabel: 'Explorer',
           tabBarIcon: ({ color }) => <Telescope size={24} color={color} />,
+          headerBackVisible: false,
         }}
       />
       <Tabs.Screen
@@ -77,6 +79,7 @@ export default function TabLayout() {
         options={{
           tabBarLabel: 'Profil',
           tabBarIcon: ({ color }) => <User size={24} color={color} />,
+          headerBackVisible: false,
         }}
       />
     </Tabs>

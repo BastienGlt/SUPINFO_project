@@ -8,16 +8,31 @@ export default function ExploreLayout() {
   const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
 
-  const commonHeaderOptions = {
-    headerStyle: { backgroundColor: colors.background },
-    headerTintColor: colors.text,
-    headerShadowVisible: false,
-    headerLeft: () => (
-      <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-        <ChevronLeft size={24} color={colors.tint} strokeWidth={2.5} />
-      </TouchableOpacity>
-    ),
-  };
-
-  return <Stack screenOptions={commonHeaderOptions} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
+        headerBackVisible: false,
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="[id]"
+        options={{
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+              <ChevronLeft size={24} color={colors.tint} strokeWidth={2.5} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+    </Stack>
+  );
 }

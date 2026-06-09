@@ -59,12 +59,6 @@ export default function FollowRequestsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Demandes d'abonnement</Text>
-      </View>
 
       {loading ? (
         <View style={styles.centered}>

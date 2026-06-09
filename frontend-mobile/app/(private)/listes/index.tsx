@@ -1,14 +1,14 @@
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, TextInput, ActivityIndicator, Alert, Platform, ScrollView,
+  Modal, TextInput, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { useState, useCallback, useMemo } from 'react';
-import { useFocusEffect, router, Stack } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { Plus, X, ChevronRight, Lock, Globe, ChevronLeft, Search } from 'lucide-react-native';
+import { Plus, X, ChevronRight, Lock, Globe, Search } from 'lucide-react-native';
 
 interface Liste {
   id: number;
@@ -33,7 +33,6 @@ export default function ListesScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVisibility, setSelectedVisibility] = useState<Set<'PUBLIQUE' | 'PRIVEE' | 'ALL'>>(new Set(['ALL']));
 
   const fetchListes = useCallback(async () => {
     if (!token) return;
@@ -64,13 +63,19 @@ export default function ListesScreen() {
       );
     }
 
-    // Filter by visibility
-    if (selectedVisibility.size > 0 && !selectedVisibility.has('ALL')) {
-      result = result.filter(item => selectedVisibility.has(item.visibilite));
-    }
-
     return result;
-  }, [listes, searchQuery, selectedVisibility]);
+  }, [listes, searchQuery]);
+
+  const grouped = useMemo(() => {
+    const result: Record<string, Liste[]> = {
+      PUBLIQUE: [],
+      PRIVEE: [],
+    };
+    for (const liste of listes) {
+      result[liste.visibilite].push(liste);
+    }
+    return result;
+  }, [listes]);
 
   const openCreate = useCallback(() => {
     setNom(''); setDescription(''); setVisibilite('PRIVEE'); setError('');
@@ -123,21 +128,7 @@ export default function ListesScreen() {
   }
 
   return (
-    <>
-      <Stack.Screen options={{
-        title: 'Mes listes',
-        headerLeft: () => (
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-            <ChevronLeft size={24} color={colors.tint} strokeWidth={2.5} />
-          </TouchableOpacity>
-        ),
-        headerRight: () => (
-          <TouchableOpacity onPress={openCreate} hitSlop={8}>
-            <Plus size={22} color={colors.tint} strokeWidth={2.5} />
-          </TouchableOpacity>
-        ),
-      }} />
-
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Search Bar */}
       <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Search size={18} color={colors.icon} strokeWidth={2} />
@@ -156,49 +147,20 @@ export default function ListesScreen() {
       </View>
 
       {/* Filter Chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-        <View style={styles.filterContainer}>
-          {(['ALL', 'PRIVEE', 'PUBLIQUE'] as const).map((visibility) => {
-            const label = visibility === 'ALL' ? 'Tous' : visibility === 'PRIVEE' ? 'Privées' : 'Publiques';
-            const isSelected = selectedVisibility.has(visibility);
-            const icon = visibility === 'PUBLIQUE' ? <Globe size={14} /> : visibility === 'PRIVEE' ? <Lock size={14} /> : null;
 
-            return (
-              <TouchableOpacity
-                key={visibility}
-                style={[
-                  styles.filterBtn,
-                  {
-                    backgroundColor: isSelected ? colors.tint : colors.surface,
-                    borderColor: isSelected ? colors.tint : colors.border,
-                  },
-                ]}
-                onPress={() =>
-                  setSelectedVisibility((prev) => {
-                    const s = new Set(prev);
-                    if (visibility === 'ALL') {
-                      return new Set(['ALL']);
-                    }
-                    s.delete('ALL');
-                    if (s.has(visibility)) s.delete(visibility);
-                    else s.add(visibility);
-                    if (s.size === 0) s.add('ALL');
-                    return s;
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <View style={{ width: 14, height: 14, justifyContent: 'center', alignItems: 'center' }}>
-                  {icon && <View style={{ tintColor: isSelected ? '#fff' : colors.icon }}>{icon}</View>}
-                </View>
-                <Text style={[styles.filterBtnText, { color: isSelected ? '#fff' : colors.icon }]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+      {/* Résumé des compteurs */}
+      <View style={styles.summary}>
+        <View style={[styles.summaryBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
+          <Globe size={14} color={colors.tint} strokeWidth={2} />
+          <Text style={[styles.summaryCount, { color: colors.tint }]}>{grouped.PUBLIQUE.length}</Text>
+          <Text style={[styles.summaryLabel, { color: colors.tint }]}>Publiques</Text>
         </View>
-      </ScrollView>
+        <View style={[styles.summaryBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
+          <Lock size={14} color={colors.tint} strokeWidth={2} />
+          <Text style={[styles.summaryCount, { color: colors.tint }]}>{grouped.PRIVEE.length}</Text>
+          <Text style={[styles.summaryLabel, { color: colors.tint }]}>Privées</Text>
+        </View>
+      </View>
 
       <FlatList
         style={{ backgroundColor: colors.background }}
@@ -240,11 +202,11 @@ export default function ListesScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={[styles.emptyText, { color: colors.icon }]}>
-              {searchQuery || (selectedVisibility.size > 0 && !selectedVisibility.has('ALL'))
+              {searchQuery
                 ? 'Aucune liste ne correspond'
                 : 'Aucune liste pour l\'instant'}
             </Text>
-            {!searchQuery && (selectedVisibility.size === 0 || selectedVisibility.has('ALL')) && (
+            {!searchQuery && (
               <TouchableOpacity
                 style={[styles.emptyBtn, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}
                 onPress={openCreate}
@@ -320,7 +282,7 @@ export default function ListesScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </>
+    </View>
   );
 }
 
@@ -332,6 +294,17 @@ const styles = StyleSheet.create({
   filterContainer: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 4, alignItems: 'center' },
   filterBtn:   { height: 36, minWidth: 80, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12 },
   filterBtnText: { fontSize: 12, fontWeight: '600' },
+  summary: { flexDirection: 'row', gap: 10, padding: 16, paddingTop: 8, paddingBottom: 8 },
+  summaryBadge: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  summaryCount: { fontSize: 22, fontWeight: '800' },
+  summaryLabel: { fontSize: 11, fontWeight: '600' },
   card:         { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   iconWrap:     { width: 42, height: 42, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   cardContent:  { flex: 1, gap: 4 },

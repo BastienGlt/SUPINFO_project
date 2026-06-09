@@ -51,6 +51,7 @@ export default function PrivateLayout() {
       <Stack.Screen name="admin/statuts" options={{ ...commonHeaderOptions, title: 'Statuts bibliothèque' }} />
       <Stack.Screen name="follow-requests/index" options={{ ...commonHeaderOptions, title: 'Demandes d\'abonnement' }} />
       <Stack.Screen name="liste/[id]" options={{ ...commonHeaderOptions, title: 'Liste' }} />
+      <Stack.Screen name="listes/index" options={{ ...commonHeaderOptions, title: 'Mes Listes' }} />
     </Stack>
   );
 }
