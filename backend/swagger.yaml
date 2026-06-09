@@ -143,6 +143,23 @@ components:
           type: string
           description: Description de l'oeuvre (requis pour la créer en base si elle n'existe pas encore)
 
+    OeuvreNoteMoyenne:
+      type: object
+      properties:
+        oeuvre_id:
+          type: integer
+        oeuvre_titre:
+          type: string
+        api_reference_id:
+          type: string
+        note_moyenne:
+          type: number
+          format: float
+          description: Moyenne des notes arrondie à 2 décimales
+        total_critiques:
+          type: integer
+          description: Nombre total de critiques pour cette oeuvre
+
     RatingStats:
       type: object
       properties:
@@ -4130,6 +4147,86 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Signalement non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== OEUVRES ====================
+
+  /oeuvres/notes-moyennes:
+    get:
+      tags: [Oeuvres]
+      summary: Lister toutes les oeuvres avec leur note moyenne
+      description: Retourne la liste des oeuvres ayant au moins une critique, triees par note decroissante. Utilise la vue v_oeuvres_notes_moyennes.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Nombre maximum de resultats
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Decalage pour la pagination
+      responses:
+        '200':
+          description: Liste des oeuvres avec leur note moyenne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oeuvres:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OeuvreNoteMoyenne'
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /oeuvres/{id}/note-moyenne:
+    get:
+      tags: [Oeuvres]
+      summary: Note moyenne d'une oeuvre
+      description: Retourne la note moyenne et le nombre de critiques via la vue v_oeuvres_notes_moyennes.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: api_reference_id de l'oeuvre dans l'API externe
+      responses:
+        '200':
+          description: Note moyenne de l'oeuvre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OeuvreNoteMoyenne'
+        '404':
+          description: Oeuvre introuvable ou aucune note
           content:
             application/json:
               schema:

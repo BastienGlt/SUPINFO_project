@@ -36,6 +36,7 @@ const notificationRoutes = require('./src/routes/notification.routes');
 const feedRoutes = require('./src/routes/feed.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const signalementRoutes = require('./src/routes/signalement.routes');
+const oeuvreRoutes = require('./src/routes/oeuvre.routes');
 
 app.use('/users', userRoutes);
 app.use('/users', followerRoutes);
@@ -48,6 +49,7 @@ app.use('/notifications', notificationRoutes);
 app.use('/feed', feedRoutes);
 app.use('/admin', adminRoutes);
 app.use('/signalements', signalementRoutes);
+app.use('/oeuvres', oeuvreRoutes);
 
 // --- Health check ---
 app.get('/health', (req, res) => {

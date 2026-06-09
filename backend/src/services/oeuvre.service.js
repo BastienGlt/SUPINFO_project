@@ -21,6 +21,23 @@ exports.findByApiRef = async (apiReferenceId) => {
  * @param {string} description
  * @returns {Object} L'oeuvre (existante ou nouvellement créée)
  */
+exports.getNoteMoyenneByApiRef = async (apiReferenceId) => {
+  const [rows] = await db.query(
+    'SELECT * FROM v_oeuvres_notes_moyennes WHERE api_reference_id = ?',
+    [String(apiReferenceId)]
+  );
+  return rows.length > 0 ? rows[0] : null;
+};
+
+exports.getAllNotesMoyennes = async ({ limit = 20, offset = 0 } = {}) => {
+  const [rows] = await db.query(
+    'SELECT * FROM v_oeuvres_notes_moyennes ORDER BY note_moyenne DESC LIMIT ? OFFSET ?',
+    [limit, offset]
+  );
+  const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM v_oeuvres_notes_moyennes');
+  return { oeuvres: rows, pagination: { limit, offset, total } };
+};
+
 exports.findOrCreate = async (apiReferenceId, titre, description) => {
   const existing = await exports.findByApiRef(apiReferenceId);
   if (existing) return existing;
