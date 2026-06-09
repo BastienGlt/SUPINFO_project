@@ -24,7 +24,23 @@ interface RawgGameDetail {
   platforms: { platform: { id: number; name: string } }[];
 }
 
-interface RatingStats { moyenne: number; total: number; }
+interface RatingStats {
+  average_rating?: string | number;
+  total_ratings?: number;
+  rating_1?: string | number;
+  rating_2?: string | number;
+  rating_3?: string | number;
+  rating_4?: string | number;
+  rating_5?: string | number;
+  max_rating?: number;
+  min_rating?: number;
+  oeuvre_id?: number;
+  note_moyenne?: string | number;
+  total_critiques?: number;
+  moyenne?: number;
+  total?: number;
+  distribution?: Record<string, number>;
+}
 interface UserRating  { id: number; note: number; contenu?: string; }
 interface UserListe {
   id: number;
@@ -66,16 +82,22 @@ export default function GameDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!id || loadedRef.current) return;
-      loadedRef.current = true;
-      setLoading(true);
-      const loads: Promise<unknown>[] = [
-        rawgFetch<RawgGameDetail>(`/games/${id}`).then(setGame).catch(() => {}),
+      if (!id) return;
+      const isFirstLoad = !loadedRef.current;
+      if (isFirstLoad) {
+        loadedRef.current = true;
+        setLoading(true);
+        const staticLoads: Promise<unknown>[] = [
+          rawgFetch<RawgGameDetail>(`/games/${id}`).then(setGame).catch(() => {}),
+          apiFetch<Statut[]>('/admin/statuts').then(setStatuts).catch(() => {}),
+        ];
+        Promise.all(staticLoads).finally(() => setLoading(false));
+      }
+      const dynamicLoads: Promise<unknown>[] = [
         apiFetch<RatingStats>(`/critiques/${id}/ratings/stats`).then(setStats).catch(() => {}),
-        apiFetch<Statut[]>('/admin/statuts').then(setStatuts).catch(() => {}),
       ];
       if (user && token) {
-        loads.push(
+        dynamicLoads.push(
           apiFetch<UserRating>(`/critiques/${id}/ratings/me`, { token })
             .then((r) => { setUserRating(r); setCritiqueNote(String(r.note)); setCritiqueContenu(r.contenu ?? ''); })
             .catch(() => {}),
@@ -84,7 +106,7 @@ export default function GameDetailScreen() {
             .catch(() => {}),
         );
       }
-      Promise.all(loads).finally(() => setLoading(false));
+      Promise.all(dynamicLoads);
     }, [id, user?.id, token])
   );
 
@@ -112,6 +134,7 @@ export default function GameDetailScreen() {
       const method = userRating ? 'PUT' : 'POST';
       const saved = await apiFetch<UserRating>(`/critiques/${id}/ratings`, { method, token, body });
       setUserRating(saved ?? { id: 0, note, contenu: critiqueContenu.trim() });
+      apiFetch<RatingStats>(`/critiques/${id}/ratings/stats`).then(setStats).catch(() => {});
       setCritiqueModal(false);
     } catch (err) {
       const e = err as { status?: number; error?: string; message?: string };
@@ -120,6 +143,7 @@ export default function GameDetailScreen() {
           const body = JSON.stringify({ note, titre: game?.name ?? '', description: game?.description_raw?.slice(0, 500) ?? '', ...(critiqueContenu.trim() ? { contenu: critiqueContenu.trim() } : {}) });
           const saved = await apiFetch<UserRating>(`/critiques/${id}/ratings`, { method: 'PUT', token, body });
           setUserRating(saved ?? { id: userRating?.id ?? 0, note, contenu: critiqueContenu.trim() });
+          apiFetch<RatingStats>(`/critiques/${id}/ratings/stats`).then(setStats).catch(() => {});
           setCritiqueModal(false);
         } catch {}
       } else { setCritiqueError(e?.error ?? e?.message ?? `Erreur ${e?.status ?? ''}`); }
@@ -197,14 +221,6 @@ export default function GameDetailScreen() {
             )}
           </View>
 
-          {game.rating > 0 && (
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star key={i} size={14} strokeWidth={0} color={colors.tint} fill={i <= rawgStars ? colors.tint : colors.border} />
-              ))}
-              <Text style={[styles.ratingValue, { color: colors.icon }]}>{game.rating.toFixed(1)}/5</Text>
-            </View>
-          )}
 
           <View style={styles.tagsRow}>
             {game.released && (
@@ -237,20 +253,71 @@ export default function GameDetailScreen() {
             </View>
           )}
 
-          {stats != null && stats.total > 0 && (
-            <View style={[styles.statsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.statsTitle, { color: colors.text }]}>Communauté</Text>
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.tint }]}>{stats.moyenne.toFixed(1)}<Text style={[styles.statSuffix, { color: colors.icon }]}>/5</Text></Text>
-                  <Text style={[styles.statLabel, { color: colors.icon }]}>Moyenne</Text>
+          {(game.rating > 0 || (stats != null && (stats.total_ratings ?? stats.total_critiques ?? stats.total ?? 0) > 0)) && (
+            <View style={[styles.ratingsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.ratingsTitle, { color: colors.text }]}>Notations</Text>
+              {game.rating > 0 && (
+                <View style={styles.ratingRow}>
+                  <Text style={[styles.ratingSource, { color: colors.icon }]}>RAWG</Text>
+                  <View style={styles.ratingStars}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} size={13} strokeWidth={0} color={colors.tint} fill={i <= rawgStars ? colors.tint : colors.border} />
+                    ))}
+                  </View>
+                  <Text style={[styles.ratingVal, { color: colors.tint }]}>
+                    {game.rating.toFixed(1)}<Text style={[styles.ratingValSuffix, { color: colors.icon }]}>/5</Text>
+                  </Text>
                 </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                  <Text style={[styles.statValue, { color: colors.tint }]}>{stats.total}</Text>
-                  <Text style={[styles.statLabel, { color: colors.icon }]}>{stats.total === 1 ? 'Critique' : 'Critiques'}</Text>
-                </View>
-              </View>
+              )}
+              {stats != null && (stats.total_ratings ?? stats.total_critiques ?? stats.total ?? 0) > 0 && (() => {
+                const total = stats.total_ratings ?? stats.total_critiques ?? stats.total ?? 0;
+                const avg = typeof (stats.average_rating ?? stats.note_moyenne ?? stats.moyenne) === 'string'
+                  ? parseFloat(String(stats.average_rating ?? stats.note_moyenne ?? stats.moyenne))
+                  : (stats.average_rating ?? stats.note_moyenne ?? stats.moyenne ?? 0);
+                return (
+                  <>
+                    {game.rating > 0 && <View style={[styles.ratingDivider, { backgroundColor: colors.border }]} />}
+                    <View style={styles.ratingRow}>
+                      <Text style={[styles.ratingSource, { color: colors.icon }]}>Communauté</Text>
+                      <View style={styles.ratingStars}>
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star key={i} size={13} strokeWidth={0} color={colors.tint} fill={i <= Math.round(avg) ? colors.tint : colors.border} />
+                        ))}
+                      </View>
+                      <Text style={[styles.ratingVal, { color: colors.tint }]}>
+                        {avg.toFixed(1)}<Text style={[styles.ratingValSuffix, { color: colors.icon }]}>/5</Text>
+                      </Text>
+                      <Text style={[styles.ratingCount, { color: colors.icon }]}>{total} avis</Text>
+                    </View>
+                    {(() => {
+                      const distMap: Record<number, number> = {};
+                      for (let i = 1; i <= 5; i++) {
+                        const count = parseInt(String(stats[`rating_${i}` as keyof typeof stats] ?? 0), 10);
+                        distMap[i] = count;
+                      }
+                      const hasDistribution = Object.values(distMap).some(v => v > 0);
+                      return hasDistribution && (
+                        <View style={styles.distContainer}>
+                          {[5, 4, 3, 2, 1].map((star) => {
+                            const count = distMap[star] ?? 0;
+                            const pct = total > 0 ? count / total : 0;
+                            return (
+                              <View key={star} style={styles.distRow}>
+                                <Text style={[styles.distLabel, { color: colors.icon }]}>{star}</Text>
+                                <Star size={9} strokeWidth={0} color={colors.tint} fill={colors.tint} />
+                                <View style={[styles.distTrack, { backgroundColor: colors.border }]}>
+                                  <View style={[styles.distFill, { backgroundColor: colors.tint, width: `${Math.round(pct * 100)}%` as any }]} />
+                                </View>
+                                <Text style={[styles.distCount, { color: colors.icon }]}>{count}</Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      );
+                    })()}
+                  </>
+                );
+              })()}
             </View>
           )}
 
@@ -416,8 +483,21 @@ const styles = StyleSheet.create({
   title:         { flex: 1, fontSize: 22, fontWeight: '800', lineHeight: 29 },
   metacriticBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start', minWidth: 44, alignItems: 'center' },
   metacriticText:  { fontWeight: '800', fontSize: 16 },
-  starsRow:      { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  ratingValue:   { marginLeft: 5, fontSize: 13, fontWeight: '500' },
+  ratingsCard:     { borderRadius: 16, borderWidth: 1, padding: 16, gap: 10 },
+  ratingsTitle:    { fontWeight: '700', fontSize: 15 },
+  ratingRow:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ratingSource:    { fontSize: 13, fontWeight: '600', width: 88 },
+  ratingStars:     { flexDirection: 'row', gap: 2 },
+  ratingVal:       { fontSize: 15, fontWeight: '700', marginLeft: 2 },
+  ratingValSuffix: { fontSize: 12, fontWeight: '500' },
+  ratingCount:     { fontSize: 12, flex: 1, textAlign: 'right' },
+  ratingDivider:   { height: 1, marginVertical: 2 },
+  distContainer:   { gap: 4, marginTop: 4 },
+  distRow:         { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  distLabel:       { fontSize: 11, fontWeight: '600', width: 10, textAlign: 'right' },
+  distTrack:       { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden' },
+  distFill:        { height: '100%', borderRadius: 3 },
+  distCount:       { fontSize: 11, width: 24, textAlign: 'right' },
   tagsRow:       { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag:           { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   tagText:       { fontSize: 12, fontWeight: '500' },
@@ -425,14 +505,6 @@ const styles = StyleSheet.create({
   description:   { fontSize: 14, lineHeight: 22 },
   readMoreBtn:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   readMoreText:  { fontSize: 13, fontWeight: '600' },
-  statsCard:     { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
-  statsTitle:    { fontWeight: '700', fontSize: 15 },
-  statsRow:      { flexDirection: 'row' },
-  statItem:      { flex: 1, alignItems: 'center', gap: 2 },
-  statDivider:   { width: 1, marginVertical: 4 },
-  statValue:     { fontSize: 22, fontWeight: '800' },
-  statSuffix:    { fontSize: 13, fontWeight: '500' },
-  statLabel:     { fontSize: 12 },
   myRatingCard:  { borderRadius: 12, borderWidth: 1, padding: 14, gap: 6 },
   myRatingRow:   { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'space-between' },
   myRatingTitle: { flex: 1, fontWeight: '700', fontSize: 14 },
