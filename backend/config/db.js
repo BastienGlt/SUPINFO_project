@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const mysql = require('mysql2/promise');
 
 // Connexion à MySQL (Pool de connexions)
@@ -9,7 +10,8 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  multipleStatements: true
 });
 
 module.exports = pool;

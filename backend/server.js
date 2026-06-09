@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 
@@ -7,6 +8,7 @@ const app = express();
 const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const yaml = require('js-yaml');
+const initializeDatabase = require('./config/initDb');
 
 const swaggerDocument = yaml.load(fs.readFileSync('./swagger.yaml', 'utf8'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -34,6 +36,7 @@ const notificationRoutes = require('./src/routes/notification.routes');
 const feedRoutes = require('./src/routes/feed.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const signalementRoutes = require('./src/routes/signalement.routes');
+const oeuvreRoutes = require('./src/routes/oeuvre.routes');
 
 app.use('/users', userRoutes);
 app.use('/users', followerRoutes);
@@ -46,6 +49,7 @@ app.use('/notifications', notificationRoutes);
 app.use('/feed', feedRoutes);
 app.use('/admin', adminRoutes);
 app.use('/signalements', signalementRoutes);
+app.use('/oeuvres', oeuvreRoutes);
 
 // --- Health check ---
 app.get('/health', (req, res) => {
@@ -62,6 +66,18 @@ app.use((req, res) => {
 
 // --- 3. DÉMARRAGE ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur Backend lancé sur le port ${PORT}`);
-});
+
+const startServer = async () => {
+  try {
+    await initializeDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Serveur Backend lancé sur le port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize database schema:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
