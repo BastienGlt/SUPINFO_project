@@ -7,10 +7,11 @@ import { router } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/context/ThemeContext';
 import { apiFetch } from '@/services/apiService';
 import {
   Library, Bell, ChevronRight, LogOut, Mail, CalendarDays, ShieldCheck,
-  Pencil, X, Check, Globe, Lock, ShieldIcon, FileText, Info,
+  Pencil, X, Check, Globe, Lock, ShieldIcon, FileText, Info, Sun, Moon,
 } from 'lucide-react-native';
 
 const LEGAL_LINKS = {
@@ -24,6 +25,7 @@ const ROLE_LABELS: Record<number, string> = { 1: 'Membre', 2: 'Modérateur', 3: 
 export default function MyProfileScreen() {
   const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
+  const { toggleTheme } = useTheme();
   const { user, logout, updateUser } = useAuth();
 
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
@@ -277,6 +279,36 @@ export default function MyProfileScreen() {
                   trackColor={{ false: colors.border, true: colors.tint + '80' }}
                   thumbColor={isPublic ? colors.tint : colors.icon}
                 />}
+          </View>
+        </View>
+      </View>
+
+      {/* Apparence */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Apparence</Text>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLabelWrap}>
+              {colorScheme === 'dark'
+                ? <Moon size={15} color={colors.icon} />
+                : <Sun size={15} color={colors.icon} />}
+              <View>
+                <Text style={[styles.toggleTitle, { color: colors.text }]}>
+                  {colorScheme === 'dark' ? 'Mode sombre' : 'Mode clair'}
+                </Text>
+                <Text style={[styles.toggleDesc, { color: colors.icon }]}>
+                  {colorScheme === 'dark'
+                    ? 'Basculer vers le mode clair'
+                    : 'Basculer vers le mode sombre'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={colorScheme === 'dark'}
+              onValueChange={toggleTheme}
+              trackColor={{ false: colors.border, true: colors.tint + '80' }}
+              thumbColor={colorScheme === 'dark' ? colors.tint : colors.icon}
+            />
           </View>
         </View>
       </View>

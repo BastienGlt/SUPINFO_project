@@ -2,8 +2,6 @@ import { Platform } from 'react-native';
 
 const ORANGE = '#f97316';
 
-// Dark/orange gaming palette — applied for both light and dark system themes
-// so the app always renders in gaming-dark mode regardless of device setting.
 const dark = {
   text:            '#f1f5f9',
   background:      '#0b0f19',
@@ -22,8 +20,26 @@ const dark = {
   amber:           '#f59e0b',
 };
 
+const light = {
+  text:            '#0f172a',
+  background:      '#f8fafc',
+  surface:         '#ffffff',
+  surfaceAlt:      '#f1f5f9',
+  tint:            ORANGE,
+  tintDim:         'rgba(249,115,22,0.10)',
+  tintBorder:      'rgba(249,115,22,0.25)',
+  icon:            '#64748b',
+  border:          '#e2e8f0',
+  tabIconDefault:  '#94a3b8',
+  tabIconSelected: ORANGE,
+  red:             '#ef4444',
+  green:           '#22c55e',
+  blue:            '#3b82f6',
+  amber:           '#f59e0b',
+};
+
 export const Colors = {
-  light: dark,
+  light,
   dark,
 };
 
