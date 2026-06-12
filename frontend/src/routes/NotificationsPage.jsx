@@ -37,32 +37,10 @@ export default function NotificationsPage() {
     };
 
     useEffect(() => {
-        loadNotifications();
-
-        // SSE temps réel
-        let eventSource;
-        const connectSSE = async () => {
-            try {
-                const token = await getAccessTokenSilently();
-                eventSource = new EventSource(
-                    `${import.meta.env.VITE_API_URL}/notifications/stream?token=${token}`
-                );
-                eventSource.addEventListener('notification', (e) => {
-                    const notif = JSON.parse(e.data);
-                    setNotifications(prev => [notif, ...prev]);
-                    setUnreadCount(prev => prev + 1);
-                });
-                eventSource.onerror = () => {
-                    eventSource.close();
-                    // Retry après 10s
-                    setTimeout(connectSSE, 10000);
-                };
-            } catch {}
-        };
-        connectSSE();
-
-        return () => { if (eventSource) eventSource.close(); };
-    }, []);
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 15000);
+    return () => clearInterval(interval);
+}, []);
 
     const handleMarkAsRead = async (id) => {
         try {

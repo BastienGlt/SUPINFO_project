@@ -12,6 +12,7 @@ import { createListeService } from '../services/listeService';
 import { Star, Heart, MessageCircle, Plus, Send, ChevronDown, ChevronUp, EyeOff, Award, Trash2, List } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const STATUS_LABELS = { 'envie': 'Envie', 'joue': 'Joué', 'termine': 'Terminé' };
 
 function StarRating({ value, onChange, readOnly = false, size = 20 }) {
     const [hover, setHover] = useState(0);
@@ -106,11 +107,8 @@ function AddToListButton({ oeuvreId, getAccessTokenSilently, effectiveRawgId, ra
                     try {
                         const oeuvresData = await service.getListOeuvres(l.id);
                         const oeuvres = Array.isArray(oeuvresData) ? oeuvresData : oeuvresData?.oeuvres || [];
-                        const found = oeuvres.some(o =>
-                            String(o.oeuvre_id) === String(oeuvreId) ||
-                            String(o.api_reference_id) === String(effectiveRawgId || rawgId)
-                        );
-                        if (found) inListes.add(l.id);
+                        if (oeuvres.some(o => String(o.oeuvre_id) === String(oeuvreId) || String(o.api_reference_id) === String(effectiveRawgId || rawgId)))
+                            inListes.add(l.id);
                     } catch {}
                 }));
                 setListesWithGame(inListes);
@@ -131,66 +129,36 @@ function AddToListButton({ oeuvreId, getAccessTokenSilently, effectiveRawgId, ra
             });
             setListesWithGame(prev => new Set([...prev, listeId]));
         } catch (err) {
-            if (err.message?.includes('Duplicate')) {
-                setListesWithGame(prev => new Set([...prev, listeId]));
-            } else {
-                alert('Erreur : ' + err.message);
-            }
+            if (err.message?.includes('Duplicate')) setListesWithGame(prev => new Set([...prev, listeId]));
+            else alert('Erreur : ' + err.message);
         }
         finally { setAdding(null); }
     };
-
-    const inListCount = listesWithGame.size;
 
     return (
         <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1rem' }}>
             <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <List size={18} /> Mes listes
-                {inListCount > 0 && (
-                    <span style={{
-                        background: 'var(--primary-glow)', color: 'var(--primary)',
-                        borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem', fontWeight: 700,
-                        border: '1px solid var(--primary)',
-                    }}>
-                        dans {inListCount} liste{inListCount > 1 ? 's' : ''}
+                {listesWithGame.size > 0 && (
+                    <span style={{ background: 'var(--primary-glow)', color: 'var(--primary)', borderRadius: '10px', padding: '2px 8px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid var(--primary)' }}>
+                        dans {listesWithGame.size} liste{listesWithGame.size > 1 ? 's' : ''}
                     </span>
                 )}
             </h3>
-            <button onClick={() => setOpen(!open)} style={{
-                width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-                borderRadius: '8px', padding: '10px', color: 'var(--text)', cursor: 'pointer',
-                fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-            }}>
+            <button onClick={() => setOpen(!open)} style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', color: 'var(--text)', cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <Plus size={16} /> {open ? 'Fermer' : 'Gérer les listes'}
             </button>
             {open && (
                 <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {loadingListes ? (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '8px' }}>Chargement...</p>
-                    ) : listes.length === 0 ? (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Aucune liste. Crée-en une depuis la page Listes.</p>
-                    ) : listes.map(l => {
+                    {loadingListes ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '8px' }}>Chargement...</p>
+                    : listes.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Aucune liste.</p>
+                    : listes.map(l => {
                         const alreadyIn = listesWithGame.has(l.id);
                         return (
-                            <button key={l.id}
-                                onClick={() => !alreadyIn && handleAdd(l.id)}
-                                disabled={alreadyIn || adding === l.id}
-                                style={{
-                                    background: alreadyIn ? 'var(--primary-glow)' : 'var(--bg)',
-                                    border: alreadyIn ? '1px solid var(--primary)' : '1px solid var(--border)',
-                                    borderRadius: '8px', padding: '10px', textAlign: 'left',
-                                    color: alreadyIn ? 'var(--primary)' : 'var(--text)',
-                                    fontFamily: 'Exo 2, sans-serif', fontSize: '0.9rem',
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    cursor: alreadyIn ? 'default' : 'pointer',
-                                    opacity: alreadyIn ? 1 : (adding === l.id ? 0.6 : 1),
-                                }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {alreadyIn ? '✓' : adding === l.id ? '⏳' : '+'} {l.nom}
-                                </span>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                                    {alreadyIn ? 'Déjà ajouté' : l.visibilite === 'PUBLIQUE' ? '🌍' : '🔒'}
-                                </span>
+                            <button key={l.id} onClick={() => !alreadyIn && handleAdd(l.id)} disabled={alreadyIn || adding === l.id}
+                                style={{ background: alreadyIn ? 'var(--primary-glow)' : 'var(--bg)', border: alreadyIn ? '1px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', padding: '10px', textAlign: 'left', color: alreadyIn ? 'var(--primary)' : 'var(--text)', fontFamily: 'Exo 2, sans-serif', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: alreadyIn ? 'default' : 'pointer', opacity: alreadyIn ? 1 : (adding === l.id ? 0.6 : 1) }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>{alreadyIn ? '✓' : adding === l.id ? '⏳' : '+'} {l.nom}</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{alreadyIn ? 'Déjà ajouté' : l.visibilite === 'PUBLIQUE' ? '🌍' : '🔒'}</span>
                             </button>
                         );
                     })}
@@ -198,6 +166,12 @@ function AddToListButton({ oeuvreId, getAccessTokenSilently, effectiveRawgId, ra
             )}
         </div>
     );
+}
+
+function getLibraryStatusLabel(statut) {
+    if (statut === null || statut === undefined) return 'inconnu';
+    if (typeof statut === 'object') return statut.libele || STATUS_LABELS[statut.code] || 'inconnu';
+    return STATUS_LABELS[statut] || String(statut);
 }
 
 async function fetchRatings(oeuvreId) {
@@ -235,13 +209,9 @@ export default function GamePage() {
     const [formContenu, setFormContenu] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    // ══════════════════════════════════════
-    // ÉTAPE 1 : Charger les critiques
-    // ══════════════════════════════════════
     useEffect(() => {
         const loadCritiques = async () => {
             let oId = oeuvreId;
-
             if (!oId && rawgId && isAuthenticated) {
                 try {
                     const bibService = createBibliothequeService(getAccessTokenSilently);
@@ -255,7 +225,6 @@ export default function GamePage() {
                     }
                 } catch {}
             }
-
             if (oId) {
                 const list = await fetchRatings(oId);
                 setRatings(list);
@@ -264,7 +233,6 @@ export default function GamePage() {
                     if (ref) setEffectiveRawgId(String(ref.api_reference_id));
                 }
             }
-
             if (urlOeuvreId && isAuthenticated) {
                 try {
                     const bibService = createBibliothequeService(getAccessTokenSilently);
@@ -273,9 +241,7 @@ export default function GamePage() {
                     if (match) {
                         setInLibrary(true);
                         setLibraryStatut(match.statut);
-                        if (match.api_reference_id && !effectiveRawgId) {
-                            setEffectiveRawgId(String(match.api_reference_id));
-                        }
+                        if (match.api_reference_id && !effectiveRawgId) setEffectiveRawgId(String(match.api_reference_id));
                     }
                 } catch {}
             }
@@ -283,29 +249,23 @@ export default function GamePage() {
         loadCritiques();
     }, [rawgId, urlOeuvreId, isAuthenticated]);
 
-    // ══════════════════════════════════════
-    // ÉTAPE 2 : Charger le jeu depuis RAWG
-    // ══════════════════════════════════════
     useEffect(() => {
         const loadGame = async () => {
             setGameLoading(true);
-            const idToTry = effectiveRawgId;
-
-            if (idToTry) {
+            if (effectiveRawgId) {
                 try {
-                    const gameData = await rawgService.getGameDetails(idToTry);
+                    const gameData = await rawgService.getGameDetails(effectiveRawgId);
                     const refTitle = ratings[0]?.oeuvre_titre || ratings[0]?.titre || '';
                     const isCorrect = !refTitle || gameData.name.toLowerCase().includes(refTitle.toLowerCase().substring(0, 5));
                     if (isCorrect) {
                         setGame(gameData);
-                        const screens = await rawgService.getGameScreenshots(idToTry).catch(() => []);
+                        const screens = await rawgService.getGameScreenshots(effectiveRawgId).catch(() => []);
                         setScreenshots(screens.slice(0, 4));
                         setGameLoading(false);
                         return;
                     }
                 } catch {}
             }
-
             const title = ratings[0]?.oeuvre_titre || ratings[0]?.titre;
             if (title) {
                 try {
@@ -326,9 +286,7 @@ export default function GamePage() {
     }, [effectiveRawgId, ratings.length]);
 
     useEffect(() => {
-        if (user && ratings.length > 0) {
-            setMyRating(ratings.find(r => r.user_id === user.id) || null);
-        }
+        if (user && ratings.length > 0) setMyRating(ratings.find(r => r.user_id === user.id) || null);
     }, [user, ratings]);
 
     const handleAddToBiblio = async (statut) => {
@@ -385,7 +343,6 @@ export default function GamePage() {
         }
     };
 
-    const STATUS_MAP = { 3: 'Envie', 1: 'En cours', 2: 'Terminé' };
     const gameTitle = game?.name || ratings[0]?.oeuvre_titre || ratings[0]?.titre || 'Jeu';
 
     return (
@@ -410,7 +367,6 @@ export default function GamePage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: game || isAuthenticated ? '1fr 320px' : '1fr', gap: '2rem', alignItems: 'start' }}>
-                {/* COLONNE GAUCHE */}
                 <div>
                     {game?.description_raw && (
                         <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1.5rem' }}>
@@ -425,17 +381,13 @@ export default function GamePage() {
                         </div>
                     )}
 
-                    {/* TOUS LES AVIS */}
                     <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h2 style={{ color: 'var(--primary)', fontSize: '1.3rem' }}>
-                                Avis ({ratings.length})
-                            </h2>
+                            <h2 style={{ color: 'var(--primary)', fontSize: '1.3rem' }}>Avis ({ratings.length})</h2>
                             {isAuthenticated && oeuvreId && !myRating && (
-                                <button onClick={() => setShowForm(!showForm)} style={{
-                                    background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', border: 'none', borderRadius: '8px', padding: '8px 16px',
-                                    color: 'white', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px',
-                                }}><Plus size={16} /> Donner mon avis</button>
+                                <button onClick={() => setShowForm(!showForm)} style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', border: 'none', borderRadius: '8px', padding: '8px 16px', color: 'white', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Plus size={16} /> Donner mon avis
+                                </button>
                             )}
                         </div>
 
@@ -480,49 +432,25 @@ export default function GamePage() {
                                             )}
                                             {isMine && (
                                                 <div style={{ display: 'flex', gap: '4px' }}>
-                                                    <button title="Modifier" onClick={() => {
-                                                        setFormNote(r.note);
-                                                        setFormContenu(r.contenu || '');
-                                                        setMyRating(r);
-                                                        setShowForm(true);
-                                                    }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>
-                                                        Modifier
-                                                    </button>
+                                                    <button title="Modifier" onClick={() => { setFormNote(r.note); setFormContenu(r.contenu || ''); setMyRating(r); setShowForm(true); }}
+                                                        style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>Modifier</button>
                                                     <button title="Supprimer" onClick={async () => {
                                                         if (!confirm('Supprimer votre avis ?')) return;
-                                                        try {
-                                                            const cs = createCritiqueService(getAccessTokenSilently);
-                                                            await cs.deleteRating(r.id);
-                                                            const list = await fetchRatings(oeuvreId);
-                                                            setRatings(list);
-                                                            setMyRating(null);
-                                                        } catch (err) { alert('Erreur : ' + err.message); }
-                                                    }} style={{ background: 'none', border: '1px solid var(--danger)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>
-                                                        Supprimer
-                                                    </button>
+                                                        try { const cs = createCritiqueService(getAccessTokenSilently); await cs.deleteRating(r.id); const list = await fetchRatings(oeuvreId); setRatings(list); setMyRating(null); } catch (err) { alert('Erreur : ' + err.message); }
+                                                    }} style={{ background: 'none', border: '1px solid var(--danger)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>Supprimer</button>
                                                 </div>
                                             )}
                                             {!isMine && <ReportButton critiqueId={r.id} contenu={r.contenu} />}
                                             {user?.role_id >= 2 && !isMine && (
                                                 <div style={{ display: 'flex', gap: '4px' }}>
                                                     {user.role_id === 3 && (
-                                                        <button title="Coup de cœur" onClick={async () => {
-                                                            try { const s = createAdminService(getAccessTokenSilently); await s.feature(r.id); alert('Critique mise en avant !'); } catch (e) { alert(e.message); }
-                                                        }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)' }}>
-                                                            <Award size={14} />
-                                                        </button>
+                                                        <button title="Coup de cœur" onClick={async () => { try { const s = createAdminService(getAccessTokenSilently); await s.feature(r.id); alert('Critique mise en avant !'); } catch (e) { alert(e.message); } }}
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)' }}><Award size={14} /></button>
                                                     )}
-                                                    <button title="Masquer" onClick={async () => {
-                                                        try { const s = createAdminService(getAccessTokenSilently); await s.hide(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
-                                                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}>
-                                                        <EyeOff size={14} />
-                                                    </button>
-                                                    <button title="Supprimer" onClick={async () => {
-                                                        if (!confirm('Supprimer cette critique ?')) return;
-                                                        try { const s = createAdminService(getAccessTokenSilently); await s.deleteCritique(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); }
-                                                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <button title="Masquer" onClick={async () => { try { const s = createAdminService(getAccessTokenSilently); await s.hide(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); } }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}><EyeOff size={14} /></button>
+                                                    <button title="Supprimer" onClick={async () => { if (!confirm('Supprimer cette critique ?')) return; try { const s = createAdminService(getAccessTokenSilently); await s.deleteCritique(r.id); setRatings(prev => prev.filter(c => c.id !== r.id)); } catch (e) { alert(e.message); } }}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}><Trash2 size={14} /></button>
                                                 </div>
                                             )}
                                         </div>
@@ -535,23 +463,21 @@ export default function GamePage() {
                     </div>
                 </div>
 
-                {/* COLONNE DROITE */}
                 {(game || isAuthenticated) && (
                     <div>
-                        {/* Ma Bibliothèque */}
                         {isAuthenticated && (
                             <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1rem' }}>
                                 <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '1.1rem' }}>Ma Bibliothèque</h3>
                                 {inLibrary ? (
                                     <div style={{ background: 'var(--primary-glow)', border: '1px solid var(--primary)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
                                         <p style={{ color: 'var(--primary)', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>✓ Dans ta collection</p>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>Statut : {STATUS_MAP[libraryStatut] || 'inconnu'}</p>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>Statut : {getLibraryStatusLabel(libraryStatut)}</p>
                                     </div>
                                 ) : effectiveRawgId ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <button onClick={() => handleAddToBiblio(3)} style={{ background: '#92400e', color: '#fbbf24', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>✨ Envie de jouer</button>
-                                        <button onClick={() => handleAddToBiblio(1)} style={{ background: '#1e3a5f', color: '#60a5fa', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>🎮 J'y joue</button>
-                                        <button onClick={() => handleAddToBiblio(2)} style={{ background: '#14532d', color: '#4ade80', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>✅ Terminé</button>
+                                        <button onClick={() => handleAddToBiblio('envie')} style={{ background: '#92400e', color: '#fbbf24', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>✨ Envie de jouer</button>
+                                        <button onClick={() => handleAddToBiblio('joue')} style={{ background: '#1e3a5f', color: '#60a5fa', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>🎮 J'y joue</button>
+                                        <button onClick={() => handleAddToBiblio('termine')} style={{ background: '#14532d', color: '#4ade80', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rajdhani, sans-serif' }}>✅ Terminé</button>
                                     </div>
                                 ) : (
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Recherche le jeu pour l'ajouter.</p>
@@ -559,19 +485,11 @@ export default function GamePage() {
                             </div>
                         )}
 
-                        {/* Ajouter à une liste */}
                         {isAuthenticated && oeuvreId && (
-                            <AddToListButton
-                                oeuvreId={oeuvreId}
-                                getAccessTokenSilently={getAccessTokenSilently}
-                                effectiveRawgId={effectiveRawgId}
-                                rawgId={rawgId}
-                                gameTitle={gameTitle}
-                                gameDescription={game?.description_raw}
-                            />
+                            <AddToListButton oeuvreId={oeuvreId} getAccessTokenSilently={getAccessTokenSilently}
+                                effectiveRawgId={effectiveRawgId} rawgId={rawgId} gameTitle={gameTitle} gameDescription={game?.description_raw} />
                         )}
 
-                        {/* Infos RAWG */}
                         {game && (
                             <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem' }}>
                                 <h3 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '1.1rem' }}>Infos</h3>

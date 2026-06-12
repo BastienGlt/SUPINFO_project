@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800;900&display=swap');
 
-:root {
+/* ═══ DARK THEME (défaut) ═══ */
+:root, [data-theme="dark"] {
   --bg: #0a0e17;
   --bg-surface: #111827;
   --bg-card: #1a1f2e;
@@ -19,6 +20,30 @@
   --info: #3b82f6;
   --warning: #facc15;
   --header-height: 60px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+/* ═══ LIGHT THEME ═══ */
+[data-theme="light"] {
+  --bg: #f5f6fa;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f1f5;
+  --primary: #d06210;
+  --primary-dark: #b85400;
+  --primary-glow: rgba(208, 98, 16, 0.1);
+  --primary-glow-strong: rgba(208, 98, 16, 0.2);
+  --accent: #e88a30;
+  --text: #1a1a2e;
+  --text-muted: #6b7280;
+  --border: #e2e4ea;
+  --border-light: #d1d5db;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --info: #2563eb;
+  --warning: #ca8a04;
+  --header-height: 60px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,6 +53,7 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
 }
 
 h1, h2, h3, h4, h5 {
