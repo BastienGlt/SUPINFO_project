@@ -1,4 +1,5 @@
 const followerService = require('../services/follower.service');
+const followRequestService = require('../services/followRequest.service');
 const userService = require('../services/user.service');
 
 /**
@@ -37,6 +38,16 @@ exports.followUser = async (req, res) => {
     const alreadyFollowing = await followerService.isFollowing(currentUser.id, targetUserId);
     if (alreadyFollowing) {
       return res.status(409).json({ error: "Vous suivez déjà cet utilisateur" });
+    }
+
+    // Profil privé → demande de suivi
+    if (targetUser.public === 0) {
+      const alreadyPending = await followRequestService.hasPendingRequest(currentUser.id, targetUserId);
+      if (alreadyPending) {
+        return res.status(409).json({ error: "Une demande de suivi est déjà en attente" });
+      }
+      const request = await followRequestService.createRequest(currentUser.id, targetUserId);
+      return res.status(202).json({ status: 'pending', message: 'Demande de suivi envoyée', request_id: request.id });
     }
 
     // Appel du Service
@@ -83,23 +94,28 @@ exports.unfollowUser = async (req, res) => {
 /**
  * GET /users/:id/followers
  * Récupère la liste des abonnés d'un utilisateur
+ * Accessible au propriétaire (même profil privé) et aux profils publics
  */
 exports.getFollowers = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
 
-    // Validation de l'ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Vérifier que l'utilisateur existe
     const user = await userService.getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Appel du Service
+    if (user.public === 0) {
+      const currentUser = req.auth ? await userService.getUserByAuth0Id(req.auth.payload.sub) : null;
+      if (!currentUser || currentUser.id !== userId) {
+        return res.status(403).json({ error: "Ce compte est privé", is_private: true });
+      }
+    }
+
     const followers = await followerService.getFollowers(userId);
     res.json(followers);
 
@@ -112,23 +128,28 @@ exports.getFollowers = async (req, res) => {
 /**
  * GET /users/:id/following
  * Récupère la liste des abonnements d'un utilisateur
+ * Accessible au propriétaire (même profil privé) et aux profils publics
  */
 exports.getFollowing = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
 
-    // Validation de l'ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Vérifier que l'utilisateur existe
     const user = await userService.getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Appel du Service
+    if (user.public === 0) {
+      const currentUser = req.auth ? await userService.getUserByAuth0Id(req.auth.payload.sub) : null;
+      if (!currentUser || currentUser.id !== userId) {
+        return res.status(403).json({ error: "Ce compte est privé", is_private: true });
+      }
+    }
+
     const following = await followerService.getFollowing(userId);
     res.json(following);
 
@@ -141,23 +162,28 @@ exports.getFollowing = async (req, res) => {
 /**
  * GET /users/:id/follow-stats
  * Récupère les statistiques de suivi d'un utilisateur
+ * Accessible au propriétaire (même profil privé) et aux profils publics
  */
 exports.getFollowStats = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
 
-    // Validation de l'ID
     if (isNaN(userId) || userId <= 0) {
       return res.status(400).json({ error: "ID utilisateur invalide" });
     }
 
-    // Vérifier que l'utilisateur existe
     const user = await userService.getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Appel du Service
+    if (user.public === 0) {
+      const currentUser = req.auth ? await userService.getUserByAuth0Id(req.auth.payload.sub) : null;
+      if (!currentUser || currentUser.id !== userId) {
+        return res.status(403).json({ error: "Ce compte est privé", is_private: true });
+      }
+    }
+
     const stats = await followerService.getFollowStats(userId);
     res.json(stats);
 

@@ -27,6 +27,9 @@ router.delete('/critiques/:id/feature', checkJwt, checkAdmin, adminController.un
 
 // ==================== CRITIQUES (modérateur+) ====================
 
+// Lister toutes les critiques
+router.get('/critiques', checkJwt, checkModerator, adminController.getAllCritiques);
+
 // Lister les critiques masquées
 router.get('/critiques/hidden', checkJwt, checkModerator, adminController.getHiddenCritiques);
 
@@ -57,6 +60,9 @@ router.put('/users/:id/unban', checkJwt, checkAdmin, adminController.unbanUser);
 
 // ==================== UTILISATEURS (modérateur+) ====================
 
+// Lister tous les utilisateurs
+router.get('/users', checkJwt, checkModerator, adminController.getAllUsers);
+
 // Lister les utilisateurs avertis
 router.get('/users/warned', checkJwt, checkModerator, adminController.getWarnedUsers);
 
@@ -65,5 +71,33 @@ router.put('/users/:id/warn', checkJwt, checkModerator, adminController.warnUser
 
 // Retirer un avertissement
 router.put('/users/:id/unwarn', checkJwt, checkModerator, adminController.unwarnUser);
+
+// ==================== STATUTS (admin uniquement) ====================
+
+// Lister tous les statuts (public)
+router.get('/statuts', adminController.getStatuts);
+
+// Créer un statut
+router.post('/statuts', checkJwt, checkAdmin, adminController.createStatut);
+
+// Modifier un statut
+router.put('/statuts/:id', checkJwt, checkAdmin, adminController.updateStatut);
+
+// Supprimer un statut
+router.delete('/statuts/:id', checkJwt, checkAdmin, adminController.deleteStatut);
+
+// ==================== SIGNALEMENTS (modérateur+) ====================
+
+// Lister tous les signalements
+router.get('/signalements', checkJwt, checkModerator, adminController.getAllSignalements);
+
+// Détail d'un signalement
+router.get('/signalements/:id', checkJwt, checkModerator, adminController.getSignalementById);
+
+// Mettre à jour le statut d'un signalement
+router.put('/signalements/:id/statut', checkJwt, checkModerator, adminController.updateSignalementStatut);
+
+// Supprimer un signalement
+router.delete('/signalements/:id', checkJwt, checkModerator, adminController.deleteSignalement);
 
 module.exports = router;

@@ -1,6 +1,9 @@
 const db = require('../../config/db');
 const notificationService = require('./notification.service');
 
+const RATINGS_ORDER_BY = new Set(['id', 'created_at', 'updated_at', 'note']);
+const ORDER_DIRECTION = new Set(['ASC', 'DESC']);
+
 /**
  * Service : Logique métier pour le système de notation des œuvres
  * Gère les notes et critiques associées aux œuvres
@@ -85,13 +88,16 @@ exports.getRatingByUserAndOeuvre = async (userId, oeuvreId) => {
  */
 exports.getRatingsByOeuvre = async (oeuvreId, options = {}) => {
   const { limit = 20, offset = 0, orderBy = 'created_at', order = 'DESC' } = options;
+  const safeOrderBy = RATINGS_ORDER_BY.has(orderBy) ? orderBy : 'created_at';
+  const normalizedOrder = typeof order === 'string' ? order.toUpperCase() : 'DESC';
+  const safeOrder = ORDER_DIRECTION.has(normalizedOrder) ? normalizedOrder : 'DESC';
   
   // Récupérer les critiques
   const sql = `
     SELECT *
     FROM v_critiques_complete
     WHERE oeuvre_id = ?
-    ORDER BY ${orderBy} ${order}
+    ORDER BY ${safeOrderBy} ${safeOrder}
     LIMIT ? OFFSET ?
   `;
   const [critiques] = await db.query(sql, [oeuvreId, limit, offset]);
@@ -180,6 +186,22 @@ exports.deleteRating = async (ratingId, userId) => {
 };
 
 /**
+ * Créer ou mettre à jour une note (upsert)
+ * @param {number} userId
+ * @param {number} oeuvreId
+ * @param {number} note
+ * @param {string} contenu
+ * @returns {Object} La critique
+ */
+exports.upsertRating = async (userId, oeuvreId, note, contenu = null) => {
+  const existing = await exports.getRatingByUserAndOeuvre(userId, oeuvreId);
+  if (existing) {
+    return await exports.updateRating(userId, oeuvreId, note, contenu);
+  }
+  return await exports.createRating(userId, oeuvreId, note, contenu);
+};
+
+/**
  * Aimer/Liker une critique
  * @param {number} userId - L'ID de l'utilisateur
  * @param {number} critiqueId - L'ID de la critique
@@ -211,6 +233,12 @@ exports.unlikeCritique = async (userId, critiqueId) => {
   const sql = 'DELETE FROM likes_critiques WHERE user_id = ? AND critique_id = ?';
   const [result] = await db.query(sql, [userId, critiqueId]);
   return result.affectedRows > 0;
+};
+
+exports.getLikesCount = async (critiqueId) => {
+  const sql = 'SELECT COUNT(*) as like_count FROM likes_critiques WHERE critique_id = ?';
+  const [rows] = await db.query(sql, [critiqueId]);
+  return rows[0].like_count;
 };
 
 /**

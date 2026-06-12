@@ -114,3 +114,16 @@ exports.countUnread = async (userId) => {
   const [rows] = await db.query(sql, [userId]);
   return rows[0].count;
 };
+
+
+/** * Supprime une notification (par exemple pour un utilisateur qui veut nettoyer sa liste).
+ * Vérifie que la notification appartient bien à l'utilisateur.
+ * @param {number} notifId
+ * @param {number} userId
+ * @returns {boolean} True si supprimé
+ */
+exports.deleteNotification = async (notifId, userId) => {
+  const sql = 'DELETE FROM notifications WHERE id = ? AND user_id = ?';
+  const [result] = await db.query(sql, [notifId, userId]);
+  return result.affectedRows > 0;
+};
