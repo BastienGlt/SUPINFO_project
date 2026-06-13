@@ -409,7 +409,6 @@ JOIN
     `critiques` `c` ON `o`.`id` = `c`.`oeuvre_id`
 GROUP BY 
     `o`.`id`;
-
 -- Listage de la structure de la vue supinfo. v_bibliotheque_details
 -- Suppression de la table temporaire et création finale de la structure d'une vue
 DROP TABLE IF EXISTS `v_bibliotheque_details`;
