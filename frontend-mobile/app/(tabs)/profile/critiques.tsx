@@ -5,7 +5,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, ArrowLeft } from 'lucide-react-native';
 
 interface Rating {
   id: number;
@@ -59,13 +59,6 @@ export default function MesCritiquesScreen() {
         ),
       }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Mes critiques</Text>
-        <View style={styles.backBtn} />
-      </View>
 
       {loading ? (
         <View style={styles.centered}>

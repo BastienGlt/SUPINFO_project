@@ -1,4 +1,5 @@
 import { Tabs, router } from 'expo-router';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import React from 'react';
 import { House, Telescope, User, LogIn } from 'lucide-react-native';
 import { TouchableOpacity, Text, View } from 'react-native';
@@ -76,11 +77,12 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="profile"
-        options={{
+        options={({ route }) => ({
           tabBarLabel: 'Profil',
           tabBarIcon: ({ color }) => <User size={24} color={color} />,
           headerBackVisible: false,
-        }}
+          headerShown: (getFocusedRouteNameFromRoute(route) ?? 'index') === 'index',
+        })}
       />
     </Tabs>
   );

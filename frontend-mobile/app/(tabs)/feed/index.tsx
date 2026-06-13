@@ -10,8 +10,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 import {
   Heart, MessageSquare, TrendingUp, Search, X,
-  Gamepad2, SendHorizonal,
+  Gamepad2, SendHorizonal, Rss, ChevronDown,
 } from 'lucide-react-native';
+
+const FEED_PAGE_SIZE = 10;
 
 interface SearchUser {
   id: number;
@@ -49,9 +51,12 @@ export default function FeedScreen() {
   const { token, user } = useAuth();
   const router = useRouter();
 
+  const [latestReviews, setLatestReviews] = useState<FeedItem[]>([]);
   const [feed, setFeed]             = useState<FeedItem[]>([]);
+  const [feedTotal, setFeedTotal]   = useState(0);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [likedIds, setLikedIds]     = useState<Set<number>>(new Set());
   const [openCommentId, setOpenCommentId]   = useState<number | null>(null);
   const [commentTexts, setCommentTexts]     = useState<Record<number, string>>({});
@@ -83,36 +88,66 @@ export default function FeedScreen() {
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
   }, []);
 
-  const doFetch = useCallback(async () => {
-    if (!token) return;
-    const data = await apiFetch<{ feed: FeedItem[] }>('/feed', { token });
-    const items = data.feed ?? [];
-    const critiques = items.filter((f) => f.type === 'critique');
+  // Enrichit une liste de critiques (compte de commentaires, de likes, et si l'utilisateur a liké).
+  // Chaque critique ne doit être traitée qu'une seule fois par cycle de fetch : le détecteur
+  // "isLiked" fait un POST puis un DELETE, et le traiter en double pour le même id (ex: une
+  // critique présente à la fois dans "Derniers avis" et "Fil d'actualité") crée une course qui
+  // désynchronise likes_count et likedIds.
+  const enrichCritiques = useCallback(async (critiques: FeedItem[]) => {
     const perCritique = await Promise.all(
       critiques.map((f) =>
         Promise.all([
           apiFetch<{ count: number }>(`/commentaires/critiques/${f.id}/count`).then((r) => Number(r?.count) || 0).catch(() => 0),
           apiFetch<{ likeCount: number }>(`/critiques/${f.id}/likes`).then((r) => Number(r?.likeCount) || 0).catch(() => 0),
-          apiFetch(`/critiques/${f.id}/like`, { method: 'POST', token })
-            .then(() => { apiFetch(`/critiques/${f.id}/like`, { method: 'DELETE', token }).catch(() => {}); return false; })
-            .catch((err: unknown) => (err as { status?: number })?.status === 409),
+          token
+            ? apiFetch(`/critiques/${f.id}/like`, { method: 'POST', token })
+                .then(() => { apiFetch(`/critiques/${f.id}/like`, { method: 'DELETE', token }).catch(() => {}); return false; })
+                .catch((err: unknown) => (err as { status?: number })?.status === 409)
+            : Promise.resolve(false),
         ]).then(([commentsCount, likesCount, isLiked]) => ({ id: f.id, commentsCount, likesCount, isLiked }))
       )
     );
     const dataMap = Object.fromEntries(perCritique.map((c) => [c.id, c]));
-    setLikedIds(new Set(perCritique.filter((c) => c.isLiked).map((c) => c.id)));
-    setFeed(items.map((f) =>
+    const likedSet = new Set(perCritique.filter((c) => c.isLiked).map((c) => c.id));
+    return { dataMap, likedSet };
+  }, [token]);
+
+  const applyEnrichment = useCallback((items: FeedItem[], dataMap: Record<number, { commentsCount: number; likesCount: number }>) =>
+    items.map((f) =>
       f.type === 'critique'
         ? { ...f, comments_count: dataMap[f.id]?.commentsCount ?? f.comments_count, likes_count: dataMap[f.id]?.likesCount ?? f.likes_count }
         : f
-    ));
+    ), []);
+
+  const fetchFeedPage = useCallback(async (offset: number) => {
+    if (!token) return { items: [] as FeedItem[], total: 0 };
+    const data = await apiFetch<{ feed: FeedItem[]; pagination: { total: number } }>(`/feed?limit=${FEED_PAGE_SIZE}&offset=${offset}`, { token });
+    return { items: data.feed ?? [], total: data.pagination?.total ?? 0 };
   }, [token]);
+
+  const doFetch = useCallback(async () => {
+    const [latestData, feedPage] = await Promise.all([
+      apiFetch<{ feed: FeedItem[] }>('/feed/latest-reviews'),
+      fetchFeedPage(0),
+    ]);
+    const latestItems = latestData.feed ?? [];
+    const feedItems = feedPage.items;
+
+    const uniqueCritiques = Array.from(
+      new Map([...latestItems, ...feedItems].filter((f) => f.type === 'critique').map((f) => [f.id, f])).values()
+    );
+    const { dataMap, likedSet } = await enrichCritiques(uniqueCritiques);
+
+    setLatestReviews(applyEnrichment(latestItems, dataMap));
+    setFeed(applyEnrichment(feedItems, dataMap));
+    setFeedTotal(feedPage.total);
+    setLikedIds(likedSet);
+  }, [fetchFeedPage, enrichCritiques, applyEnrichment]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!token) { setLoading(false); return; }
       doFetch().catch(() => {}).finally(() => setLoading(false));
-    }, [token, doFetch])
+    }, [doFetch])
   );
 
   const onRefresh = useCallback(() => {
@@ -120,11 +155,29 @@ export default function FeedScreen() {
     doFetch().catch(() => {}).finally(() => setRefreshing(false));
   }, [doFetch]);
 
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || feed.length >= feedTotal) return;
+    setLoadingMore(true);
+    try {
+      const page = await fetchFeedPage(feed.length);
+      const newCritiques = page.items.filter((f) => f.type === 'critique');
+      const { dataMap, likedSet } = await enrichCritiques(newCritiques);
+      setFeed((prev) => [...prev, ...applyEnrichment(page.items, dataMap)]);
+      setLikedIds((prev) => new Set([...prev, ...likedSet]));
+    } catch {
+      // ignore, l'utilisateur pourra réessayer via le bouton
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [feed.length, feedTotal, loadingMore, fetchFeedPage, enrichCritiques, applyEnrichment]);
+
   const handleLike = useCallback((item: FeedItem) => {
     if (!token || item.type !== 'critique') return;
     const isLiked = likedIds.has(item.id);
     setLikedIds((prev) => { const s = new Set(prev); isLiked ? s.delete(item.id) : s.add(item.id); return s; });
-    setFeed((prev) => prev.map((f) => f.id === item.id ? { ...f, likes_count: (Number(f.likes_count) || 0) + (isLiked ? -1 : 1) } : f));
+    const updateCount = (f: FeedItem) => f.id === item.id ? { ...f, likes_count: (Number(f.likes_count) || 0) + (isLiked ? -1 : 1) } : f;
+    setLatestReviews((prev) => prev.map(updateCount));
+    setFeed((prev) => prev.map(updateCount));
     apiFetch(`/critiques/${item.id}/like`, { method: isLiked ? 'DELETE' : 'POST', token }).catch(() => {});
   }, [token, likedIds]);
 
@@ -135,7 +188,9 @@ export default function FeedScreen() {
     setSendingIds((prev) => new Set(prev).add(item.id));
     try {
       await apiFetch(`/commentaires/critiques/${item.id}`, { method: 'POST', token, body: JSON.stringify({ contenu: text }) });
-      setFeed((prev) => prev.map((f) => f.id === item.id ? { ...f, comments_count: (Number(f.comments_count) || 0) + 1 } : f));
+      const updateCount = (f: FeedItem) => f.id === item.id ? { ...f, comments_count: (Number(f.comments_count) || 0) + 1 } : f;
+      setLatestReviews((prev) => prev.map(updateCount));
+      setFeed((prev) => prev.map(updateCount));
       setCommentTexts((prev) => ({ ...prev, [item.id]: '' }));
       setOpenCommentId(null);
     } finally {
@@ -164,6 +219,79 @@ export default function FeedScreen() {
   }
 
   const showDrop = searchFocused || searchQuery.length > 0;
+
+  const renderCard = (item: FeedItem) => {
+    const isLiked        = likedIds.has(item.id);
+    const isCommentOpen  = openCommentId === item.id;
+    const isSending      = sendingIds.has(item.id);
+    const commentText    = commentTexts[item.id] ?? '';
+    const canComment     = !!token && item.type === 'critique';
+
+    return (
+      <View key={item.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <TouchableOpacity onPress={() => handleOpenCritique(item)} activeOpacity={0.85}>
+          {/* Card header */}
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
+              {item.oeuvre_titre}
+            </Text>
+            {item.note != null && (
+              <View style={[styles.noteBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
+                <Text style={[styles.noteText, { color: colors.tint }]}>{item.note}/5</Text>
+              </View>
+            )}
+          </View>
+          {/* Metadata */}
+          <Text style={[styles.meta, { color: colors.icon }]}>
+            par <Text style={{ color: colors.tint }}>@{item.author_pseudo}</Text>
+            {' · '}{formatDate(item.created_at)}
+          </Text>
+          {/* Content */}
+          {!!item.contenu && (
+            <Text style={[styles.content, { color: colors.icon }]} numberOfLines={3}>
+              "{item.contenu}"
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Footer */}
+        <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
+          <TouchableOpacity style={styles.footerAction} onPress={() => handleLike(item)} activeOpacity={0.7}>
+            <Heart size={14} color={isLiked ? colors.red : colors.icon} fill={isLiked ? colors.red : 'transparent'} strokeWidth={2} />
+            <Text style={[styles.footerCount, { color: isLiked ? colors.red : colors.icon }]}>{Number(item.likes_count) || 0}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.footerAction} onPress={() => canComment && setOpenCommentId((p) => p === item.id ? null : item.id)} activeOpacity={canComment ? 0.7 : 1}>
+            <MessageSquare size={14} color={isCommentOpen ? colors.tint : colors.icon} strokeWidth={2} />
+            <Text style={[styles.footerCount, { color: isCommentOpen ? colors.tint : colors.icon }]}>{Number(item.comments_count) || 0}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Inline comment input */}
+        {isCommentOpen && (
+          <View style={[styles.commentRow, { borderTopColor: colors.border }]}>
+            <TextInput
+              style={[styles.commentInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+              value={commentText}
+              onChangeText={(v) => setCommentTexts((prev) => ({ ...prev, [item.id]: v }))}
+              placeholder="Écrire un commentaire…"
+              placeholderTextColor={colors.tabIconDefault}
+              multiline
+              maxLength={2000}
+              autoFocus
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, { backgroundColor: colors.tint }, (!commentText.trim() || isSending) && { opacity: 0.4 }]}
+              onPress={() => handleSendComment(item)}
+              disabled={!commentText.trim() || isSending}
+              activeOpacity={0.8}
+            >
+              {isSending ? <ActivityIndicator size="small" color="white" /> : <SendHorizonal size={16} color="white" strokeWidth={2.5} />}
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
@@ -251,10 +379,23 @@ export default function FeedScreen() {
               </View>
             )}
 
-            {/* Section title */}
+            {/* Derniers avis */}
             <View style={styles.sectionRow}>
               <TrendingUp size={18} color={colors.tint} strokeWidth={2.5} />
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Derniers avis</Text>
+            </View>
+            {latestReviews.length > 0 ? (
+              <View style={styles.section}>
+                {latestReviews.map(renderCard)}
+              </View>
+            ) : (
+              <Text style={[styles.emptySectionText, { color: colors.icon }]}>Aucun avis pour l'instant.</Text>
+            )}
+
+            {/* Fil d'actualité */}
+            <View style={[styles.sectionRow, styles.sectionRowSpaced]}>
+              <Rss size={18} color={colors.tint} strokeWidth={2.5} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Fil d'actualité</Text>
             </View>
           </View>
         }
@@ -266,78 +407,26 @@ export default function FeedScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => {
-          const isLiked        = likedIds.has(item.id);
-          const isCommentOpen  = openCommentId === item.id;
-          const isSending      = sendingIds.has(item.id);
-          const commentText    = commentTexts[item.id] ?? '';
-          const canComment     = !!token && item.type === 'critique';
-
-          return (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <TouchableOpacity onPress={() => handleOpenCritique(item)} activeOpacity={0.85}>
-                {/* Card header */}
-                <View style={styles.cardHeader}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
-                    {item.oeuvre_titre}
-                  </Text>
-                  {item.note != null && (
-                    <View style={[styles.noteBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
-                      <Text style={[styles.noteText, { color: colors.tint }]}>{item.note}/5</Text>
-                    </View>
-                  )}
-                </View>
-                {/* Metadata */}
-                <Text style={[styles.meta, { color: colors.icon }]}>
-                  par <Text style={{ color: colors.tint }}>@{item.author_pseudo}</Text>
-                  {' · '}{formatDate(item.created_at)}
-                </Text>
-                {/* Content */}
-                {!!item.contenu && (
-                  <Text style={[styles.content, { color: colors.icon }]} numberOfLines={3}>
-                    "{item.contenu}"
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              {/* Footer */}
-              <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
-                <TouchableOpacity style={styles.footerAction} onPress={() => handleLike(item)} activeOpacity={0.7}>
-                  <Heart size={14} color={isLiked ? colors.red : colors.icon} fill={isLiked ? colors.red : 'transparent'} strokeWidth={2} />
-                  <Text style={[styles.footerCount, { color: isLiked ? colors.red : colors.icon }]}>{Number(item.likes_count) || 0}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerAction} onPress={() => canComment && setOpenCommentId((p) => p === item.id ? null : item.id)} activeOpacity={canComment ? 0.7 : 1}>
-                  <MessageSquare size={14} color={isCommentOpen ? colors.tint : colors.icon} strokeWidth={2} />
-                  <Text style={[styles.footerCount, { color: isCommentOpen ? colors.tint : colors.icon }]}>{Number(item.comments_count) || 0}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Inline comment input */}
-              {isCommentOpen && (
-                <View style={[styles.commentRow, { borderTopColor: colors.border }]}>
-                  <TextInput
-                    style={[styles.commentInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
-                    value={commentText}
-                    onChangeText={(v) => setCommentTexts((prev) => ({ ...prev, [item.id]: v }))}
-                    placeholder="Écrire un commentaire…"
-                    placeholderTextColor={colors.tabIconDefault}
-                    multiline
-                    maxLength={2000}
-                    autoFocus
-                  />
-                  <TouchableOpacity
-                    style={[styles.sendBtn, { backgroundColor: colors.tint }, (!commentText.trim() || isSending) && { opacity: 0.4 }]}
-                    onPress={() => handleSendComment(item)}
-                    disabled={!commentText.trim() || isSending}
-                    activeOpacity={0.8}
-                  >
-                    {isSending ? <ActivityIndicator size="small" color="white" /> : <SendHorizonal size={16} color="white" strokeWidth={2.5} />}
-                  </TouchableOpacity>
-                </View>
+        renderItem={({ item }) => renderCard(item)}
+        ListFooterComponent={
+          token && feed.length < feedTotal ? (
+            <TouchableOpacity
+              style={[styles.loadMoreBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={handleLoadMore}
+              disabled={loadingMore}
+              activeOpacity={0.8}
+            >
+              {loadingMore ? (
+                <ActivityIndicator size="small" color={colors.tint} />
+              ) : (
+                <>
+                  <Text style={[styles.loadMoreText, { color: colors.tint }]}>Afficher plus</Text>
+                  <ChevronDown size={16} color={colors.tint} strokeWidth={2.5} />
+                </>
               )}
-            </View>
-          );
-        }}
+            </TouchableOpacity>
+          ) : null
+        }
       />
     </KeyboardAvoidingView>
   );
@@ -380,7 +469,10 @@ const styles = StyleSheet.create({
   },
   heroBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  sectionRowSpaced: { marginTop: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '800' },
+  section: { gap: 12, marginBottom: 4 },
+  emptySectionText: { fontSize: 13, marginBottom: 4 },
   card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden', marginBottom: 4 },
   cardHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
@@ -410,6 +502,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, maxHeight: 100,
   },
   sendBtn: { width: 38, height: 38, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  loadMoreBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1, borderRadius: 12,
+    paddingVertical: 12, marginTop: 8,
+  },
+  loadMoreText: { fontSize: 14, fontWeight: '700' },
   emptyWrap: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText:  { fontSize: 15, textAlign: 'center' },
 });

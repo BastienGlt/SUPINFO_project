@@ -62,23 +62,28 @@ export default function PublicUserProfileScreen() {
     return authService.getUserById(userId)
       .then((u) => {
         setProfileUser(u);
-        if (u.is_private) {
-          setIsPrivate(true);
-        } else {
-          Promise.allSettled([
-            apiFetch<{ followers: number; following: number }>(`/users/${userId}/follow-stats`),
-            apiFetch<RatingsResponse>(`/users/${userId}/ratings`),
-          ]).then(([statsResult, ratingsResult]) => {
-            if (statsResult.status === 'fulfilled') setFollowStats(statsResult.value);
-            if (ratingsResult.status === 'fulfilled') {
-              const data = ratingsResult.value;
-              setRatings(Array.isArray(data.critiques) ? data.critiques : []);
-              setRatingsTotal(data.pagination?.total ?? data.critiques?.length ?? 0);
-            }
-          });
-        }
+        return Promise.allSettled([
+          apiFetch<{ followers: number; following: number }>(`/users/${userId}/follow-stats`, { token: token ?? undefined }),
+          apiFetch<RatingsResponse>(`/users/${userId}/ratings`, { token: token ?? undefined }),
+        ]).then(([statsResult, ratingsResult]) => {
+          // Compte privé et on n'est ni le propriétaire ni un abonné accepté : l'API renvoie 403 + is_private.
+          const blocked = [statsResult, ratingsResult].some(
+            (r) => r.status === 'rejected' && (r.reason as { is_private?: boolean })?.is_private
+          );
+          if (blocked) {
+            setIsPrivate(true);
+            return;
+          }
+          setIsPrivate(false);
+          if (statsResult.status === 'fulfilled') setFollowStats(statsResult.value);
+          if (ratingsResult.status === 'fulfilled') {
+            const data = ratingsResult.value;
+            setRatings(Array.isArray(data.critiques) ? data.critiques : []);
+            setRatingsTotal(data.pagination?.total ?? data.critiques?.length ?? 0);
+          }
+        });
       });
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     const userId = parseInt(id ?? '0', 10);

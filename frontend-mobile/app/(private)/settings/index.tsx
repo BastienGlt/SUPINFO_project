@@ -210,15 +210,6 @@ export default function MyProfileScreen() {
         )}
       </View>
 
-      {/* Ligne de stats */}
-      <View style={[styles.statsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <StatItem label="Abonnés" value={followStats.followers} colors={colors} />
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <StatItem label="Abonnements" value={followStats.following} colors={colors} />
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <StatItem label="Critiques" value={critiquesCount} colors={colors} />
-      </View>
-
       {/* Bio (mode affichage uniquement) */}
       {!isEditing && user.bio ? (
         <View style={styles.section}>
