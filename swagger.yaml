@@ -2930,6 +2930,42 @@ paths:
 
   # ==================== FEED ====================
 
+  /feed/latest-reviews:
+    get:
+      tags: [Feed]
+      summary: Derniers avis de la communauté
+      description: |
+        Retourne les derniers avis (critiques) publiés par n'importe quel utilisateur,
+        sur n'importe quelle oeuvre présente en base, triés du plus récent au plus ancien.
+
+        Accessible sans authentification.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+            maximum: 5
+          description: Nombre d'avis à retourner
+      responses:
+        '200':
+          description: Derniers avis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feed:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FeedItem'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /feed:
     get:
       tags: [Feed]

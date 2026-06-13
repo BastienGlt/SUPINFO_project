@@ -44,3 +44,21 @@ exports.getFeed = async (userId, options = {}) => {
     }
   };
 };
+
+/**
+ * Récupère les derniers avis (critiques) publiés par n'importe quel utilisateur,
+ * sur n'importe quelle oeuvre présente en base.
+ * @param {number} limit - Nombre d'avis à retourner
+ * @returns {Object} { feed }
+ */
+exports.getLatestReviews = async (limit = 5) => {
+  const sql = `
+    SELECT * FROM v_feed_activities
+    WHERE type = 'critique'
+    ORDER BY created_at DESC
+    LIMIT ?
+  `;
+  const [feed] = await db.query(sql, [limit]);
+
+  return { feed };
+};
