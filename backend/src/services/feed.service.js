@@ -54,7 +54,7 @@ exports.getFeed = async (userId, options = {}) => {
 exports.getLatestReviews = async (limit = 5) => {
   const sql = `
     SELECT * FROM v_feed_activities
-    WHERE type = 'critique'
+    WHERE type = 'critique' COLLATE utf8mb4_general_ci
     ORDER BY created_at DESC
     LIMIT ?
   `;
