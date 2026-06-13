@@ -50,6 +50,19 @@ exports.isFollowing = async (followerId, followedId) => {
 };
 
 /**
+ * Vérifie si un utilisateur peut voir le contenu d'un compte privé
+ * (le propriétaire du compte ou un de ses followers)
+ * @param {number|null} currentUserId - L'ID de l'utilisateur connecté (ou null)
+ * @param {number} targetUserId - L'ID du compte privé concerné
+ * @returns {boolean} True si l'accès au contenu privé est autorisé
+ */
+exports.canViewPrivateContent = async (currentUserId, targetUserId) => {
+  if (!currentUserId) return false;
+  if (currentUserId === targetUserId) return true;
+  return exports.isFollowing(currentUserId, targetUserId);
+};
+
+/**
  * Récupère la liste des abonnés d'un utilisateur
  * @param {number} userId - L'ID de l'utilisateur
  * @returns {Array} Liste des abonnés avec leurs informations

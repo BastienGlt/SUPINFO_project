@@ -3,6 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const ratingController = require('../controllers/rating.controller');
 const checkJwt = require('../middlewares/auth.middleware');
+const checkJwtOptional = require('../middlewares/optionalAuth.middleware');
 
 // Route publique : Recherche d'utilisateurs par pseudo
 router.get('/', userController.searchUsers);
@@ -20,7 +21,7 @@ router.get('/:id/ratings', ratingController.getRatingsByUser);
 router.get('/:id/ratings/:oeuvreId', ratingController.getUserRatingForOeuvre);
 
 // Route publique : Récupère un utilisateur par ID
-router.get('/:id', userController.getUserById);
+router.get('/:id', checkJwtOptional, userController.getUserById);
 
 // Route pour MODIFIER un utilisateur (lui-même ou admin)
 router.put('/:id', checkJwt, userController.updateUser);

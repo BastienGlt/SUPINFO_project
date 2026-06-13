@@ -94,7 +94,7 @@ exports.unfollowUser = async (req, res) => {
 /**
  * GET /users/:id/followers
  * Récupère la liste des abonnés d'un utilisateur
- * Accessible au propriétaire (même profil privé) et aux profils publics
+ * Accessible au propriétaire, aux followers (si compte privé) et aux profils publics
  */
 exports.getFollowers = async (req, res) => {
   try {
@@ -111,7 +111,8 @@ exports.getFollowers = async (req, res) => {
 
     if (user.public === 0) {
       const currentUser = req.auth ? await userService.getUserByAuth0Id(req.auth.payload.sub) : null;
-      if (!currentUser || currentUser.id !== userId) {
+      const canView = currentUser && await followerService.canViewPrivateContent(currentUser.id, userId);
+      if (!canView) {
         return res.status(403).json({ error: "Ce compte est privé", is_private: true });
       }
     }
@@ -128,7 +129,7 @@ exports.getFollowers = async (req, res) => {
 /**
  * GET /users/:id/following
  * Récupère la liste des abonnements d'un utilisateur
- * Accessible au propriétaire (même profil privé) et aux profils publics
+ * Accessible au propriétaire, aux followers (si compte privé) et aux profils publics
  */
 exports.getFollowing = async (req, res) => {
   try {
@@ -145,7 +146,8 @@ exports.getFollowing = async (req, res) => {
 
     if (user.public === 0) {
       const currentUser = req.auth ? await userService.getUserByAuth0Id(req.auth.payload.sub) : null;
-      if (!currentUser || currentUser.id !== userId) {
+      const canView = currentUser && await followerService.canViewPrivateContent(currentUser.id, userId);
+      if (!canView) {
         return res.status(403).json({ error: "Ce compte est privé", is_private: true });
       }
     }
@@ -162,7 +164,7 @@ exports.getFollowing = async (req, res) => {
 /**
  * GET /users/:id/follow-stats
  * Récupère les statistiques de suivi d'un utilisateur
- * Accessible au propriétaire (même profil privé) et aux profils publics
+ * Accessible au propriétaire, aux followers (si compte privé) et aux profils publics
  */
 exports.getFollowStats = async (req, res) => {
   try {
@@ -179,7 +181,8 @@ exports.getFollowStats = async (req, res) => {
 
     if (user.public === 0) {
       const currentUser = req.auth ? await userService.getUserByAuth0Id(req.auth.payload.sub) : null;
-      if (!currentUser || currentUser.id !== userId) {
+      const canView = currentUser && await followerService.canViewPrivateContent(currentUser.id, userId);
+      if (!canView) {
         return res.status(403).json({ error: "Ce compte est privé", is_private: true });
       }
     }

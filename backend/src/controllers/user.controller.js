@@ -1,4 +1,5 @@
 const userService = require('../services/user.service');
+const followerService = require('../services/follower.service');
 
 /**
  * Controller : Gère les requêtes HTTP et appelle les Services
@@ -80,14 +81,19 @@ exports.getUserById = async (req, res) => {
     }
 
     if (user.public === 0) {
-      return res.json({
-        id: user.id,
-        pseudo: user.pseudo,
-        prenom: user.prenom,
-        nom: user.nom,
-        photo: user.photo,
-        is_private: true
-      });
+      const currentUser = req.auth ? await userService.getUserByAuth0Id(req.auth.payload.sub) : null;
+      const canView = currentUser && await followerService.canViewPrivateContent(currentUser.id, userId);
+
+      if (!canView) {
+        return res.json({
+          id: user.id,
+          pseudo: user.pseudo,
+          prenom: user.prenom,
+          nom: user.nom,
+          photo: user.photo,
+          is_private: true
+        });
+      }
     }
 
     return res.json(user);
