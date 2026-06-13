@@ -64,6 +64,24 @@ async function ensureColumn(tableName, columnName, columnDefinition) {
   }
 }
 
+async function ensureView(viewName, createViewSql) {
+  const [rows] = await db.query(
+    `
+      SELECT 1
+      FROM information_schema.views
+      WHERE table_schema = DATABASE()
+        AND table_name = ?
+      LIMIT 1
+    `,
+    [viewName]
+  );
+
+  if (rows.length === 0) {
+    await db.query(createViewSql);
+    console.log(`Patched schema: created view ${viewName}`);
+  }
+}
+
 async function runPreSchemaPatches() {
   // Some existing Docker volumes contain an older schema where this column is missing,
   // which breaks v_signalements creation.
@@ -71,6 +89,26 @@ async function runPreSchemaPatches() {
     'signalements',
     'created_at',
     'TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+  );
+
+  // Some existing Docker volumes were created before this view was added to schema.sql.
+  await ensureView(
+    'v_oeuvres_notes_moyennes',
+    `
+      CREATE OR REPLACE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW \`v_oeuvres_notes_moyennes\` AS
+      SELECT
+          \`o\`.\`id\` AS \`oeuvre_id\`,
+          \`o\`.\`titre\` AS \`oeuvre_titre\`,
+          \`o\`.\`api_reference_id\` AS \`api_reference_id\`,
+          ROUND(AVG(\`c\`.\`note\`), 2) AS \`note_moyenne\`,
+          COUNT(\`c\`.\`id\`) AS \`total_critiques\`
+      FROM
+          \`oeuvres\` \`o\`
+      JOIN
+          \`critiques\` \`c\` ON \`o\`.\`id\` = \`c\`.\`oeuvre_id\`
+      GROUP BY
+          \`o\`.\`id\`
+    `
   );
 }
 
