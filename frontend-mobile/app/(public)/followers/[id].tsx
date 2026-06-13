@@ -17,7 +17,7 @@ interface FollowUser {
 
 export default function PublicFollowersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const router = useRouter();
   const { token } = useAuth();
@@ -83,7 +83,7 @@ export default function PublicFollowersScreen() {
               {item.photo ? (
                 <Image source={{ uri: item.photo }} style={styles.avatar} />
               ) : (
-                <View style={[styles.avatarFallback, { backgroundColor: colors.tint + '25' }]}>
+                <View style={[styles.avatarFallback, { backgroundColor: colors.tintDim }]}>
                   <User size={20} color={colors.tint} strokeWidth={2} />
                 </View>
               )}

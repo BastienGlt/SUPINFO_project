@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -7,11 +7,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
 import { CheckCircle2, Gamepad2, Bookmark, Library, Trash2, RefreshCw, Search, X } from 'lucide-react-native';
 
-// Config visuelle uniquement — clé = code du statut en BDD
-const STATUS_CONFIG: Record<string, { color: string; bg: string; darkBg: string }> = {
-  VU:       { color: '#22c55e', bg: '#f0fdf4', darkBg: '#14532d22' },
-  EN_COURS: { color: '#3b82f6', bg: '#eff6ff', darkBg: '#1e3a5f22' },
-  A_VOIR:   { color: '#f59e0b', bg: '#fffbeb', darkBg: '#78350f22' },
+const STATUS_CONFIG: Record<string, { color: string; darkBg: string }> = {
+  VU:       { color: '#22c55e', darkBg: '#14532d22' },
+  EN_COURS: { color: '#3b82f6', darkBg: '#1e3a5f22' },
+  A_VOIR:   { color: '#f59e0b', darkBg: '#78350f22' },
 };
 
 // Ordre du cycle UI
@@ -45,7 +44,7 @@ interface BiblioItem {
 }
 
 export default function BibliothequeScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { token } = useAuth();
   const router = useRouter();
@@ -55,14 +54,12 @@ export default function BibliothequeScreen() {
   const [loading, setLoading] = useState(true);
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
     Promise.all([
       apiFetch<Statut[]>('/admin/statuts').then((data) => {
         setStatuts(data);
-        setSelectedCodes(new Set(data.map((s) => s.code)));
       }).catch(() => {}),
       apiFetch<BiblioItem[]>('/bibliotheque/items', { token })
         .then(setItems)
@@ -81,10 +78,9 @@ export default function BibliothequeScreen() {
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const matchesSearch = item.titre.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = selectedCodes.has(item.statut.code);
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
-  }, [items, searchQuery, selectedCodes]);
+  }, [items, searchQuery]);
 
   /**
    * PUT /bibliotheque/items/{id} — cycle le statut selon STATUS_CYCLE.
@@ -175,40 +171,13 @@ export default function BibliothequeScreen() {
       </View>
 
       {/* Filtres par statut */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-        <View style={styles.filterContainer}>
-          {statuts.map((statut) => {
-            const cfg = STATUS_CONFIG[statut.code];
-            const color = cfg?.color ?? colors.tint;
-            const isSelected = selectedCodes.has(statut.code);
-            return (
-              <TouchableOpacity
-                key={statut.id}
-                style={[styles.filterBtn, { backgroundColor: isSelected ? color : colors.surface, borderColor: color }]}
-                onPress={() =>
-                  setSelectedCodes((prev) => {
-                    const s = new Set(prev);
-                    if (s.has(statut.code)) s.delete(statut.code); else s.add(statut.code);
-                    return s;
-                  })
-                }
-              >
-                <StatusIcon code={statut.code} color={isSelected ? '#fff' : color} size={14} />
-                <Text style={[styles.filterBtnText, { color: isSelected ? '#fff' : color }]}>
-                  {statut.libele}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
 
       {/* Résumé des compteurs par statut */}
       <View style={styles.summary}>
         {statuts.map((statut) => {
           const cfg = STATUS_CONFIG[statut.code];
           const color = cfg?.color ?? colors.tint;
-          const bgColor = cfg ? (colorScheme === 'dark' ? cfg.darkBg : cfg.bg) : colors.surface;
+          const bgColor = cfg ? cfg.darkBg : colors.surface;
           return (
             <View key={statut.id} style={[styles.summaryBadge, { backgroundColor: bgColor, borderColor: color + '50' }]}>
               <StatusIcon code={statut.code} color={color} />
@@ -227,8 +196,8 @@ export default function BibliothequeScreen() {
           <View style={styles.emptyWrap}>
             <Library size={44} color={colors.icon} strokeWidth={1.5} />
             <Text style={[styles.empty, { color: colors.icon }]}>
-              {searchQuery || selectedCodes.size < statuts.length
-                ? 'Aucun jeu ne correspond à vos filtres.'
+              {searchQuery
+                ? 'Aucun jeu ne correspond à votre recherche.'
                 : "Votre bibliothèque est vide.\nAjoutez des jeux depuis leur fiche !"}
             </Text>
           </View>
@@ -236,7 +205,7 @@ export default function BibliothequeScreen() {
         renderItem={({ item }) => {
           const cfg = STATUS_CONFIG[item.statut.code];
           const color = cfg?.color ?? colors.tint;
-          const bgColor = cfg ? (colorScheme === 'dark' ? cfg.darkBg : cfg.bg) : colors.surface;
+          const bgColor = cfg ? cfg.darkBg : colors.surface;
           const isUpdating = updatingIds.has(item.id);
 
           return (
@@ -304,20 +273,25 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 0,
+    height: 44,
   },
   filterContainer: {
     flexDirection: 'row',
     gap: 10,
+    alignItems: 'center',
+    height: 44,
   },
   filterBtn: {
+    height: 36,
+    minWidth: 80,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     borderRadius: 8,
-    borderWidth: 1.5,
+    borderWidth: 1,
   },
   filterBtnText: {
     fontSize: 12,

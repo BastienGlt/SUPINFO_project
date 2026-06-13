@@ -1,23 +1,31 @@
 import {
   View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Alert,
-  TextInput, ActivityIndicator, Switch,
+  TextInput, ActivityIndicator, Switch, Linking,
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/context/ThemeContext';
 import { apiFetch } from '@/services/apiService';
 import {
   Library, Bell, ChevronRight, LogOut, Mail, CalendarDays, ShieldCheck,
-  Pencil, X, Check, Globe, Lock,
+  Pencil, X, Check, Globe, Lock, ShieldIcon, FileText, Info, Sun, Moon,
 } from 'lucide-react-native';
+
+const LEGAL_LINKS = {
+  privacy: 'https://example.com/politique-de-confidentialite',
+  terms: 'https://example.com/conditions-utilisation',
+  legal: 'https://example.com/mentions-legales',
+};
 
 const ROLE_LABELS: Record<number, string> = { 1: 'Membre', 2: 'Modérateur', 3: 'Admin' };
 
 export default function MyProfileScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
+  const { toggleTheme } = useTheme();
   const { user, logout, updateUser } = useAuth();
 
   const [followStats, setFollowStats] = useState({ followers: 0, following: 0 });
@@ -113,7 +121,7 @@ export default function MyProfileScreen() {
         {user.photo ? (
           <Image source={{ uri: user.photo }} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.tint + '25' }]}>
+          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.tintDim }]}>
             <Text style={[styles.avatarInitial, { color: colors.tint }]}>
               {user.prenom?.[0]?.toUpperCase() ?? '?'}
             </Text>
@@ -185,7 +193,7 @@ export default function MyProfileScreen() {
               {user.prenom} {user.nom}
             </Text>
             <Text style={[styles.pseudo, { color: colors.tint }]}>@{user.pseudo}</Text>
-            <View style={[styles.roleBadge, { backgroundColor: colors.tint + '18', borderColor: colors.tint + '35' }]}>
+            <View style={[styles.roleBadge, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}>
               <ShieldCheck size={12} color={colors.tint} strokeWidth={2.5} />
               <Text style={[styles.roleText, { color: colors.tint }]}>{role}</Text>
             </View>
@@ -200,15 +208,6 @@ export default function MyProfileScreen() {
             </TouchableOpacity>
           </>
         )}
-      </View>
-
-      {/* Ligne de stats */}
-      <View style={[styles.statsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <StatItem label="Abonnés" value={followStats.followers} colors={colors} />
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <StatItem label="Abonnements" value={followStats.following} colors={colors} />
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <StatItem label="Critiques" value={critiquesCount} colors={colors} />
       </View>
 
       {/* Bio (mode affichage uniquement) */}
@@ -275,6 +274,36 @@ export default function MyProfileScreen() {
         </View>
       </View>
 
+      {/* Apparence */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Apparence</Text>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLabelWrap}>
+              {colorScheme === 'dark'
+                ? <Moon size={15} color={colors.icon} />
+                : <Sun size={15} color={colors.icon} />}
+              <View>
+                <Text style={[styles.toggleTitle, { color: colors.text }]}>
+                  {colorScheme === 'dark' ? 'Mode sombre' : 'Mode clair'}
+                </Text>
+                <Text style={[styles.toggleDesc, { color: colors.icon }]}>
+                  {colorScheme === 'dark'
+                    ? 'Basculer vers le mode clair'
+                    : 'Basculer vers le mode sombre'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={colorScheme === 'dark'}
+              onValueChange={toggleTheme}
+              trackColor={{ false: colors.border, true: colors.tint + '80' }}
+              thumbColor={colorScheme === 'dark' ? colors.tint : colors.icon}
+            />
+          </View>
+        </View>
+      </View>
+
       {/* Accès rapide */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Accès rapide</Text>
@@ -294,6 +323,33 @@ export default function MyProfileScreen() {
         </View>
       </View>
 
+      {/* Informations légales */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Informations légales</Text>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <LegalLink
+            icon={<ShieldIcon size={15} color={colors.icon} />}
+            label="Politique de confidentialité"
+            onPress={() => Linking.openURL(LEGAL_LINKS.privacy)}
+            colors={colors}
+          />
+          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
+          <LegalLink
+            icon={<FileText size={15} color={colors.icon} />}
+            label="Conditions d'utilisation"
+            onPress={() => Linking.openURL(LEGAL_LINKS.terms)}
+            colors={colors}
+          />
+          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
+          <LegalLink
+            icon={<Info size={15} color={colors.icon} />}
+            label="Mentions légales"
+            onPress={() => Linking.openURL(LEGAL_LINKS.legal)}
+            colors={colors}
+          />
+        </View>
+      </View>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
         <LogOut size={18} color="white" strokeWidth={2.5} />
         <Text style={styles.logoutText}>Se déconnecter</Text>
@@ -307,7 +363,7 @@ function EditInput({
   colors,
   style,
   ...props
-}: { colors: typeof Colors.light; style?: object } & React.ComponentProps<typeof TextInput>) {
+}: { colors: typeof Colors.dark; style?: object } & React.ComponentProps<typeof TextInput>) {
   return (
     <TextInput
       {...props}
@@ -328,7 +384,7 @@ const editInputStyle = StyleSheet.create({
   },
 });
 
-function StatItem({ label, value, colors }: { label: string; value: number; colors: typeof Colors.light }) {
+function StatItem({ label, value, colors }: { label: string; value: number; colors: typeof Colors.dark }) {
   return (
     <View style={styles.statItem}>
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
@@ -339,7 +395,7 @@ function StatItem({ label, value, colors }: { label: string; value: number; colo
 
 function InfoRow({
   icon, label, value, colors,
-}: { icon: React.ReactNode; label: string; value: string; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; label: string; value: string; colors: typeof Colors.dark }) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoLabelWrap}>
@@ -351,16 +407,30 @@ function InfoRow({
   );
 }
 
+function LegalLink({
+  icon, label, onPress, colors,
+}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.dark }) {
+  return (
+    <TouchableOpacity style={styles.legalRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.infoLabelWrap}>
+        {icon}
+        <Text style={[styles.infoLabel, { color: colors.text }]}>{label}</Text>
+      </View>
+      <ChevronRight size={15} color={colors.icon} strokeWidth={2} />
+    </TouchableOpacity>
+  );
+}
+
 function QuickLink({
   icon, label, onPress, colors,
-}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; label: string; onPress: () => void; colors: typeof Colors.dark }) {
   return (
     <TouchableOpacity
       style={[styles.quickLinkCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.quickLinkIconWrap, { backgroundColor: colors.tint + '14' }]}>{icon}</View>
+      <View style={[styles.quickLinkIconWrap, { backgroundColor: colors.tintDim }]}>{icon}</View>
       <Text style={[styles.quickLinkText, { color: colors.text }]}>{label}</Text>
       <ChevronRight size={18} color={colors.icon} strokeWidth={2} />
     </TouchableOpacity>
@@ -447,6 +517,13 @@ const styles = StyleSheet.create({
   infoLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   infoLabel: { fontSize: 14 },
   infoValue: { fontSize: 14, fontWeight: '500', flex: 1, textAlign: 'right' },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
   quickLinks: { gap: 10 },
   quickLinkCard: {
     flexDirection: 'row',

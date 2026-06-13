@@ -24,7 +24,7 @@ interface AdminUser {
 }
 
 export default function AdminUsersScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { user, token } = useAuth();
 
@@ -152,7 +152,7 @@ export default function AdminUsersScreen() {
 
       {/* Bouton toggle — tous les utilisateurs */}
       <TouchableOpacity
-        style={[styles.toggleBtn, { backgroundColor: colors.tint + '14', borderColor: colors.tint + '30' }]}
+        style={[styles.toggleBtn, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}
         onPress={toggleAllUsers}
         activeOpacity={0.75}
         disabled={loadingAll}
@@ -253,7 +253,7 @@ export default function AdminUsersScreen() {
 
 function SectionHeaderView({
   icon, title, colors,
-}: { icon: React.ReactNode; title: string; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; title: string; colors: typeof Colors.dark }) {
   return (
     <View style={styles.sectionHeader}>
       {icon}
@@ -264,7 +264,7 @@ function SectionHeaderView({
 
 function EmptyCard({
   icon, text, colors,
-}: { icon: React.ReactNode; text: string; colors: typeof Colors.light }) {
+}: { icon: React.ReactNode; text: string; colors: typeof Colors.dark }) {
   return (
     <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {icon}
@@ -280,7 +280,7 @@ function UserCard({
   type: 'all' | 'warned' | 'banned';
   isAdmin: boolean;
   isSelf: boolean;
-  colors: typeof Colors.light;
+  colors: typeof Colors.dark;
   onWarn: (u: AdminUser) => void;
   onUnwarn: (u: AdminUser) => void;
   onBan: (u: AdminUser) => void;
@@ -327,7 +327,7 @@ function UserCard({
                 icon={<UserCheck size={13} color={colors.tint} strokeWidth={2.5} />}
                 color={colors.tint}
                 onPress={() => onUnwarn(u)}
-                bg={colors.tint + '12'}
+                bg={colors.tintDim}
               />
               {isAdmin && u.role_id < 3 && (
                 <ActionBtn
@@ -346,7 +346,7 @@ function UserCard({
               icon={<ShieldOff size={13} color={colors.tint} strokeWidth={2.5} />}
               color={colors.tint}
               onPress={() => onUnban(u)}
-              bg={colors.tint + '12'}
+              bg={colors.tintDim}
             />
           )}
           {isAdmin && !isBanned && !isWarned && u.role_id < 3 && (

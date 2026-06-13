@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { ArrowLeft, User } from 'lucide-react-native';
+import { ChevronLeft, User, ArrowLeft } from 'lucide-react-native';
 
 interface FollowUser {
   id: number;
@@ -16,7 +16,7 @@ interface FollowUser {
 }
 
 export default function FollowingScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const router = useRouter();
   const { user, token } = useAuth();
@@ -42,14 +42,16 @@ export default function FollowingScreen() {
   }, [user?.id]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Abonnements</Text>
-        <View style={styles.backBtn} />
-      </View>
+    <>
+      <Stack.Screen options={{
+        title: 'Abonnements',
+        headerLeft: () => (
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+            <ChevronLeft size={24} color={colors.tint} strokeWidth={2.5} />
+          </TouchableOpacity>
+        ),
+      }} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
 
       {loading ? (
         <View style={styles.centered}>
@@ -73,7 +75,7 @@ export default function FollowingScreen() {
               {item.photo ? (
                 <Image source={{ uri: item.photo }} style={styles.avatar} />
               ) : (
-                <View style={[styles.avatarFallback, { backgroundColor: colors.tint + '25' }]}>
+                <View style={[styles.avatarFallback, { backgroundColor: colors.tintDim }]}>
                   <User size={20} color={colors.tint} strokeWidth={2} />
                 </View>
               )}
@@ -87,23 +89,13 @@ export default function FollowingScreen() {
           )}
         />
       )}
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  backBtn: { width: 36 },
-  title: { fontSize: 18, fontWeight: '700' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 16, gap: 10 },
   userItem: {

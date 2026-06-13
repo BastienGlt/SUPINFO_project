@@ -17,7 +17,7 @@ interface Statut {
 }
 
 export default function AdminStatutsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const { user, token } = useAuth();
 
@@ -129,7 +129,7 @@ export default function AdminStatutsScreen() {
         <>
           {/* Formulaire de création */}
           {creating ? (
-            <View style={[styles.createForm, { backgroundColor: colors.surface, borderColor: colors.tint + '40' }]}>
+            <View style={[styles.createForm, { backgroundColor: colors.surface, borderColor: colors.tintBorder }]}>
               <Text style={[styles.formTitle, { color: colors.text }]}>Nouveau statut</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
@@ -159,7 +159,7 @@ export default function AdminStatutsScreen() {
             </View>
           ) : (
             <TouchableOpacity
-              style={[styles.addBtn, { backgroundColor: colors.tint + '12', borderColor: colors.tint + '30' }]}
+              style={[styles.addBtn, { backgroundColor: colors.tintDim, borderColor: colors.tintBorder }]}
               onPress={() => setCreating(true)}
               activeOpacity={0.75}
             >
@@ -178,7 +178,7 @@ export default function AdminStatutsScreen() {
       }
       renderItem={({ item: s }) =>
         editingId === s.id ? (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.tint + '40' }]}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.tintBorder }]}>
             <TextInput
               style={[styles.editInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
               value={editCode}
@@ -194,7 +194,7 @@ export default function AdminStatutsScreen() {
               <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.border }]} onPress={() => setEditingId(null)} activeOpacity={0.75}>
                 <X size={15} color={colors.icon} strokeWidth={2.5} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.tint + '18' }]} onPress={() => saveEdit(s)} activeOpacity={0.75}>
+              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.tintDim }]} onPress={() => saveEdit(s)} activeOpacity={0.75}>
                 <Check size={15} color={colors.tint} strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
@@ -206,7 +206,7 @@ export default function AdminStatutsScreen() {
               <Text style={[styles.libele, { color: colors.text }]}>{s.libele}</Text>
             </View>
             <View style={styles.cardActions}>
-              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.tint + '12' }]} onPress={() => startEdit(s)} activeOpacity={0.75}>
+              <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.tintDim }]} onPress={() => startEdit(s)} activeOpacity={0.75}>
                 <Edit3 size={15} color={colors.tint} strokeWidth={2.5} />
               </TouchableOpacity>
               <TouchableOpacity style={[styles.iconBtn, { backgroundColor: '#ef444412' }]} onPress={() => remove(s)} activeOpacity={0.75}>
