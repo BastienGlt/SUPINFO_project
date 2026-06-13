@@ -28,16 +28,21 @@ async function loadPublicCritiques() {
     return critiques.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 20);
 }
 
+function getAuthorName(post) {
+    return post.pseudo || post.user_pseudo || post.auteur_pseudo || post.author_pseudo
+        || post.prenom || post.user_prenom || post.auteur || 'Utilisateur';
+}
+
 function CritiqueCard({ post, onClick }) {
     return (
         <div className="card" style={{ cursor: 'pointer' }} onClick={onClick}>
             <div className="card-header">
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ color: 'white', fontSize: '1.1rem' }}>
+                    <h3 style={{ color: 'var(--text)', fontSize: '1.1rem' }}>
                         {post.oeuvre_titre || post.titre || 'Sans titre'}
                     </h3>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        par <span style={{ color: 'var(--primary)' }}>{post.pseudo || post.prenom || 'Anonyme'}</span>
+                        par <span style={{ color: 'var(--primary)' }}>{getAuthorName(post)}</span>
                         {post.created_at && <> · {new Date(post.created_at).toLocaleDateString()}</>}
                     </span>
                 </div>
@@ -71,7 +76,6 @@ export default function HomePage() {
     const [loadingFeed, setLoadingFeed] = useState(true);
     const [loadingCritiques, setLoadingCritiques] = useState(true);
 
-    // Charger le feed des follows (connecté uniquement)
     useEffect(() => {
         if (!isAuthenticated) { setLoadingFeed(false); return; }
         const load = async () => {
@@ -89,10 +93,12 @@ export default function HomePage() {
         load();
     }, [isAuthenticated]);
 
-    // Charger les critiques publiques (toujours)
     useEffect(() => {
         loadPublicCritiques()
-            .then(setCritiques)
+            .then((data) => {
+                console.log('Premier avis (debug champs):', data[0]);
+                setCritiques(data);
+            })
             .catch(err => console.error('Erreur critiques:', err))
             .finally(() => setLoadingCritiques(false));
     }, []);
@@ -103,13 +109,13 @@ export default function HomePage() {
     };
 
     const handleFeedClick = (post) => {
-        if (post.oeuvre_id) navigate(`/oeuvre/${post.oeuvre_id}`);
+        const oeuvreId = post._loaded_oeuvre_id || post.oeuvre_id;
+        if (oeuvreId) navigate(`/oeuvre/${oeuvreId}`);
         else if (post.api_reference_id) navigate(`/game/${post.api_reference_id}`);
     };
 
     return (
         <div className="page-container">
-            {/* Hero */}
             <div className="hero">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <Gamepad2 size={32} style={{ color: 'var(--primary)' }} />
@@ -136,24 +142,17 @@ export default function HomePage() {
 
             <AdvancedSearch />
 
-            {/* FIL D'ACTUALITÉ DES FOLLOWS */}
             {isAuthenticated && (
                 <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
                         <Users size={20} style={{ color: 'var(--primary)' }} />
                         <h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Fil d'actualité</h2>
                     </div>
-
                     {loadingFeed ? (
                         <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Chargement du fil...</p>
                     ) : feed.length === 0 ? (
-                        <div style={{
-                            background: 'var(--bg-card)', border: '1px solid var(--border)',
-                            borderRadius: '12px', padding: '2rem', textAlign: 'center', marginBottom: '2rem',
-                        }}>
-                            <p style={{ color: 'var(--text-muted)' }}>
-                                Aucune activité de tes abonnements. Suis des utilisateurs pour voir leurs avis ici !
-                            </p>
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
+                            <p style={{ color: 'var(--text-muted)' }}>Aucune activité de tes abonnements.</p>
                         </div>
                     ) : (
                         <div className="grid" style={{ marginBottom: '2rem' }}>
@@ -165,7 +164,6 @@ export default function HomePage() {
                 </>
             )}
 
-            {/* DERNIERS AVIS PUBLICS */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
                 <TrendingUp size={20} style={{ color: 'var(--primary)' }} />
                 <h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Derniers avis</h2>

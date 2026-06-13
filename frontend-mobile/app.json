@@ -19,9 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "softwareKeyboardLayoutMode": "pan",
-      "package": "com.anonymous.frontendmobile"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",

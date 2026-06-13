@@ -16,9 +16,6 @@ router.post('/:id/ratings', checkJwt, ratingController.createRating);
 // PUT /oeuvres/:id/ratings - Mettre à jour une note et une critique pour une œuvre
 router.put('/:id/ratings', checkJwt, ratingController.updateRating);
 
-// GET /critiques/:id/ratings/me - Récupérer la note de l'utilisateur connecté pour une œuvre
-router.get('/:id/ratings/me', checkJwt, ratingController.getMyRatingForOeuvre);
-
 // GET /oeuvres/:id/ratings - Récupérer toutes les notes d'une œuvre
 router.get('/:id/ratings', ratingController.getRatingsByOeuvre);
 
@@ -26,9 +23,6 @@ router.get('/:id/ratings', ratingController.getRatingsByOeuvre);
 router.delete('/:id', checkJwt, ratingController.deleteRating);
 
 //LIKE
-
-// GET /ratings/:id/likes - Récupérer le nombre de likes d'une critique
-router.get('/:id/likes', ratingController.getLikesCount);
 
 // POST /ratings/:id/like - Liker une critique
 router.post('/:id/like', checkJwt, ratingController.likeCritique);

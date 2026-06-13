@@ -26,19 +26,6 @@ exports.getUserById = async (id) => {
 };
 
 /**
- * Recherche des utilisateurs par pseudo (recherche partielle)
- * @param {string} pseudo - Le pseudo à rechercher
- * @returns {Array} Liste des utilisateurs correspondants
- */
-exports.searchUsersByPseudo = async (pseudo) => {
-  const [rows] = await db.query(
-    'SELECT id, pseudo, prenom, nom, photo, bio, `public` FROM users WHERE pseudo LIKE ? LIMIT 20',
-    [`%${pseudo}%`]
-  );
-  return rows;
-};
-
-/**
  * Crée un nouvel utilisateur dans la base de données
  * @param {Object} userData - Les données de l'utilisateur à créer
  * @param {string} userData.auth0Id - L'identifiant Auth0
@@ -94,11 +81,11 @@ exports.createUser = async (userData) => {
  */
 exports.updateUser = async (userId, updateData) => {
   const { prenom, nom, pseudo, bio, photo } = updateData;
-  const isPublic = updateData.public;
-
+  
+  // Construire dynamiquement la requête SQL en fonction des champs fournis
   const fields = [];
   const values = [];
-
+  
   if (prenom !== undefined) {
     fields.push('prenom = ?');
     values.push(prenom);
@@ -118,10 +105,6 @@ exports.updateUser = async (userId, updateData) => {
   if (photo !== undefined) {
     fields.push('photo = ?');
     values.push(photo);
-  }
-  if (isPublic !== undefined) {
-    fields.push('`public` = ?');
-    values.push(isPublic ? 1 : 0);
   }
   
   if (fields.length === 0) {

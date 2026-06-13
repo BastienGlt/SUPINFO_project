@@ -6,9 +6,9 @@ import { createBibliothequeService } from '../services/bibliothequeService';
 import { Trash2, ExternalLink } from 'lucide-react';
 
 const STATUS_STYLES = {
-    'Joué':    { color: '#60a5fa', background: 'rgba(30,58,95,0.3)', border: '1px solid #1e3a5f', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
-    'Terminé': { color: '#4ade80', background: 'rgba(20,83,45,0.3)', border: '1px solid #14532d', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
-    'Envie':   { color: '#facc15', background: 'rgba(113,63,18,0.3)', border: '1px solid #713f12', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
+    'Joué':    { color: '#2563eb', background: 'rgba(37,99,235,0.15)', border: '1.5px solid #2563eb', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
+    'Terminé': { color: '#16a34a', background: 'rgba(22,163,74,0.15)', border: '1.5px solid #16a34a', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
+    'Envie':   { color: '#b45309', background: 'rgba(180,83,9,0.15)', border: '1.5px solid #b45309', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
 };
 
 const CODE_TO_LABEL = {

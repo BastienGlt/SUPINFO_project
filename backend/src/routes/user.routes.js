@@ -4,9 +4,6 @@ const userController = require('../controllers/user.controller');
 const ratingController = require('../controllers/rating.controller');
 const checkJwt = require('../middlewares/auth.middleware');
 
-// Route publique : Recherche d'utilisateurs par pseudo
-router.get('/', userController.searchUsers);
-
 // Route protégée : Récupère l'utilisateur connecté
 router.get('/me', checkJwt, userController.getMe);
 

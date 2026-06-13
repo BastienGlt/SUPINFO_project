@@ -4,17 +4,17 @@ class BibliothequeService {
 
   // ===== CRUD Bibliothèque Items =====
 
-  async addToBibliotheque(userId, oeuvreId, statutId = 1) {
+  async addToBibliotheque(userId, oeuvreId, statut = 'A_VOIR') {
     const query = `
-      INSERT INTO bibliotheque_items (user_id, oeuvre_id, statut_id, updated_at)
+      INSERT INTO bibliotheque_items (user_id, oeuvre_id, statut, updated_at)
       VALUES (?, ?, ?, NOW())
     `;
-    const [result] = await db.execute(query, [userId, oeuvreId, statutId]);
+    const [result] = await db.execute(query, [userId, oeuvreId, statut]);
     return result.insertId;
   }
 
   async updateBibliothequeItem(userId, itemId, updates) {
-    const allowedFields = ['statut_id'];
+    const allowedFields = ['statut'];
     const fields = [];
     const values = [];
 
@@ -69,32 +69,32 @@ class BibliothequeService {
   }
 
   async getUserBibliotheque(userId, filters = {}) {
-    let query = `SELECT * FROM v_bibliotheque_details WHERE user_id = ?`;
+    let query = `
+      SELECT
+        bi.id,
+        bi.user_id,
+        bi.oeuvre_id,
+        bi.statut,
+        bi.updated_at,
+        o.titre,
+        o.description,
+        o.api_reference_id
+      FROM bibliotheque_items bi
+      JOIN oeuvres o ON bi.oeuvre_id = o.id
+      WHERE bi.user_id = ?
+    `;
 
     const params = [userId];
 
-    if (filters.statut_id) {
-      query += ' AND statut_id = ?';
-      params.push(filters.statut_id);
+    if (filters.statut) {
+      query += ' AND bi.statut = ?';
+      params.push(filters.statut);
     }
 
-    query += ' ORDER BY updated_at DESC';
+    query += ' ORDER BY bi.updated_at DESC';
 
     const [rows] = await db.execute(query, params);
-    return rows.map(row => ({
-      id: row.id,
-      user_id: row.user_id,
-      oeuvre_id: row.oeuvre_id,
-      updated_at: row.updated_at,
-      titre: row.titre,
-      description: row.description,
-      api_reference_id: row.api_reference_id,
-      statut: {
-        id: row.statut_id,
-        code: row.statut_code,
-        libele: row.statut_libele
-      }
-    }));
+    return rows;
   }
 }
 

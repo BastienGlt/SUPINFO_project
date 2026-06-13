@@ -1,9 +1,6 @@
 const db = require('../../config/db');
 const notificationService = require('./notification.service');
 
-const COMMENTAIRES_ORDER_BY = new Set(['id', 'created_at', 'updated_at']);
-const ORDER_DIRECTION = new Set(['ASC', 'DESC']);
-
 /**
  * Service : Logique métier pour le système de commentaires sur les critiques
  * Gère les commentaires associés aux critiques
@@ -55,15 +52,12 @@ exports.getCommentaireById = async (commentaireId) => {
  */
 exports.getCommentairesByCritique = async (critiqueId, options = {}) => {
   const { limit = 50, offset = 0, orderBy = 'created_at', order = 'ASC' } = options;
-  const safeOrderBy = COMMENTAIRES_ORDER_BY.has(orderBy) ? orderBy : 'created_at';
-  const normalizedOrder = typeof order === 'string' ? order.toUpperCase() : 'ASC';
-  const safeOrder = ORDER_DIRECTION.has(normalizedOrder) ? normalizedOrder : 'ASC';
   
   const sql = `
     SELECT *
     FROM v_commentaires
     WHERE critique_id = ?
-    ORDER BY ${safeOrderBy} ${safeOrder}
+    ORDER BY ${orderBy} ${order}
     LIMIT ? OFFSET ?
   `;
   const [commentaires] = await db.query(sql, [critiqueId, limit, offset]);

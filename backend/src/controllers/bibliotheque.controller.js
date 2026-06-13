@@ -1,6 +1,5 @@
 const bibliothequeService = require('../services/bibliotheque.service');
 const userService = require('../services/user.service');
-const oeuvreService = require('../services/oeuvre.service');
 
 class BibliothequeController {
 
@@ -25,31 +24,23 @@ class BibliothequeController {
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
       const body = this.parseBody(req.body);
-      const { api_reference_id, titre, description, statut_id } = body;
+      const { oeuvre_id, statut } = body;
 
       if (Object.keys(body).length === 0) {
         return res.status(400).json({
-          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec api_reference_id, titre, description et statut_id.'
+          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec oeuvre_id et statut.'
         });
       }
 
-      if (!api_reference_id) {
-        return res.status(400).json({ error: 'La référence API de l\'œuvre (api_reference_id) est requise' });
+      if (!oeuvre_id) {
+        return res.status(400).json({ error: 'L\'ID de l\'œuvre est requis' });
       }
 
-      if (!titre || !description) {
-        return res.status(400).json({ error: 'Le titre et la description de l\'œuvre sont obligatoires' });
-      }
-
-      // Crée l'œuvre en base si elle n'existe pas encore
-      const oeuvre = await oeuvreService.findOrCreate(api_reference_id, titre, description);
-
-      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre.id, statut_id);
+      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre_id, statut);
 
       res.status(201).json({
         message: 'Œuvre ajoutée à la bibliothèque',
-        item_id: itemId,
-        oeuvre
+        item_id: itemId
       });
     } catch (error) {
       console.error('Erreur addItem:', error);
@@ -129,10 +120,10 @@ class BibliothequeController {
       const userId = req.params.userId || (await userService.getUserByAuth0Id(req.auth.payload.sub))?.id;
       if (!userId) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
-      const { statut_id } = req.query;
+      const { statut } = req.query;
 
       const filters = {};
-      if (statut_id) filters.statut_id = parseInt(statut_id, 10);
+      if (statut) filters.statut = statut;
 
       const items = await bibliothequeService.getUserBibliotheque(userId, filters);
 

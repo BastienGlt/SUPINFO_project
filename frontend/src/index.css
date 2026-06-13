@@ -25,26 +25,36 @@
 
 /* ═══ LIGHT THEME ═══ */
 [data-theme="light"] {
-  --bg: #f5f6fa;
+  --bg: #f0f2f5;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-hover: #f0f1f5;
+  --bg-card-hover: #f5f5f7;
   --primary: #d06210;
   --primary-dark: #b85400;
-  --primary-glow: rgba(208, 98, 16, 0.1);
-  --primary-glow-strong: rgba(208, 98, 16, 0.2);
+  --primary-glow: rgba(208, 98, 16, 0.12);
+  --primary-glow-strong: rgba(208, 98, 16, 0.22);
   --accent: #e88a30;
   --text: #1a1a2e;
-  --text-muted: #6b7280;
-  --border: #e2e4ea;
-  --border-light: #d1d5db;
+  --text-muted: #5a6070;
+  --border: #d8dbe2;
+  --border-light: #c5c9d2;
   --danger: #dc2626;
   --success: #16a34a;
   --info: #2563eb;
-  --warning: #ca8a04;
+  --warning: #b45309;
   --header-height: 60px;
   --shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
+
+[data-theme="light"] .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+[data-theme="light"] .hero { background: linear-gradient(135deg, #fff5eb 0%, #ffe0c2 100%); border-color: var(--border); }
+[data-theme="light"] .hero h1 { color: #1a1a2e; }
+[data-theme="light"] .data-table th { background: #f0f2f5; }
+[data-theme="light"] .header { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+[data-theme="light"] .search-dropdown { box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
+[data-theme="light"] .profile-header-bg { opacity: 0.9; }
+
+
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -539,4 +549,45 @@ h1, h2, h3, h4, h5 {
 @keyframes notifPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.15); }
+}
+
+/* ═══════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════ */
+.footer {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  margin-top: 3rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footer-links a:hover { color: var(--primary); }
+
+
+[data-theme="light"] .status-pill {
+  border-width: 1.5px;
 }
