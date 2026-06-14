@@ -33,19 +33,27 @@ Authentification gérée par **Auth0** (OAuth2 / JWT). Les données de jeux (tit
 ### Prérequis
 
 - [Docker](https://www.docker.com/) et Docker Compose (Docker Desktop sur Windows/Mac)
-- Un fichier `.env` à la racine du projet (voir [Configuration](#configuration-variables-denvironnement))
+- [Node.js](https://nodejs.org/) (pour exécuter `setup-env.js`, appelé automatiquement par les scripts npm ci-dessous)
 
 ### Lancer la stack
 
 ```bash
 # Build + démarrage de tous les services (db, backend, frontend)
-docker compose up --build -d
+npm run docker:up
 
-# Suivre les logs
+# Ou en arrière-plan
+npm run docker:up:d
+
+# Build seul (sans démarrer)
+npm run docker:build
+
+# Suivre les logs (utile avec docker:up:d)
 docker compose logs -f
 ```
 
-Docker enchaîne automatiquement :
+Ces commandes génèrent automatiquement le fichier `.env` à la racine (via `setup-env.js`) avant de lancer `docker compose` — voir [Configuration](#configuration-variables-denvironnement) pour le détail.
+
+Docker enchaîne ensuite automatiquement :
 1. Démarrage de **MySQL** et import du schéma initial (`backend/config/schema.sql`) si la base est vide.
 2. Attente que MySQL soit en bonne santé (`healthcheck`) avant de démarrer le **backend**.
 3. Au démarrage du backend, `initDb.js` applique aussi des **correctifs de schéma idempotents** (colonnes/vues manquantes sur un volume existant plus ancien) — voir [Base de données](#base-de-données).
@@ -63,7 +71,12 @@ docker compose down -v
 
 ## Configuration (variables d'environnement)
 
-Copier `.env.example` vers `.env` à la racine, puis adapter les valeurs :
+Le fichier `.env` à la racine (utilisé par `docker compose`) est généré automatiquement par `setup-env.js`, exécuté avant chaque commande `npm run docker:*` (et via `npm run setup-env`) :
+
+- si `.env` n'existe pas encore, il est créé avec des valeurs par défaut codées dans `setup-env.js` ;
+- une variable d'environnement déjà exportée dans le shell (utile en CI pour injecter des secrets) prend le pas sur la valeur par défaut ;
+- si `.env` existe déjà, il **n'est pas régénéré** (vos modifications manuelles sont conservées) — utiliser `node setup-env.js --force` pour le régénérer entièrement ;
+- il reste possible d'éditer `.env` à la main après génération (`nano .env`).
 
 | Variable | Description |
 |---|---|
@@ -74,7 +87,7 @@ Copier `.env.example` vers `.env` à la racine, puis adapter les valeurs :
 | `VITE_API_URL` | URL de l'API backend, accessible depuis le navigateur (ex. `http://localhost:5000`) |
 | `VITE_RAWG_API_KEY` | Clé API [RAWG](https://rawg.io/apidocs) pour récupérer les données des jeux |
 
-> Pour le développement local sans Docker, chaque sous-projet (`backend/`, `frontend/`, `frontend-mobile/`) possède son propre `.env` (voir leurs `.env.example` respectifs).
+> Pour le développement local sans Docker, chaque sous-projet (`backend/`, `frontend/`, `frontend-mobile/`) possède son propre `.env` (voir leurs `.env.example` respectifs) — `setup-env.js` ne gère que le `.env` racine utilisé par Docker.
 
 ## Accès aux services
 
@@ -120,6 +133,11 @@ npm run frontend          # frontend en mode dev
 npm run mobile            # app mobile (Expo, mode LAN)
 npm run tunnel            # app mobile (Expo, mode tunnel)
 npm run install           # installe les dépendances backend + frontend + mobile
+
+npm run setup-env         # (re)génère le .env racine (voir Configuration)
+npm run docker:up         # génère le .env puis docker compose up --build
+npm run docker:up:d       # idem, en arrière-plan (-d)
+npm run docker:build      # génère le .env puis docker compose build (sans démarrer)
 ```
 
 ## Application mobile (Expo)

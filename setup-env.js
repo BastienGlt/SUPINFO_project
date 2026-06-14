@@ -1,29 +1,24 @@
 #!/usr/bin/env node
-// Génère le fichier .env à la racine (utilisé par docker-compose).
+// Génère le fichier .env à la racine (utilisé par docker-compose), sans
+// aucune interaction.
 //
 // Pour chaque variable, la valeur est choisie dans cet ordre de priorité :
 //   1. Variable d'environnement déjà exportée (utile en CI / secrets)
-//   2. Valeur présente dans un .env existant (conservée si on relance le script)
-//   3. Valeur par défaut (générée pour DB_PASSWORD, sinon celle de .env.example)
+//   2. Valeur présente dans un .env existant
+//   3. Valeur par défaut codée ci-dessous
 //
-// En mode interactif (terminal), chaque valeur peut être saisie manuellement
-// (Entrée = garder la valeur par défaut proposée).
-// En mode non interactif (CI), les valeurs par défaut sont utilisées sans prompt.
+// Si un .env existe déjà, le script ne fait rien (pour pouvoir être chaîné
+// automatiquement avant un build Docker). Utiliser --force pour le régénérer.
 //
-// Usage : node setup-env.js  (ou npm run setup-env)
+// Usage : node setup-env.js [--force]  (ou npm run setup-env)
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const readline = require('readline');
 
 const ENV_FILE = path.join(__dirname, '.env');
-
-function randomPassword() {
-  return crypto.randomBytes(16).toString('hex');
-}
 
 function parseEnvFile(filePath) {
   const result = {};
@@ -39,54 +34,34 @@ function parseEnvFile(filePath) {
 }
 
 const existingEnv = parseEnvFile(ENV_FILE);
-const isInteractive = process.stdin.isTTY && process.stdout.isTTY;
 
-let rl = null;
-if (isInteractive) {
-  rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+// value(varName, defaultValue) -> valeur retenue pour cette variable
+function value(varName, defaultValue) {
+  if (process.env[varName]) return process.env[varName];
+  if (existingEnv[varName] !== undefined) return existingEnv[varName];
+  return defaultValue;
 }
 
-function question(query) {
-  return new Promise((resolve) => rl.question(query, resolve));
-}
+function main() {
+  const force = process.argv.includes('--force');
 
-// ask(varName, defaultValue) -> valeur retenue pour cette variable
-async function ask(varName, defaultValue) {
-  const envValue = process.env[varName];
-  if (envValue) return envValue;
-
-  const proposed = existingEnv[varName] !== undefined ? existingEnv[varName] : defaultValue;
-
-  if (!isInteractive) return proposed;
-
-  const answer = await question(`${varName} [${proposed}]: `);
-  return answer.trim() || proposed;
-}
-
-async function main() {
-  if (fs.existsSync(ENV_FILE) && isInteractive) {
-    const confirm = await question(
-      'Un fichier .env existe déjà. Le mettre à jour (les valeurs actuelles seront proposées par défaut) ? [y/N] '
-    );
-    if (!/^y/i.test(confirm.trim())) {
-      console.log('Abandon.');
-      rl.close();
-      return;
-    }
+  if (fs.existsSync(ENV_FILE) && !force) {
+    console.log('.env existe déjà, génération ignorée (utiliser --force pour régénérer).');
+    return;
   }
 
-  const DB_PASSWORD = await ask('DB_PASSWORD', randomPassword());
-  const DB_NAME = await ask('DB_NAME', 'supinfo_db');
-  const DB_HOST = await ask('DB_HOST', 'localhost');
-  const DB_USER = await ask('DB_USER', 'root');
-  const PORT = await ask('PORT', '5000');
-  const AUTH0_AUDIENCE = await ask('AUTH0_AUDIENCE', 'https://your-auth0-tenant.eu.auth0.com/api/v2/');
-  const AUTH0_DOMAIN = await ask('AUTH0_DOMAIN', 'your-auth0-tenant.eu.auth0.com');
-  const VITE_AUTH0_DOMAIN = await ask('VITE_AUTH0_DOMAIN', AUTH0_DOMAIN);
-  const VITE_AUTH0_CLIENT_ID = await ask('VITE_AUTH0_CLIENT_ID', 'your_auth0_client_id');
-  const VITE_AUTH0_AUDIENCE = await ask('VITE_AUTH0_AUDIENCE', AUTH0_AUDIENCE);
-  const VITE_API_URL = await ask('VITE_API_URL', 'http://localhost:5000');
-  const VITE_RAWG_API_KEY = await ask('VITE_RAWG_API_KEY', 'your_rawg_api_key');
+  const DB_PASSWORD = value('DB_PASSWORD', crypto.randomBytes(16).toString('hex'));
+  const DB_NAME = value('DB_NAME', 'supinfo_db');
+  const DB_HOST = value('DB_HOST', 'localhost');
+  const DB_USER = value('DB_USER', 'root');
+  const PORT = value('PORT', '5000');
+  const AUTH0_AUDIENCE = value('AUTH0_AUDIENCE', 'https://dev-7q8y8bzgwgz5k5j1.eu.auth0.com/api/v2/');
+  const AUTH0_DOMAIN = value('AUTH0_DOMAIN', 'dev-7q8y8bzgwgz5k5j1.eu.auth0.com');
+  const VITE_AUTH0_DOMAIN = value('VITE_AUTH0_DOMAIN', AUTH0_DOMAIN);
+  const VITE_AUTH0_CLIENT_ID = value('VITE_AUTH0_CLIENT_ID', 'qlzGka2yy7fleIQt1ikN4Ksu7iWzcDNt');
+  const VITE_AUTH0_AUDIENCE = value('VITE_AUTH0_AUDIENCE', AUTH0_AUDIENCE);
+  const VITE_API_URL = value('VITE_API_URL', 'http://localhost:5000');
+  const VITE_RAWG_API_KEY = value('VITE_RAWG_API_KEY', '795006b9dad04d0e99dbddceab1a8d99');
 
   const content = `# Base de données MySQL
 DB_PASSWORD=${DB_PASSWORD}
@@ -115,8 +90,6 @@ VITE_RAWG_API_KEY=${VITE_RAWG_API_KEY}
 
   fs.writeFileSync(ENV_FILE, content);
   console.log(`Fichier .env généré : ${ENV_FILE}`);
-
-  if (rl) rl.close();
 }
 
 main();

@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "setup-env": "node setup-env.js",
+    "docker:build": "node setup-env.js && docker compose build",
+    "docker:up": "node setup-env.js && docker compose up --build",
+    "docker:up:d": "node setup-env.js && docker compose up -d --build",
     "dev": "npm run dev --prefix backend",
     "start": "npm run start --prefix backend",
     "mobile": "npm run lan --prefix frontend-mobile",

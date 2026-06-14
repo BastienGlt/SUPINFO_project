@@ -5,6 +5,7 @@ Application web full-stack de critiques de jeux vidéo avec authentification Aut
 ## Prérequis
 
 - Docker & Docker Compose installés
+- Node.js installé (pour exécuter `setup-env.js`, appelé automatiquement par `npm run docker:*`)
 - Compte Auth0 configuré (ou utiliser les credentials existants)
 - Clé API RAWG (optionnel, pour l'intégration jeux vidéo)
 
@@ -16,25 +17,27 @@ Application web full-stack de critiques de jeux vidéo avec authentification Aut
 
 ## Démarrage rapide avec Docker
 
-### 1. Configuration
-
-Générer le fichier `.env` à la racine avec le script de setup :
+### 1. Build et démarrage
 
 ```bash
-npm run setup-env
-# ou directement :
-node setup-env.js
+# Build et démarrage de tous les services
+npm run docker:up
+
+# Ou en arrière-plan
+npm run docker:up:d
+
+# Build seul (sans démarrer)
+npm run docker:build
 ```
 
-Le script propose une valeur par défaut pour chaque variable (générée pour
-`DB_PASSWORD`, sinon reprise de `.env.example`) :
-- en mode interactif, appuyez sur Entrée pour accepter la valeur proposée,
-  ou saisissez la vôtre ;
-- en CI / mode non interactif, les valeurs sont prises depuis les variables
-  d'environnement déjà exportées (secrets), sinon les valeurs par défaut sont
-  utilisées sans prompt ;
-- si un `.env` existe déjà, ses valeurs actuelles sont reprises comme
-  valeurs par défaut (relancer le script ne les écrase pas).
+Ces commandes génèrent automatiquement le `.env` à la racine (via
+`setup-env.js`) avant de lancer `docker compose`, sans aucune question :
+- les valeurs par défaut (Auth0, RAWG) sont codées dans `setup-env.js` ;
+- une variable d'environnement déjà exportée (ex: secret CI) prend le pas
+  sur la valeur par défaut ;
+- si un `.env` existe déjà, il n'est **pas** régénéré (pour ne pas écraser
+  une config existante). Utiliser `node setup-env.js --force` pour le
+  régénérer.
 
 Variables disponibles :
 - `DB_PASSWORD` : mot de passe MySQL
@@ -49,24 +52,14 @@ Il est toujours possible d'éditer `.env` manuellement après génération :
 nano .env
 ```
 
-### 2. Lancer l'application
-
-```bash
-# Build et démarrage de tous les services
-docker compose up --build
-
-# Ou en arrière-plan
-docker compose up -d --build
-```
-
-### 3. Accès
+### 2. Accès
 
 - **Frontend web** : http://localhost:3000
 - **API backend** : http://localhost:5000
 - **API docs (Swagger)** : http://localhost:5000/api-docs
 - **MySQL** : localhost:3306
 
-### 4. Arrêter l'application
+### 3. Arrêter l'application
 
 ```bash
 # Arrêt
