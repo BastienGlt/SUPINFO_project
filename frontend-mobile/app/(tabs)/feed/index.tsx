@@ -366,7 +366,7 @@ export default function FeedScreen() {
                   <View style={styles.heroOverlay}>
                     <View style={styles.heroTopRow}>
                       <Gamepad2 size={26} color="white" strokeWidth={2} />
-                      <Text style={styles.heroTitle}>Bienvenue sur ProjetSupinfo</Text>
+                      <Text style={styles.heroTitle}>Bienvenue sur SUPCONTENT</Text>
                     </View>
                     <Text style={styles.heroDesc}>
                       Découvrez les derniers avis de la communauté gaming. Connectez-vous pour participer !

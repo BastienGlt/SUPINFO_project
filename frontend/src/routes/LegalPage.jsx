@@ -40,7 +40,7 @@ export default function LegalPage() {
                 <div className="legal-content">
                     <h3>Éditeur du site</h3>
                     <p>Ce site est un projet étudiant réalisé dans le cadre de la formation SUPINFO International University.</p>
-                    <p>Nom du projet : <strong style={{ color: 'var(--text)' }}>PROJET SUPINFO— Réseau social gaming</strong></p>
+                    <p>Nom du projet : <strong style={{ color: 'var(--text)' }}>SUPCONTENT — Réseau social gaming</strong></p>
                     <p>Responsables du projet : PHUNG DANH-CORENTIN - GUILLEMET BASTIEN</p>
 
                     <h3>Hébergement</h3>
@@ -53,7 +53,7 @@ export default function LegalPage() {
                     <p>Les images, logos et contenus liés aux jeux restent la propriété exclusive de leurs éditeurs et studios respectifs. Ils sont utilisés à des fins informatives et non commerciales.</p>
 
                     <h3>Propriété intellectuelle</h3>
-                    <p>Le code source de cette application est la propriété de l'équipe de développement SUPINFO. Toute reproduction, représentation, modification ou distribution, même partielle, est interdite sans autorisation écrite préalable.</p>
+                    <p>Le code source de cette application est la propriété de l'équipe de développement SUPCONTENT. Toute reproduction, représentation, modification ou distribution, même partielle, est interdite sans autorisation écrite préalable.</p>
                     <p>Les marques, logos et noms de jeux vidéo cités sur ce site sont la propriété de leurs détenteurs respectifs.</p>
 
                     <h3>Responsabilité</h3>
@@ -69,7 +69,7 @@ export default function LegalPage() {
                 </div>
                 <div className="legal-content">
                     <h3>Article 1 — Objet</h3>
-                    <p>Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme PROJET SUPINFO, un réseau social dédié aux jeux vidéo. En accédant au site, l'utilisateur accepte sans réserve les présentes conditions.</p>
+                    <p>Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme SUPCONTENT, un réseau social dédié aux jeux vidéo. En accédant au site, l'utilisateur accepte sans réserve les présentes conditions.</p>
 
                     <h3>Article 2 — Inscription et compte</h3>
                     <p>L'inscription est gratuite et s'effectue via un compte Google (OAuth2) ou tout autre provider configuré. L'utilisateur s'engage à :</p>
@@ -101,11 +101,11 @@ export default function LegalPage() {
                     <p>Les utilisateurs peuvent signaler un contenu problématique via le bouton de signalement présent sur chaque critique.</p>
 
                     <h3>Article 5 — Propriété des critiques</h3>
-                    <p>Les critiques, notes et avis publiés restent la propriété intellectuelle de leurs auteurs. En les publiant sur PROJET SUPINFO, l'utilisateur accorde à la plateforme une licence non exclusive, gratuite et mondiale d'affichage et de diffusion dans le cadre du service.</p>
+                    <p>Les critiques, notes et avis publiés restent la propriété intellectuelle de leurs auteurs. En les publiant sur SUPCONTENT, l'utilisateur accorde à la plateforme une licence non exclusive, gratuite et mondiale d'affichage et de diffusion dans le cadre du service.</p>
                     <p>L'utilisateur peut à tout moment modifier ou supprimer ses propres critiques.</p>
 
                     <h3>Article 6 — Limitation de responsabilité</h3>
-                    <p>PROJET SUPINFO est un projet étudiant fourni "tel quel", sans garantie de disponibilité permanente ni de pérennité. L'équipe ne saurait être tenue responsable :</p>
+                    <p>SUPCONTENT est un projet étudiant fourni "tel quel", sans garantie de disponibilité permanente ni de pérennité. L'équipe ne saurait être tenue responsable :</p>
                     <ul style={listStyle}>
                         <li>Des interruptions temporaires ou permanentes du service</li>
                         <li>De la perte éventuelle de données utilisateur</li>
@@ -126,7 +126,7 @@ export default function LegalPage() {
                 </div>
                 <div className="legal-content">
                     <h3>1. Responsable du traitement</h3>
-                    <p>Le responsable du traitement des données est l'équipe projet SUPINFO, dans le cadre d'un projet étudiant à vocation éducative.</p>
+                    <p>Le responsable du traitement des données est l'équipe projet SUPCONTENT, dans le cadre d'un projet étudiant à vocation éducative.</p>
 
                     <h3>2. Données collectées</h3>
                     <p>Nous collectons les catégories de données suivantes :</p>
@@ -166,7 +166,7 @@ export default function LegalPage() {
                         <li><strong style={{ color: 'var(--text)' }}>Droit d'opposition</strong> : vous opposer au traitement de certaines données à caractère personnel</li>
                         <li><strong style={{ color: 'var(--text)' }}>Droit à la limitation</strong> : demander la limitation du traitement de vos données dans les cas prévus par le RGPD</li>
                     </ul>
-                    <p>Pour exercer l'un de ces droits, contactez l'équipe via le formulaire de contact ci-dessous ou via la plateforme SUPINFO.</p>
+                    <p>Pour exercer l'un de ces droits, contactez l'équipe via le formulaire de contact ci-dessous ou via la plateforme SUPCONTENT.</p>
 
                     <h3>7. Cookies et stockage local</h3>
                     <p>Ce site n'utilise <strong style={{ color: 'var(--text)' }}>aucun cookie de tracking ni publicitaire</strong>. Seul le localStorage du navigateur est utilisé pour :</p>
@@ -198,7 +198,7 @@ export default function LegalPage() {
                     <p>Pour toute question relative à vos données personnelles, au fonctionnement du site, ou pour signaler un problème :</p>
 
                     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1.5rem', marginTop: '1rem' }}>
-                        <p style={{ marginBottom: '0.8rem' }}><strong style={{ color: 'var(--text)' }}>PROJET SUPINFO</strong></p>
+                        <p style={{ marginBottom: '0.8rem' }}><strong style={{ color: 'var(--text)' }}>SUPCONTENT</strong></p>
                         <p>📧 bastien.guillemet@supinfo.com </p>
                         <p>📧 danh-corentin.phung@supinfo.com </p>
                         <p>🏫 SUPINFO Lille</p>
@@ -211,7 +211,7 @@ export default function LegalPage() {
                     <h3>Exercer vos droits RGPD</h3>
                     <p>Pour toute demande relative à vos droits (accès, rectification, suppression, portabilité), envoyez votre demande via par mail à l'adresse bastien.guillemet@supinfo.com :</p>
                     <ul style={listStyle}>
-                        <li>Votre pseudo sur PROJET SUPINFO</li>
+                        <li>Votre pseudo sur SUPCONTENT</li>
                         <li>L'adresse email associée à votre compte</li>
                         <li>La nature de votre demande</li>
                     </ul>

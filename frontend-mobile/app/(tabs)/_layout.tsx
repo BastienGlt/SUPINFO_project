@@ -30,8 +30,8 @@ export default function TabLayout() {
         headerShadowVisible: false,
         headerLeft: () => (
           <View style={{ marginLeft: 16, flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: colors.tint,  fontWeight: '900', fontSize: 17, letterSpacing: 0.4 }}>PROJET</Text>
-            <Text style={{ color: colors.text,  fontWeight: '900', fontSize: 17, letterSpacing: 0.4 }}>SUPINFO</Text>
+            <Text style={{ color: colors.tint,  fontWeight: '900', fontSize: 17, letterSpacing: 0.4 }}>SUP</Text>
+            <Text style={{ color: colors.text,  fontWeight: '900', fontSize: 17, letterSpacing: 0.4 }}>CONTENT</Text>
           </View>
         ),
         headerRight: () =>

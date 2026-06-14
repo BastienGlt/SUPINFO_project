@@ -89,7 +89,7 @@ export default function Header() {
     return (
         <header className="header">
             <Link to="/" className="brand">
-                <span className="brand-accent">PROJET</span>SUPINFO
+                <span className="brand-accent">SUP</span>CONTENT
             </Link>
 
             <div className="header-search" ref={wrapperRef}>

@@ -1,4 +1,4 @@
-# ProjetFinal — Plateforme communautaire de critiques de jeux vidéo
+# SUPCONTENT — Plateforme communautaire de critiques de jeux vidéo
 
 Application web (+ mobile) permettant aux utilisateurs de rechercher des jeux vidéo (via l'API [RAWG](https://rawg.io/apidocs)), de les noter et critiquer, de suivre d'autres joueurs, de gérer une bibliothèque personnelle (à jouer / en cours / terminé), de créer des listes thématiques et de recevoir des notifications. Un panel de modération/administration permet de traiter les signalements.
 
@@ -266,7 +266,7 @@ Toutes les routes (hors `/health`) passent par le middleware `checkActive` qui b
 
 ## Documentation utilisateur
 
-Bienvenue sur **ProjetFinal**, la plateforme communautaire pour découvrir, noter et discuter de vos jeux vidéo préférés.
+Bienvenue sur **SUPCONTENT**, la plateforme communautaire pour découvrir, noter et discuter de vos jeux vidéo préférés.
 
 ### Sommaire (guide utilisateur)
 

@@ -24,8 +24,8 @@ export default function LoginScreen() {
           <Gamepad2 size={48} color={colors.tint} strokeWidth={1.5} />
         </View>
         <View style={styles.titleRow}>
-          <Text style={[styles.titleOrange, { color: colors.tint }]}>PROJET</Text>
-          <Text style={[styles.titleWhite, { color: colors.text }]}>SUPINFO</Text>
+          <Text style={[styles.titleOrange, { color: colors.tint }]}>SUP</Text>
+          <Text style={[styles.titleWhite, { color: colors.text }]}>CONTENT</Text>
         </View>
         <Text style={[styles.subtitle, { color: colors.icon }]}>
           La communauté des passionnés de jeux vidéo

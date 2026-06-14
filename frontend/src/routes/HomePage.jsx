@@ -105,7 +105,7 @@ export default function HomePage() {
             <div className="hero">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <Gamepad2 size={32} style={{ color: 'var(--primary)' }} />
-                    <h1 style={{ fontSize: '2rem' }}>{isAuthenticated ? 'Bienvenue !' : 'Bienvenue sur ProjetSupinfo'}</h1>
+                    <h1 style={{ fontSize: '2rem' }}>{isAuthenticated ? 'Bienvenue !' : 'Bienvenue sur SUPCONTENT'}</h1>
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
                     {isAuthenticated ? 'Voici les dernières activités de la communauté.' : 'Découvrez les derniers avis de la communauté gaming. Connectez-vous pour participer !'}

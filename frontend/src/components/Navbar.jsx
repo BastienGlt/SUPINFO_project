@@ -11,7 +11,7 @@ export default function Navbar() {
     return (
         <nav className="navbar">
             <div className="navbar-inner">
-                <Link to="/" className="brand">ProjetFinal</Link>
+                <Link to="/" className="brand">SUPCONTENT</Link>
                 <div className="nav-links">
                     <Link to="/" className={`nav-item ${isActive('/')}`}><Home size={18}/> Accueil</Link>
                     {isAuthenticated ? (
