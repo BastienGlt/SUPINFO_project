@@ -1,6 +1,6 @@
 # ProjetFinal — Plateforme communautaire de critiques de jeux vidéo
 
-Application web (+ mobile) permettant aux utilisateurs de rechercher des jeux vidéo (via l'API [RAWG](https://rawg.io/apidocs)), de les noter et critiquer, de suivre d'autres joueurs, de gérer une bibliothèque personnelle (à jouer / en cours / terminé), de créer des listes thématiques, d'échanger par messagerie privée et de recevoir des notifications. Un panel de modération/administration permet de traiter les signalements.
+Application web (+ mobile) permettant aux utilisateurs de rechercher des jeux vidéo (via l'API [RAWG](https://rawg.io/apidocs)), de les noter et critiquer, de suivre d'autres joueurs, de gérer une bibliothèque personnelle (à jouer / en cours / terminé), de créer des listes thématiques et de recevoir des notifications. Un panel de modération/administration permet de traiter les signalements.
 
 ## Sommaire
 
@@ -232,11 +232,10 @@ Bienvenue sur **ProjetFinal**, la plateforme communautaire pour découvrir, note
 5. [Ma Bibliothèque](#5-ma-bibliothèque)
 6. [Mes Listes](#6-mes-listes)
 7. [Profil et abonnements](#7-profil-et-abonnements)
-8. [Messagerie privée](#8-messagerie-privée)
-9. [Notifications](#9-notifications)
-10. [Signaler un contenu](#10-signaler-un-contenu)
-11. [Modération et administration](#11-modération-et-administration)
-12. [Questions fréquentes](#12-questions-fréquentes)
+8. [Notifications](#8-notifications)
+9. [Signaler un contenu](#9-signaler-un-contenu)
+10. [Modération et administration](#10-modération-et-administration)
+11. [Questions fréquentes](#11-questions-fréquentes)
 
 ### 1. Premiers pas
 
@@ -327,23 +326,12 @@ En cliquant sur le pseudo/avatar d'un autre membre, vous accédez à son profil 
 Depuis ce profil, vous pouvez :
 
 - **Suivre** / **Ne plus suivre** cet utilisateur.
-- Lui **envoyer un message privé**.
 
 #### Listes d'abonnés / abonnements
 
 Depuis votre profil ou celui d'un autre utilisateur, cliquez sur le nombre d'abonnés ou d'abonnements pour afficher la liste correspondante (avatar, nom, bio courte), avec accès direct à chaque profil.
 
-### 8. Messagerie privée
-
-Accessible via **Messages** (utilisateurs connectés).
-
-- La colonne de gauche liste vos **conversations** (pseudo du contact, aperçu du dernier message).
-- Sélectionnez une conversation pour afficher l'historique des échanges (vos messages et ceux de votre interlocuteur sont visuellement distingués).
-- Tapez votre message et envoyez-le.
-
-Pour démarrer une nouvelle conversation, rendez-vous sur le profil d'un utilisateur et cliquez sur **Envoyer un message**.
-
-### 9. Notifications
+### 8. Notifications
 
 Accessible via l'icône **Notifications** (avec un badge indiquant le nombre de notifications non lues).
 
@@ -357,7 +345,7 @@ Chaque notification affiche une icône, le pseudo de la personne concernée, une
 
 - **Marquer comme lue** une notification individuellement, ou utiliser **Tout marquer comme lu**.
 
-### 10. Signaler un contenu
+### 9. Signaler un contenu
 
 Sur un avis ou un commentaire, cliquez sur l'icône **drapeau / Signaler** :
 
@@ -367,7 +355,7 @@ Sur un avis ou un commentaire, cliquez sur l'icône **drapeau / Signaler** :
 
 Le signalement est ensuite transmis à l'équipe de modération (voir section suivante).
 
-### 11. Modération et administration
+### 10. Modération et administration
 
 Réservé aux comptes ayant le rôle **Modérateur** ou **Administrateur** (badge visible sur le profil, avec accès au **panel Admin**).
 
@@ -381,7 +369,7 @@ Le panel d'administration comprend plusieurs sections dépliables, avec un compt
 
 > Un utilisateur banni ne peut plus accéder aux fonctionnalités nécessitant une authentification (blocage appliqué automatiquement sur toutes les routes protégées).
 
-### 12. Questions fréquentes
+### 11. Questions fréquentes
 
 **Je viens de me connecter mais je ne vois pas mes données / je suis bloqué sur "Compléter mon profil".**
 → Remplissez le formulaire (Prénom, Nom, Pseudo obligatoires) et validez : votre compte applicatif sera créé en lien avec votre identité Auth0.

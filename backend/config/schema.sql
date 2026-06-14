@@ -594,23 +594,6 @@ INSERT INTO `notifications` (`id`, `user_id`, `from_user_id`, `type`, `source_id
 (7, 1, 3, 'follow', NULL, 0, '2026-05-12 09:00:00'),
 (8, 5, 3, 'follow', NULL, 0, '2026-05-15 09:00:00');
 
-INSERT INTO `conversations` (`id`, `updated_at`) VALUES
-(1, '2026-06-05 10:15:00'),
-(2, '2026-06-06 18:30:00');
-
-INSERT INTO `conversation_participants` (`conversation_id`, `user_id`) VALUES
-(1, 1),
-(1, 2),
-(2, 3),
-(2, 4);
-
-INSERT INTO `messages` (`id`, `conversation_id`, `user_id`, `contenu`, `lu`, `created_at`) VALUES
-(1, 1, 1, 'Salut ! Tu as vu le dernier jeu Rockstar ?', 1, '2026-06-05 10:00:00'),
-(2, 1, 2, 'Oui, j''ai hâte de le tester !', 1, '2026-06-05 10:05:00'),
-(3, 1, 1, 'On y joue ensemble ce week-end ?', 0, '2026-06-05 10:15:00'),
-(4, 2, 3, 'On finit Life is Strange ensemble ce soir ?', 0, '2026-06-06 18:20:00'),
-(5, 2, 4, 'Carrément, je suis chaud !', 1, '2026-06-06 18:30:00');
-
 INSERT INTO `signalements` (`id`, `signaleur_id`, `type_contenu`, `contenu_id`, `motif`, `statut`, `created_at`) VALUES
 (1, 4, 'critique', 10, 'Propos méprisants envers la communauté', 'en_attente', '2026-05-19 22:00:00'),
 (2, 5, 'commentaire', 8, 'Message hors sujet / spam', 'en_examen', '2026-05-19 22:30:00'),
