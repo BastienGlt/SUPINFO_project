@@ -1,5 +1,6 @@
 const bibliothequeService = require('../services/bibliotheque.service');
 const userService = require('../services/user.service');
+const oeuvreService = require('../services/oeuvre.service');
 
 class BibliothequeController {
 
@@ -24,23 +25,35 @@ class BibliothequeController {
       if (!currentUser) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
       const body = this.parseBody(req.body);
-      const { oeuvre_id, statut } = body;
+      const { api_reference_id, oeuvre_id, titre, description, statut_id, statut } = body;
 
       if (Object.keys(body).length === 0) {
         return res.status(400).json({
-          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec oeuvre_id et statut.'
+          error: 'Le corps de la requête est vide ou invalide. Envoyez un JSON valide avec oeuvre_id or api_reference_id and statut.'
         });
       }
 
-      if (!oeuvre_id) {
-        return res.status(400).json({ error: 'L\'ID de l\'œuvre est requis' });
+      // Determine oeuvre: prefer api_reference_id (create/find), otherwise accept oeuvre_id
+      let oeuvre;
+      if (api_reference_id) {
+        if (!titre || !description) {
+          return res.status(400).json({ error: 'Titre et description requis lors de la création via api_reference_id' });
+        }
+        oeuvre = await oeuvreService.findOrCreate(api_reference_id, titre, description);
+      } else if (oeuvre_id) {
+        oeuvre = { id: oeuvre_id };
+      } else {
+        return res.status(400).json({ error: 'L\'ID de l\'œuvre (oeuvre_id) ou api_reference_id est requis' });
       }
 
-      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre_id, statut);
+      // Accept either statut_id (number) or statut (string)
+      const statutValue = (statut_id !== undefined) ? statut_id : statut;
+      const itemId = await bibliothequeService.addToBibliotheque(currentUser.id, oeuvre.id, statutValue);
 
       res.status(201).json({
         message: 'Œuvre ajoutée à la bibliothèque',
-        item_id: itemId
+        item_id: itemId,
+        oeuvre
       });
     } catch (error) {
       console.error('Erreur addItem:', error);
@@ -62,6 +75,13 @@ class BibliothequeController {
         return res.status(400).json({
           error: 'Le corps de la requête est vide ou invalide.'
         });
+      }
+
+      // normalize: allow both statut and statut_id from clients
+      if (updates.statut_id !== undefined && updates.statut === undefined) {
+        updates.statut = updates.statut_id;
+      } else if (updates.statut !== undefined && updates.statut_id === undefined) {
+        updates.statut_id = updates.statut;
       }
 
       const success = await bibliothequeService.updateBibliothequeItem(currentUser.id, id, updates);
@@ -120,10 +140,11 @@ class BibliothequeController {
       const userId = req.params.userId || (await userService.getUserByAuth0Id(req.auth.payload.sub))?.id;
       if (!userId) return res.status(401).json({ error: 'Utilisateur non authentifié' });
 
-      const { statut } = req.query;
+      const { statut, statut_id } = req.query;
 
       const filters = {};
-      if (statut) filters.statut = statut;
+      if (statut !== undefined) filters.statut = statut;
+      if (statut_id !== undefined) filters.statut_id = statut_id;
 
       const items = await bibliothequeService.getUserBibliotheque(userId, filters);
 
