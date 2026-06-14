@@ -2,9 +2,13 @@
 
 Application web (+ mobile) permettant aux utilisateurs de rechercher des jeux vidéo (via l'API [RAWG](https://rawg.io/apidocs)), de les noter et critiquer, de suivre d'autres joueurs, de gérer une bibliothèque personnelle (à jouer / en cours / terminé), de créer des listes thématiques et de recevoir des notifications. Un panel de modération/administration permet de traiter les signalements.
 
+- 📦 Dépôt Git : [github.com/BastienGlt/SUPINFO_project](https://github.com/BastienGlt/SUPINFO_project)
+- 🗄️ Schéma de la base de données (dbdiagram.io) : [SUPINFO Final Project](https://dbdiagram.io/d/SUPINFO-Final-Project-696e03c2d6e030a02470ab42)
+
 ## Sommaire
 
 - [Architecture](#architecture)
+- [Diagrammes UML](#diagrammes-uml)
 - [Démarrage rapide avec Docker](#démarrage-rapide-avec-docker)
 - [Configuration (variables d'environnement)](#configuration-variables-denvironnement)
 - [Accès aux services](#accès-aux-services)
@@ -27,6 +31,10 @@ Application web (+ mobile) permettant aux utilisateurs de rechercher des jeux vi
 | **Mobile** | Expo / React Native (non dockerisé) | — |
 
 Authentification gérée par **Auth0** (OAuth2 / JWT). Les données de jeux (titres, jaquettes, genres, notes globales) proviennent de l'**API RAWG**, les critiques/notes/commentaires sont stockés dans la base MySQL applicative.
+
+## Diagrammes UML
+
+La documentation technique détaillée (diagramme de cas d'utilisation, diagramme de séquence de l'intégration avec l'API RAWG, et modèle de données / schéma de la base) se trouve dans [`docs/diagrammes-uml.md`](docs/diagrammes-uml.md).
 
 ## Démarrage rapide avec Docker
 
@@ -230,6 +238,8 @@ Au démarrage, les logs affichent l'URL de redirection à utiliser (`=== URL À 
 ```
 
 ## Base de données
+
+📊 Schéma visuel interactif : [dbdiagram.io — SUPINFO Final Project](https://dbdiagram.io/d/SUPINFO-Final-Project-696e03c2d6e030a02470ab42)
 
 Le schéma MySQL (`backend/config/schema.sql`) définit notamment :
 
