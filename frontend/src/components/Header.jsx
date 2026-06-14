@@ -5,7 +5,17 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { rawgService } from '../services/rawgService';
 import { createBibliothequeService } from '../services/bibliothequeService';
 import { createNotificationService } from '../services/notificationService';
-import { Search, X, Loader, LogIn, LogOut, Home, Library, List, Bell, User } from 'lucide-react';
+import { Search, X, Loader, LogIn, LogOut, Home, Library, Bell, Sun, Moon, List } from 'lucide-react';
+
+function useTheme() {
+    const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+    const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+    return { theme, toggle };
+}
 
 export default function Header() {
     const { user, isAuthenticated, logout } = useAuth();
@@ -13,8 +23,8 @@ export default function Header() {
     const location = useLocation();
     const navigate = useNavigate();
     const isActive = (p) => location.pathname === p ? 'active' : '';
+    const { theme, toggle: toggleTheme } = useTheme();
 
-    // Search state
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -22,8 +32,6 @@ export default function Header() {
     const [addingId, setAddingId] = useState(null);
     const timeoutRef = useRef(null);
     const wrapperRef = useRef(null);
-
-    // Notification badge
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
@@ -34,7 +42,6 @@ export default function Header() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Charger le compteur de notifications
     useEffect(() => {
         if (!isAuthenticated) return;
         const loadCount = async () => {
@@ -45,11 +52,10 @@ export default function Header() {
             } catch {}
         };
         loadCount();
-        const interval = setInterval(loadCount, 30000); // polling toutes les 30s
+        const interval = setInterval(loadCount, 30000);
         return () => clearInterval(interval);
     }, [isAuthenticated]);
 
-    // Search debounce
     useEffect(() => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (query.length < 2) { setResults([]); setIsOpen(false); return; }
@@ -89,9 +95,7 @@ export default function Header() {
             <div className="header-search" ref={wrapperRef}>
                 <div className="header-search-inner">
                     <Search size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                    <input type="text" placeholder="Rechercher un jeu..." value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                    />
+                    <input type="text" placeholder="Rechercher un jeu..." value={query} onChange={(e) => setQuery(e.target.value)} />
                     {loading && <Loader size={16} className="spinner" style={{ color: 'var(--text-muted)' }} />}
                     {query && !loading && (
                         <X size={16} style={{ color: 'var(--text-muted)', cursor: 'pointer' }}
@@ -114,9 +118,9 @@ export default function Header() {
                                             <Loader size={14} className="spinner" style={{ color: 'var(--text-muted)' }} />
                                         ) : (
                                             <>
-                                                <button className="search-action-btn envie" onClick={() => handleAdd(game, 3)}>Envie</button>
-                                                <button className="search-action-btn joue" onClick={() => handleAdd(game, 1)}>Joue</button>
-                                                <button className="search-action-btn termine" onClick={() => handleAdd(game, 2)}>Fini</button>
+                                                <button className="search-action-btn envie" onClick={() => handleAdd(game, 'envie')}>Envie</button>
+                                                <button className="search-action-btn joue" onClick={() => handleAdd(game, 'joue')}>Joue</button>
+                                                <button className="search-action-btn termine" onClick={() => handleAdd(game, 'termine')}>Fini</button>
                                             </>
                                         )}
                                     </div>
@@ -134,15 +138,14 @@ export default function Header() {
                         <Link to="/bibliotheque" className={`header-nav-link ${isActive('/bibliotheque')}`}><Library size={16} /> Collection</Link>
                         <Link to="/listes" className={`header-nav-link ${isActive('/listes')}`}><List size={16} /> Listes</Link>
                         <Link to="/notifications" style={{
-                                position: 'relative', display: 'flex', alignItems: 'center',
-                                justifyContent: 'center', padding: '8px', borderRadius: '8px',
-                                color: location.pathname === '/notifications' ? 'var(--primary)' : 'var(--text-muted)',
-                                background: location.pathname === '/notifications' ? 'var(--primary-glow)' : 'none',
-                                border: location.pathname === '/notifications' ? '1px solid var(--primary)' : '1px solid var(--border)',
-textBoxtransition: 'all 0.15s',
-                            }}>
-                                <Bell size={22} />
-                                {unreadCount > 0 && (
+                            position: 'relative', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', padding: '8px', borderRadius: '8px',
+                            color: location.pathname === '/notifications' ? 'var(--primary)' : 'var(--text-muted)',
+                            background: location.pathname === '/notifications' ? 'var(--primary-glow)' : 'none',
+                            transition: 'all 0.15s', textDecoration: 'none',
+                        }}>
+                            <Bell size={22} />
+                            {unreadCount > 0 && (
                                 <span style={{
                                     position: 'absolute', top: '2px', right: '2px',
                                     background: '#ef4444', color: 'white',
@@ -152,16 +155,25 @@ textBoxtransition: 'all 0.15s',
                                     border: '2px solid var(--bg-surface)',
                                     padding: '0 4px',
                                     animation: 'notifPulse 2s ease-in-out infinite',
-                                                    }}>
-                                {unreadCount > 99 ? '99+' : unreadCount}
-                            </span>
-                        )}
-                    </Link>
+                                }}>
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                            )}
+                        </Link>
                     </>
                 )}
             </nav>
 
             <div className="header-user">
+                <button onClick={toggleTheme} title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+                    style={{
+                        background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px',
+                        padding: '7px 8px', cursor: 'pointer', color: 'var(--text-muted)',
+                        display: 'flex', alignItems: 'center', transition: 'all 0.15s',
+                    }}>
+                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+
                 {isAuthenticated && user ? (
                     <>
                         <Link to="/profile" className={`header-nav-link ${isActive('/profile')}`}>

@@ -4,7 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../hooks/useAuth';
 import { getPublicUser } from '../services/userService';
 import { createFollowerService } from '../services/followerService';
-import { UserPlus, UserMinus, MessageCircle, Star, Users } from 'lucide-react';
+import { UserPlus, UserMinus, Star, Users } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -58,22 +58,19 @@ export default function UserProfilePage() {
                     }
                 } catch {}
 
-                // Vérifier si on le suit
+                
+                // Vérifier si on le suit déjà
                 if (isAuthenticated) {
                     try {
                         const service = createFollowerService(getAccessTokenSilently);
-                        const res = await fetch(`${API_URL}/users/${userId}/is-following`, {
-                            headers: {
-                                'Content-Type': 'application/json',
-                                Authorization: `Bearer ${await getAccessTokenSilently()}`,
-                            },
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            setIsFollowing(data.isFollowing);
-                        }
+                        const following = await service.getFollowing(user.id);
+                        const list = Array.isArray(following) ? following : following?.following || [];
+                        const alreadyFollows = list.some(f => 
+                        String(f.followed_id) === String(userId)
+                    );
+                        setIsFollowing(alreadyFollows);
                     } catch {}
-                }
+                    }
             } catch (err) {
                 console.error(err);
             } finally {
@@ -84,30 +81,31 @@ export default function UserProfilePage() {
     }, [userId, isAuthenticated]);
 
     const handleFollow = async () => {
-        setFollowLoading(true);
-        try {
-            const service = createFollowerService(getAccessTokenSilently);
-            if (isFollowing) {
-                await service.unfollow(userId);
-                setIsFollowing(false);
-                setStats(s => ({ ...s, followers: Math.max(0, s.followers - 1) }));
-            } else {
+    setFollowLoading(true);
+    try {
+        const service = createFollowerService(getAccessTokenSilently);
+        if (isFollowing) {
+            await service.unfollow(userId);
+            setIsFollowing(false);
+            setStats(s => ({ ...s, followers: Math.max(0, s.followers - 1) }));
+        } else {
+            try {
                 await service.follow(userId);
-                setIsFollowing(true);
-                setStats(s => ({ ...s, followers: s.followers + 1 }));
+            } catch (err) {
+                
+                console.log('Follow error (probable doublon):', err.message);
             }
-        } catch (err) {
-            alert('Erreur : ' + err.message);
-        } finally {
-            setFollowLoading(false);
+            
+            setIsFollowing(true);
+            setStats(s => ({ ...s, followers: s.followers + 1 }));
         }
+    } catch (err) {
+        alert('Erreur : ' + err.message);
+    } finally {
+        setFollowLoading(false);
+    }
     };
 
-    const handleStartConversation = () => {
-        if (!user || !profile) return;
-        const convo = messageService.getOrCreateConversation(user.id, profile.id, profile.pseudo);
-        navigate('/messages', { state: { activeConvoId: convo.id } });
-    };
 
     if (loading) return <div className="page-container">Chargement...</div>;
     if (!profile) return <div className="page-container">Utilisateur introuvable.</div>;
@@ -149,18 +147,7 @@ export default function UserProfilePage() {
                             >
                                 {isFollowing ? <><UserMinus size={16} /> Ne plus suivre</> : <><UserPlus size={16} /> Suivre</>}
                             </button>
-                            <button
-                                onClick={handleStartConversation}
-                                style={{
-                                    background: 'var(--bg)', border: '1px solid var(--border)',
-                                    borderRadius: '8px', padding: '10px 24px',
-                                    color: 'var(--text)', fontWeight: 700, cursor: 'pointer',
-                                    fontFamily: 'Rajdhani, sans-serif', fontSize: '0.95rem',
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                }}
-                            >
-                                <MessageCircle size={16} /> Message
-                            </button>
+                    
                         </div>
                     )}
 

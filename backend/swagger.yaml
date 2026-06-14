@@ -1446,6 +1446,33 @@ paths:
 
   # ==================== CRITIQUES ====================
 
+  /critiques/recentes:
+    get:
+      tags: [Critiques]
+      summary: Récupérer les critiques les plus récentes, toutes œuvres confondues
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+      responses:
+        '200':
+          description: Liste des critiques les plus récentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /critiques/{id}/ratings:
     get:
       tags: [Critiques]

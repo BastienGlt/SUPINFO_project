@@ -3,8 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
+import LegalPage from './routes/LegalPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationsPage from './routes/NotificationsPage';
+import Footer from './components/Footer';
 import HomePage from './routes/HomePage';
 import ListesPage from './routes/ListesPage';
 import LoginPage from './routes/LoginPage';
@@ -36,19 +38,21 @@ function AppLayout() {
             <Route path="/" element={<HomePage />} />
             <Route path="/game/:rawgId" element={<GamePage />} />
             <Route path="/oeuvre/:oeuvreId" element={<GamePage />} />
-            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/listes" element={<ProtectedRoute><ListesPage /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/legal" element={<LegalPage />} />
             <Route path="/complete-profile" element={<CompleteProfilePage />} />
             <Route path="/user/:userId" element={<UserProfilePage />} />
             <Route path="/followers/:userId" element={<FollowListPage />} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/bibliotheque" element={<ProtectedRoute><BibliothequePage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/listes" element={<ProtectedRoute><ListesPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
           </Routes>
         </AuthRedirect>
       </div>
+      <Footer />
     </>
   );
 }

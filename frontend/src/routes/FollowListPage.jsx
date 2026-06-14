@@ -29,11 +29,6 @@ export default function FollowListPage() {
 
                 const followersRaw = await service.getFollowers(userId).catch(() => []);
                 const followingRaw = await service.getFollowing(userId).catch(() => []);
-
-                // Debug : voir la structure exacte
-                console.log('Followers brut:', followersRaw);
-                console.log('Following brut:', followingRaw);
-
        
                 const normalizeList = (data) => {
                     if (Array.isArray(data)) return data;

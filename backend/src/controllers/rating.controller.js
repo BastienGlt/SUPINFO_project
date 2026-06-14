@@ -147,6 +147,21 @@ exports.getOeuvreRatingStats = async (req, res) => {
 };
 
 /**
+ * GET /critiques/recentes
+ * Récupérer les critiques les plus récentes, toutes œuvres confondues
+ */
+exports.getRecentCritiques = async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const critiques = await ratingService.getRecentRatings(limit);
+    res.status(200).json(critiques);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Impossible de récupérer les critiques récentes" });
+  }
+};
+
+/**
  * GET /users/:id/ratings
  * Récupérer toutes les notes d'un utilisateur
  */

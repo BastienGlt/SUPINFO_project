@@ -117,6 +117,22 @@ exports.getRatingsByOeuvre = async (oeuvreId, options = {}) => {
 };
 
 /**
+ * Récupérer les critiques les plus récentes, toutes œuvres confondues
+ * @param {number} limit - Nombre maximum de critiques à retourner
+ * @returns {Array} Liste des critiques les plus récentes
+ */
+exports.getRecentRatings = async (limit = 20) => {
+  const sql = `
+    SELECT *
+    FROM v_critiques_complete
+    ORDER BY created_at DESC
+    LIMIT ?
+  `;
+  const [rows] = await db.query(sql, [limit]);
+  return rows;
+};
+
+/**
  * Récupérer toutes les notes d'un utilisateur
  * @param {number} userId - L'ID de l'utilisateur
  * @param {Object} options - Options de pagination

@@ -31,9 +31,8 @@ export default function AdvancedSearch() {
             .catch(() => {});
     }, []);
 
-    // Charger les listes publiques et utilisateurs au montage
+    // Charger les listes publiques au montage
     const [allLists, setAllLists] = useState([]);
-    const [allUsers, setAllUsers] = useState([]);
 
     useEffect(() => {
         // Listes publiques
@@ -41,22 +40,6 @@ export default function AdvancedSearch() {
             .then(res => res.ok ? res.json() : [])
             .then(data => setAllLists(Array.isArray(data) ? data : data?.listes || []))
             .catch(() => {});
-
-        // Utilisateurs : récupérer depuis les critiques chargées
-        const loadUsers = async () => {
-            const knownUsers = new Map();
-            for (let id = 1; id <= 30; id++) {
-                try {
-                    const res = await fetch(`${API_URL}/users/${id}`, { headers: { 'Content-Type': 'application/json' } });
-                    if (res.ok) {
-                        const u = await res.json();
-                        if (u.pseudo) knownUsers.set(u.id, u);
-                    }
-                } catch {}
-            }
-            setAllUsers(Array.from(knownUsers.values()));
-        };
-        loadUsers();
     }, []);
 
     // Recherche avec debounce
@@ -81,12 +64,9 @@ export default function AdvancedSearch() {
                 }
 
                 if (tab === 'users') {
-                    const filtered = allUsers.filter(u =>
-                        u.pseudo?.toLowerCase().includes(q) ||
-                        u.prenom?.toLowerCase().includes(q) ||
-                        u.nom?.toLowerCase().includes(q)
-                    );
-                    setUsers(filtered);
+                    const res = await fetch(`${API_URL}/users?search=${encodeURIComponent(query)}`, { headers: { 'Content-Type': 'application/json' } });
+                    const data = res.ok ? await res.json() : [];
+                    setUsers(Array.isArray(data) ? data : []);
                 }
 
                 if (tab === 'lists') {
@@ -314,33 +294,6 @@ export default function AdvancedSearch() {
                                 <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px' }}>
                                     {l.nombre_oeuvres || 0} jeux · par {l.createur_pseudo || 'Anonyme'}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {query.length < 2 && tab === 'users' && allUsers.length > 0 && (
-                <div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '10px' }}>Membres de la communauté :</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {allUsers.slice(0, 10).map(u => (
-                            <div key={u.id} onClick={() => navigate(`/user/${u.id}`)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg)',
-                                    border: '1px solid var(--border)', borderRadius: '20px', padding: '6px 14px 6px 6px',
-                                    cursor: 'pointer', transition: 'border-color 0.15s',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                                {u.photo ? (
-                                    <img src={u.photo} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
-                                ) : (
-                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: '0.8rem' }}>
-                                        {(u.pseudo || '?')[0].toUpperCase()}
-                                    </div>
-                                )}
-                                <span style={{ color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600 }}>@{u.pseudo}</span>
                             </div>
                         ))}
                     </div>

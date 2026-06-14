@@ -5,25 +5,28 @@ import { useAuth } from '../hooks/useAuth';
 import { createBibliothequeService } from '../services/bibliothequeService';
 import { Trash2, ExternalLink } from 'lucide-react';
 
-const STATUS_MAP = {
-    1: 'joue',
-    2: 'terminé',
-    3: 'envie',
-    'joue': 'joue',
-    'termine': 'terminé',
-    'envie': 'envie',
-    'en_cours': 'joue',
-    'A_VOIR': 'envie',
+const STATUS_STYLES = {
+    'Joué':    { color: '#2563eb', background: 'rgba(37,99,235,0.15)', border: '1.5px solid #2563eb', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
+    'Terminé': { color: '#16a34a', background: 'rgba(22,163,74,0.15)', border: '1.5px solid #16a34a', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
+    'Envie':   { color: '#b45309', background: 'rgba(180,83,9,0.15)', border: '1.5px solid #b45309', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
 };
 
-const STATUS_STYLES = {
-    'joue':    { color: '#60a5fa', background: '#1e3a5f20', border: '1px solid #1e3a5f', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
-    'terminé': { color: '#4ade80', background: '#14532d20', border: '1px solid #14532d', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
-    'envie':   { color: '#facc15', background: '#713f1220', border: '1px solid #713f12', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' },
+const CODE_TO_LABEL = {
+    'joue': 'Joué',
+    'termine': 'Terminé',
+    'envie': 'Envie',
 };
 
 function getStatusLabel(statut) {
-    return STATUS_MAP[statut] || STATUS_MAP[String(statut)] || 'inconnu';
+    if (statut === null || statut === undefined) return 'Envie';
+    if (typeof statut === 'object') return statut.libele || CODE_TO_LABEL[statut.code] || 'Envie';
+    return CODE_TO_LABEL[String(statut)] || String(statut);
+}
+
+function getFilterKey(statut) {
+    if (statut === null || statut === undefined) return 'Envie';
+    if (typeof statut === 'object') return CODE_TO_LABEL[statut.code] || statut.libele || 'Envie';
+    return CODE_TO_LABEL[String(statut)] || String(statut);
 }
 
 export default function BibliothequePage() {
@@ -32,14 +35,12 @@ export default function BibliothequePage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [filter, setFilter] = useState('tous');
 
     useEffect(() => {
         const service = createBibliothequeService(getAccessTokenSilently);
         service.getItems()
-            .then((data) => {
-                console.log('Bibliotheque items:', data); // debug pour voir la structure
-                setItems(data);
-            })
+            .then(setItems)
             .catch((err) => setError(err.message))
             .finally(() => setLoading(false));
     }, []);
@@ -50,18 +51,41 @@ export default function BibliothequePage() {
             const service = createBibliothequeService(getAccessTokenSilently);
             await service.deleteItem(itemId);
             setItems(items.filter(i => i.id !== itemId));
-        } catch (err) {
-            alert('Erreur : ' + err.message);
-        }
+        } catch (err) { alert('Erreur : ' + err.message); }
     };
+
+    const count = (label) => items.filter(i => getFilterKey(i.statut) === label).length;
+    const filteredItems = filter === 'tous' ? items : items.filter(i => getFilterKey(i.statut) === filter);
+
+    const btnStyle = (f) => ({
+        padding: '6px 14px', borderRadius: '8px', cursor: 'pointer',
+        fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: '0.85rem',
+        border: filter === f ? '1px solid var(--primary)' : '1px solid var(--border)',
+        background: filter === f ? 'var(--primary-glow)' : 'var(--bg)',
+        color: filter === f ? 'var(--primary)' : 'var(--text-muted)',
+    });
 
     if (loading) return <div className="page-container">Chargement...</div>;
     if (error) return <div className="page-container">Erreur : {error}</div>;
 
     return (
         <div className="page-container">
-            <h1 style={{ marginBottom: '2rem', color: 'var(--primary)' }}>Ma Collection</h1>
-            {items.length === 0 ? <p>Votre bibliothèque est vide. Recherchez un jeu pour commencer.</p> : (
+            <h1 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>Ma Collection ({items.length})</h1>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                <button style={btnStyle('tous')} onClick={() => setFilter('tous')}>Tous ({items.length})</button>
+                <button style={btnStyle('Joué')} onClick={() => setFilter('Joué')}>🎮 Joué ({count('Joué')})</button>
+                <button style={btnStyle('Terminé')} onClick={() => setFilter('Terminé')}>✅ Terminé ({count('Terminé')})</button>
+                <button style={btnStyle('Envie')} onClick={() => setFilter('Envie')}>✨ Envie ({count('Envie')})</button>
+            </div>
+
+            {filteredItems.length === 0 ? (
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', textAlign: 'center' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>
+                        {filter === 'tous' ? 'Votre bibliothèque est vide. Recherchez un jeu pour commencer.' : 'Aucun jeu dans cette catégorie.'}
+                    </p>
+                </div>
+            ) : (
                 <div className="table-wrapper">
                     <table className="data-table">
                         <thead>
@@ -73,31 +97,18 @@ export default function BibliothequePage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map(item => {
+                            {filteredItems.map(item => {
                                 const label = getStatusLabel(item.statut);
                                 return (
                                     <tr key={item.id}>
                                         <td>
-                                            <Link
-                                                to={`/game/${item.api_reference_id}`}
-                                                style={{
-                                                    color: 'var(--text)',
-                                                    textDecoration: 'none',
-                                                    fontWeight: 'bold',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                }}
-                                            >
+                                            <Link to={`/game/${item.api_reference_id}`}
+                                                style={{ color: 'var(--text)', textDecoration: 'none', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 {item.titre}
                                                 <ExternalLink size={14} style={{ color: 'var(--primary)' }} />
                                             </Link>
                                         </td>
-                                        <td>
-                                            <span style={STATUS_STYLES[label] || {}}>
-                                                {label}
-                                            </span>
-                                        </td>
+                                        <td><span style={STATUS_STYLES[label] || STATUS_STYLES['Envie']}>{label}</span></td>
                                         <td>{new Date(item.updated_at).toLocaleDateString()}</td>
                                         <td>
                                             <button onClick={() => handleDelete(item.id)}

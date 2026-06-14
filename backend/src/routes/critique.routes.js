@@ -8,6 +8,9 @@ const checkJwt = require('../middlewares/auth.middleware');
  * Préfixe: /ratings
  */
 
+// GET /critiques/recentes - Récupérer les critiques les plus récentes (toutes œuvres)
+router.get('/recentes', ratingController.getRecentCritiques);
+
 router.get('/:id/ratings/stats', ratingController.getOeuvreRatingStats);
 
 // POST /oeuvres/:id/ratings - Créer une note et une critique pour une œuvre
