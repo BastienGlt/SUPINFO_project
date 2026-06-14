@@ -59,7 +59,7 @@ export default function FollowersScreen() {
         </View>
       ) : followers.length === 0 ? (
         <View style={styles.centered}>
-          <Text style={{ color: colors.icon, fontSize: 15 }}>Aucun abonné pour l\'instant.</Text>
+          <Text style={{ color: colors.icon, fontSize: 15 }}>Aucun abonné pour l'instant.</Text>
         </View>
       ) : (
         <FlatList
@@ -80,7 +80,9 @@ export default function FollowersScreen() {
                 </View>
               )}
               <View style={styles.userInfo}>
-                <Text style={[styles.userName, { color: colors.text }]}>{item.prenom} {item.nom}</Text>
+                <Text style={[styles.userName, { color: colors.text }]}>
+                  {item.prenom} {item.nom}
+                </Text>
                 <Text style={[styles.userPseudo, { color: colors.tint }]}>@{item.pseudo}</Text>
               </View>
             </TouchableOpacity>

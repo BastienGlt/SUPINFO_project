@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-// Génère le fichier .env à la racine (utilisé par docker-compose), sans
-// aucune interaction.
+// Génère le fichier .env à la racine (utilisé par docker-compose) ainsi que
+// frontend-mobile/.env (utilisé par Expo), sans aucune interaction.
 //
 // Pour chaque variable, la valeur est choisie dans cet ordre de priorité :
 //   1. Variable d'environnement déjà exportée (utile en CI / secrets)
 //   2. Valeur présente dans un .env existant
 //   3. Valeur par défaut codée ci-dessous
 //
-// Si un .env existe déjà, le script ne fait rien (pour pouvoir être chaîné
-// automatiquement avant un build Docker). Utiliser --force pour le régénérer.
+// Si un fichier existe déjà, le script ne le régénère pas (pour pouvoir être
+// chaîné automatiquement avant un build Docker). Utiliser --force pour le
+// régénérer.
 //
 // Usage : node setup-env.js [--force]  (ou npm run setup-env)
 
@@ -19,6 +20,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const ENV_FILE = path.join(__dirname, '.env');
+const MOBILE_ENV_FILE = path.join(__dirname, 'frontend-mobile', '.env');
 
 function parseEnvFile(filePath) {
   const result = {};
@@ -42,13 +44,17 @@ function value(varName, defaultValue) {
   return defaultValue;
 }
 
-function main() {
-  const force = process.argv.includes('--force');
-
-  if (fs.existsSync(ENV_FILE) && !force) {
-    console.log('.env existe déjà, génération ignorée (utiliser --force pour régénérer).');
+function writeEnvFile(filePath, content, force) {
+  if (fs.existsSync(filePath) && !force) {
+    console.log(`${filePath} existe déjà, génération ignorée (utiliser --force pour régénérer).`);
     return;
   }
+  fs.writeFileSync(filePath, content);
+  console.log(`Fichier généré : ${filePath}`);
+}
+
+function main() {
+  const force = process.argv.includes('--force');
 
   const DB_PASSWORD = value('DB_PASSWORD', crypto.randomBytes(16).toString('hex'));
   const DB_NAME = value('DB_NAME', 'supinfo_db');
@@ -88,8 +94,21 @@ VITE_API_URL=${VITE_API_URL}
 VITE_RAWG_API_KEY=${VITE_RAWG_API_KEY}
 `;
 
-  fs.writeFileSync(ENV_FILE, content);
-  console.log(`Fichier .env généré : ${ENV_FILE}`);
+  writeEnvFile(ENV_FILE, content, force);
+
+  const mobileContent = `# Auth0
+EXPO_PUBLIC_AUTH0_DOMAIN=${VITE_AUTH0_DOMAIN}
+EXPO_PUBLIC_AUTH0_CLIENT_ID=${VITE_AUTH0_CLIENT_ID}
+EXPO_PUBLIC_AUTH0_AUDIENCE=${VITE_AUTH0_AUDIENCE}
+
+# URL de l'API backend
+EXPO_PUBLIC_API_URL=${VITE_API_URL}
+
+# RAWG API Key
+EXPO_PUBLIC_RAWG_API_KEY=${VITE_RAWG_API_KEY}
+`;
+
+  writeEnvFile(MOBILE_ENV_FILE, mobileContent, force);
 }
 
 main();

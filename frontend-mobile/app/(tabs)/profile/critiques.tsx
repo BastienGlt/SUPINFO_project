@@ -66,7 +66,7 @@ export default function MesCritiquesScreen() {
         </View>
       ) : ratings.length === 0 ? (
         <View style={styles.centered}>
-          <Text style={{ color: colors.icon, fontSize: 15 }}>Aucune critique pour l\'instant.</Text>
+          <Text style={{ color: colors.icon, fontSize: 15 }}>Aucune critique pour l'instant.</Text>
         </View>
       ) : (
         <FlatList

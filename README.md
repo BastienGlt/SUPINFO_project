@@ -87,7 +87,7 @@ Le fichier `.env` à la racine (utilisé par `docker compose`) est généré aut
 | `VITE_API_URL` | URL de l'API backend, accessible depuis le navigateur (ex. `http://localhost:5000`) |
 | `VITE_RAWG_API_KEY` | Clé API [RAWG](https://rawg.io/apidocs) pour récupérer les données des jeux |
 
-> Pour le développement local sans Docker, chaque sous-projet (`backend/`, `frontend/`, `frontend-mobile/`) possède son propre `.env` (voir leurs `.env.example` respectifs) — `setup-env.js` ne gère que le `.env` racine utilisé par Docker.
+> Pour le développement local sans Docker, `backend/` et `frontend/` possèdent leur propre `.env` (voir leurs `.env.example` respectifs) — `setup-env.js` ne gère pas ces fichiers. En revanche, `setup-env.js` génère également `frontend-mobile/.env` (variables `EXPO_PUBLIC_*`, reprises des valeurs `VITE_*` ci-dessus) — voir [Application mobile](#application-mobile-expo).
 
 > En production, pensez à adapter `VITE_API_URL` pour qu'il pointe vers l'URL réelle de l'API backend déployée.
 
@@ -144,13 +144,58 @@ npm run docker:build      # génère le .env puis docker compose build (sans dé
 
 ## Application mobile (Expo)
 
+L'app mobile n'est pas dockerisée : elle nécessite un émulateur Android/iOS ou un appareil physique avec [Expo Go](https://expo.dev/go), ainsi que le **backend** lancé et joignable depuis l'appareil.
+
+### 1. Installation
+
 ```bash
 cd frontend-mobile
 npm install
-npm run lan      # ou: npm run tunnel
 ```
 
-Configuration via `frontend-mobile/.env` (variables `EXPO_PUBLIC_*` : API URL, Auth0, clé RAWG). L'app mobile n'est pas dockerisée (nécessite un émulateur ou un appareil physique avec Expo Go).
+### 2. Configuration (`frontend-mobile/.env`)
+
+Le fichier `frontend-mobile/.env` (variables `EXPO_PUBLIC_*`) est généré automatiquement par `setup-env.js`, comme le `.env` racine :
+
+```bash
+# Depuis la racine du projet
+npm run setup-env
+```
+
+| Variable | Description |
+|---|---|
+| `EXPO_PUBLIC_AUTH0_DOMAIN` / `EXPO_PUBLIC_AUTH0_CLIENT_ID` / `EXPO_PUBLIC_AUTH0_AUDIENCE` | Configuration Auth0 (reprend les valeurs `VITE_AUTH0_*` du `.env` racine) |
+| `EXPO_PUBLIC_API_URL` | URL de l'API backend, joignable depuis l'appareil mobile |
+| `EXPO_PUBLIC_RAWG_API_KEY` | Clé API [RAWG](https://rawg.io/apidocs) |
+
+> ⚠️ **`EXPO_PUBLIC_API_URL`** : la valeur par défaut `http://localhost:5000` ne fonctionne **pas** sur un appareil physique ou un émulateur Android (`localhost` y désigne l'appareil lui-même, pas votre PC). Remplacez-la par l'adresse IP locale de votre machine sur le réseau, par ex. :
+>
+> ```
+> EXPO_PUBLIC_API_URL=http://192.168.1.21:5000
+> ```
+>
+> (IP locale visible via `ipconfig` sur Windows / `ifconfig` ou `ip a` sur Linux/Mac.) Le backend doit être démarré (`npm run dev`) et l'appareil mobile connecté au **même réseau Wi-Fi** que le PC.
+
+### 3. Démarrer le backend
+
+```bash
+npm run dev   # depuis la racine, ou `cd backend && npm run dev`
+```
+
+### 4. Lancer l'app mobile
+
+```bash
+cd frontend-mobile
+npm run lan      # mode LAN (même réseau Wi-Fi)
+# ou
+npm run tunnel    # mode tunnel (réseaux différents, plus lent)
+```
+
+Scannez le QR code affiché avec l'app **Expo Go** (Android) ou l'appareil photo (iOS), ou lancez un émulateur/simulateur depuis le terminal Expo.
+
+### 5. Configuration Auth0
+
+Au démarrage, les logs affichent l'URL de redirection à utiliser (`=== URL À COPIER DANS AUTH0 ===`, de la forme `frontendmobile://...` ou `exp://...`). Ajoutez-la aux **Allowed Callback / Logout URLs** de l'application Auth0 correspondante, sinon la connexion échouera.
 
 ## Structure du projet
 

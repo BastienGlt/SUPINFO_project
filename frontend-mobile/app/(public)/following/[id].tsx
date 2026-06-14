@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
-import { useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { apiFetch } from '@/services/apiService';
-import { ChevronLeft, User, ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, User, Lock } from 'lucide-react-native';
 
 interface FollowUser {
   id: number;
@@ -15,18 +15,21 @@ interface FollowUser {
   photo?: string;
 }
 
-export default function FollowingScreen() {
+export default function PublicFollowingScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const colorScheme = useColorScheme() ?? 'dark';
   const colors = Colors[colorScheme];
   const router = useRouter();
-  const { user, token } = useAuth();
+  const { token } = useAuth();
 
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    apiFetch<Record<string, unknown>[]>(`/users/${user.id}/following`, { token })
+    const userId = parseInt(id ?? '0', 10);
+    if (!userId) { setLoading(false); return; }
+    apiFetch<Record<string, unknown>[]>(`/users/${userId}/following`, { token })
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setFollowing(list.map((item) => ({
@@ -37,25 +40,30 @@ export default function FollowingScreen() {
           photo: (item.followed_photo ?? item.photo) as string | undefined,
         })));
       })
-      .catch(() => {})
+      .catch((err: { status?: number; is_private?: boolean }) => {
+        if (err.status === 403 && err.is_private) setIsPrivate(true);
+      })
       .finally(() => setLoading(false));
-  }, [user?.id]);
+  }, [id, token]);
 
   return (
-    <>
-      <Stack.Screen options={{
-        title: 'Abonnements',
-        headerLeft: () => (
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-            <ChevronLeft size={24} color={colors.tint} strokeWidth={2.5} />
-          </TouchableOpacity>
-        ),
-      }} />
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.text }]}>Abonnements</Text>
+        <View style={styles.backBtn} />
+      </View>
 
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.tint} />
+        </View>
+      ) : isPrivate ? (
+        <View style={styles.centered}>
+          <Lock size={28} color={colors.icon} strokeWidth={1.5} />
+          <Text style={[styles.privateText, { color: colors.icon }]}>Ce compte est privé</Text>
         </View>
       ) : following.length === 0 ? (
         <View style={styles.centered}>
@@ -80,23 +88,32 @@ export default function FollowingScreen() {
                 </View>
               )}
               <View style={styles.userInfo}>
-                <Text style={[styles.userName, { color: colors.text }]}>
-                  {item.prenom} {item.nom}
-                </Text>
+                <Text style={[styles.userName, { color: colors.text }]}>{item.prenom} {item.nom}</Text>
                 <Text style={[styles.userPseudo, { color: colors.tint }]}>@{item.pseudo}</Text>
               </View>
             </TouchableOpacity>
           )}
         />
       )}
-      </View>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 56,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  backBtn: { width: 36 },
+  title: { fontSize: 18, fontWeight: '700' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  privateText: { fontSize: 15, fontWeight: '600' },
   list: { padding: 16, gap: 10 },
   userItem: {
     flexDirection: 'row',
