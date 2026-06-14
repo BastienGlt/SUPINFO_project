@@ -20,7 +20,7 @@ export default function Footer() {
                         Projet étudiant SUPINFO — usage éducatif uniquement.
                     </p>
                     <p style={{ marginTop: '0.5rem' }}>
-                        © {new Date().getFullYear()} Culture Connect — Tous droits réservés.
+                        © {new Date().getFullYear()} SUPINFO — Tous droits réservés.
                     </p>
                 </div>
             </div>
