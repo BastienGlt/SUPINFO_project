@@ -468,3 +468,150 @@ INSERT INTO `statuts` (`id`, `code`, `libele`) VALUES
 (1, 'joue', 'Joué'),
 (2, 'termine', 'Terminé'),
 (3, 'envie', 'Envie');
+
+-- --------------------------------------------------------
+-- Jeu de données de test (seed) pour le développement local
+-- Pour se connecter via Auth0 avec un de ces comptes, remplacer
+-- la valeur `auth0_id` de l'utilisateur correspondant par le
+-- "sub" du compte Auth0 utilisé pour les tests.
+-- --------------------------------------------------------
+
+INSERT INTO `users` (`id`, `auth0_id`, `prenom`, `nom`, `pseudo`, `photo`, `bio`, `email`, `role_id`, `status`, `public`, `created_at`, `updated_at`) VALUES
+(1, 'auth0|seed-admin-001', 'Alice', 'Dupont', 'alice_d', 'https://i.pravatar.cc/150?img=1', 'Administratrice de la plateforme. Passionnée de RPG et de jeux narratifs.', 'alice.dupont@example.com', 3, 'active', 1, '2026-05-01 10:00:00', '2026-05-01 10:00:00'),
+(2, 'auth0|seed-mod-002', 'Bob', 'Martin', 'bob_m', 'https://i.pravatar.cc/150?img=2', 'Modérateur de la communauté. Fan de FPS compétitifs.', 'bob.martin@example.com', 2, 'active', 1, '2026-05-02 09:30:00', '2026-05-02 09:30:00'),
+(3, 'auth0|seed-user-003', 'Chloé', 'Bernard', 'chloe_b', 'https://i.pravatar.cc/150?img=3', 'Adore les jeux d''aventure et les histoires riches.', 'chloe.bernard@example.com', 1, 'active', 1, '2026-05-03 14:15:00', '2026-05-03 14:15:00'),
+(4, 'auth0|seed-user-004', 'David', 'Petit', 'david_p', 'https://i.pravatar.cc/150?img=4', 'Collectionneur de jeux Rockstar.', 'david.petit@example.com', 1, 'active', 1, '2026-05-04 18:45:00', '2026-05-04 18:45:00'),
+(5, 'auth0|seed-user-005', 'Emma', 'Roux', 'emma_r', 'https://i.pravatar.cc/150?img=5', 'Profil privé, accessible uniquement aux abonnés acceptés.', 'emma.roux@example.com', 1, 'active', 0, '2026-05-05 08:20:00', '2026-05-05 08:20:00'),
+(6, 'auth0|seed-user-006', 'Hugo', 'Moreau', 'hugo_m', 'https://i.pravatar.cc/150?img=6', 'Joueur occasionnel.', 'hugo.moreau@example.com', 1, 'warned', 1, '2026-05-06 11:00:00', '2026-05-06 11:00:00'),
+(7, 'auth0|seed-user-007', 'Léa', 'Simon', 'lea_s', 'https://i.pravatar.cc/150?img=7', 'Compte suspendu pour non-respect des règles.', 'lea.simon@example.com', 1, 'banned', 1, '2026-05-07 16:10:00', '2026-05-07 16:10:00');
+
+INSERT INTO `oeuvres` (`id`, `api_reference_id`, `titre`, `description`) VALUES
+(1, '3498', 'Grand Theft Auto V', 'Action-aventure en monde ouvert développé par Rockstar Games.'),
+(2, '3328', 'The Witcher 3: Wild Hunt', 'RPG en monde ouvert dans un univers fantastique sombre.'),
+(3, '4200', 'Portal 2', 'Jeu de réflexion en plateforme à la première personne.'),
+(4, '28', 'Red Dead Redemption 2', 'Épopée western en monde ouvert par Rockstar Games.'),
+(5, '5286', 'Tomb Raider (2013)', 'Reboot de la saga suivant les origines de Lara Croft.'),
+(6, '3439', 'Life is Strange', 'Jeu narratif épisodique où les choix influencent le récit.'),
+(7, '4291', 'Counter-Strike: Global Offensive', 'Jeu de tir tactique multijoueur compétitif.'),
+(8, '58175', 'God of War (2018)', 'Action-aventure suivant Kratos et Atreus dans la mythologie nordique.');
+
+INSERT INTO `critiques` (`id`, `user_id`, `oeuvre_id`, `note`, `contenu`, `created_at`, `updated_at`, `featured`, `hidden`) VALUES
+(1, 1, 1, 5, 'Un classique indémodable, le monde de Los Santos est incroyablement vivant.', '2026-05-10 12:00:00', '2026-05-10 12:00:00', 1, 0),
+(2, 2, 1, 4, 'Très bon jeu mais le online a mal vieilli.', '2026-05-11 09:30:00', '2026-05-11 09:30:00', 0, 0),
+(3, 3, 2, 5, 'Le meilleur RPG auquel j''ai joué, scénario et personnages exceptionnels.', '2026-05-12 15:45:00', '2026-05-12 15:45:00', 1, 0),
+(4, 4, 2, 4, 'Très long mais ça vaut le coup, surtout avec les extensions.', '2026-05-13 17:20:00', '2026-05-13 17:20:00', 0, 0),
+(5, 1, 3, 5, 'Des énigmes ingénieuses et un humour toujours présent.', '2026-05-14 10:10:00', '2026-05-14 10:10:00', 1, 0),
+(6, 5, 4, 5, 'Une expérience narrative et visuelle hors norme.', '2026-05-15 19:00:00', '2026-05-15 19:00:00', 0, 0),
+(7, 3, 4, 3, 'Magnifique mais le rythme est parfois trop lent pour moi.', '2026-05-16 08:45:00', '2026-05-16 08:45:00', 0, 0),
+(8, 2, 5, 4, 'Bon reboot, le gameplay de survie est prenant.', '2026-05-17 13:30:00', '2026-05-17 13:30:00', 0, 0),
+(9, 4, 6, 5, 'Les choix ont vraiment un impact, très émouvant.', '2026-05-18 20:15:00', '2026-05-18 20:15:00', 0, 0),
+(10, 6, 7, 2, 'Communauté toxique, dommage car le gameplay est solide.', '2026-05-19 21:40:00', '2026-05-19 21:40:00', 0, 1),
+(11, 1, 8, 5, 'Une mise en scène et une ambiance sonore incroyables.', '2026-05-20 11:05:00', '2026-05-20 11:05:00', 1, 0),
+(12, 3, 1, 3, 'Sympa mais je m''attendais à mieux après tout ce hype.', '2026-05-21 14:50:00', '2026-05-21 14:50:00', 0, 0);
+
+INSERT INTO `commentaires` (`id`, `user_id`, `critique_id`, `contenu`, `created_at`) VALUES
+(1, 2, 1, 'Totalement d''accord, le mode histoire est génial !', '2026-05-10 13:00:00'),
+(2, 3, 1, 'Le online vaut aussi le coup avec des amis.', '2026-05-10 14:20:00'),
+(3, 1, 3, 'Les extensions Hearts of Stone et Blood and Wine sont excellentes.', '2026-05-12 16:30:00'),
+(4, 4, 5, 'Le DLC est aussi super sympa.', '2026-05-14 11:00:00'),
+(5, 2, 6, 'Je recommande de jouer sans regarder de guide.', '2026-05-15 21:00:00'),
+(6, 5, 9, 'Mon épisode préféré reste le 3.', '2026-05-18 22:10:00'),
+(7, 1, 11, 'La bande son est incroyable, quelle ambiance.', '2026-05-20 12:00:00'),
+(8, 6, 2, 'Le online reste fun en groupe.', '2026-05-11 10:00:00');
+
+INSERT INTO `likes_critiques` (`user_id`, `critique_id`, `created_at`) VALUES
+(2, 1, '2026-05-10 13:05:00'),
+(3, 1, '2026-05-10 14:25:00'),
+(4, 1, '2026-05-10 18:00:00'),
+(1, 3, '2026-05-12 16:35:00'),
+(5, 3, '2026-05-13 08:00:00'),
+(2, 5, '2026-05-14 11:10:00'),
+(3, 6, '2026-05-15 21:05:00'),
+(4, 6, '2026-05-16 09:00:00'),
+(1, 9, '2026-05-19 09:00:00'),
+(5, 11, '2026-05-20 12:30:00');
+
+-- statut_id : 1 = joué, 2 = terminé, 3 = envie
+INSERT INTO `bibliotheque_items` (`id`, `user_id`, `oeuvre_id`, `updated_at`, `statut_id`) VALUES
+(1, 1, 1, '2026-05-10 12:00:00', 2),
+(2, 1, 2, '2026-05-09 09:00:00', 1),
+(3, 1, 3, '2026-05-14 10:10:00', 2),
+(4, 1, 8, '2026-05-20 11:05:00', 2),
+(5, 2, 1, '2026-05-11 09:30:00', 2),
+(6, 2, 4, '2026-05-08 08:00:00', 3),
+(7, 2, 5, '2026-05-17 13:30:00', 2),
+(8, 3, 2, '2026-05-12 15:45:00', 2),
+(9, 3, 4, '2026-05-16 08:45:00', 2),
+(10, 3, 1, '2026-05-21 14:50:00', 2),
+(11, 4, 2, '2026-05-13 17:20:00', 2),
+(12, 4, 6, '2026-05-18 20:15:00', 2),
+(13, 5, 4, '2026-05-15 19:00:00', 2),
+(14, 6, 7, '2026-05-19 21:40:00', 1);
+
+INSERT INTO `listes` (`id`, `user_id`, `nom`, `description`, `visibilite`, `created_at`) VALUES
+(1, 1, 'Mes coups de cœur RPG', 'Les jeux de rôle qui m''ont le plus marqué.', 'PUBLIQUE', '2026-05-09 10:00:00'),
+(2, 1, 'À tester plus tard', 'Liste perso, pas encore commencés.', 'PRIVEE', '2026-05-09 10:05:00'),
+(3, 3, 'Top jeux narratifs', 'Pour les amateurs de bonnes histoires.', 'PUBLIQUE', '2026-05-12 16:00:00'),
+(4, 4, 'Jeux Rockstar', 'Tous les jeux du studio que j''ai adorés.', 'PUBLIQUE', '2026-05-13 18:00:00'),
+(5, 5, 'Liste entre amis', 'Visible uniquement par mes abonnés.', 'AMIS', '2026-05-15 19:30:00');
+
+INSERT INTO `liste_oeuvres` (`liste_id`, `oeuvre_id`, `added_at`, `statut`) VALUES
+(1, 2, '2026-05-09 10:10:00', NULL),
+(1, 8, '2026-05-09 10:11:00', NULL),
+(1, 4, '2026-05-09 10:12:00', NULL),
+(2, 7, '2026-05-09 10:20:00', NULL),
+(3, 6, '2026-05-12 16:10:00', NULL),
+(3, 3, '2026-05-12 16:11:00', NULL),
+(4, 1, '2026-05-13 18:10:00', NULL),
+(4, 4, '2026-05-13 18:11:00', NULL),
+(5, 5, '2026-05-15 19:40:00', NULL);
+
+INSERT INTO `followers` (`user_sub`, `user_follow`, `created_at`) VALUES
+(2, 1, '2026-05-11 09:00:00'),
+(3, 1, '2026-05-12 09:00:00'),
+(4, 1, '2026-05-13 09:00:00'),
+(1, 2, '2026-05-11 09:05:00'),
+(3, 2, '2026-05-12 09:05:00'),
+(1, 3, '2026-05-12 09:10:00'),
+(4, 3, '2026-05-13 09:10:00'),
+(1, 4, '2026-05-13 09:15:00'),
+(2, 6, '2026-05-19 09:00:00'),
+(3, 5, '2026-05-15 09:00:00');
+
+-- Demandes d'abonnement (le profil d'Emma, id 5, est privé)
+INSERT INTO `follow_requests` (`id`, `requester_id`, `target_id`, `status`, `created_at`, `updated_at`) VALUES
+(1, 2, 5, 'pending', '2026-06-01 10:00:00', '2026-06-01 10:00:00'),
+(2, 3, 5, 'accepted', '2026-05-14 09:00:00', '2026-05-15 09:00:00'),
+(3, 7, 5, 'rejected', '2026-05-20 10:00:00', '2026-05-21 10:00:00');
+
+INSERT INTO `notifications` (`id`, `user_id`, `from_user_id`, `type`, `source_id`, `lu`, `created_at`) VALUES
+(1, 1, 2, 'like', 1, 1, '2026-05-10 13:05:00'),
+(2, 1, 3, 'like', 1, 1, '2026-05-10 14:25:00'),
+(3, 1, 4, 'like', 1, 0, '2026-05-10 18:00:00'),
+(4, 1, 2, 'commentaire', 1, 1, '2026-05-10 13:00:00'),
+(5, 1, 3, 'commentaire', 1, 0, '2026-05-10 14:20:00'),
+(6, 1, 2, 'follow', NULL, 1, '2026-05-11 09:00:00'),
+(7, 1, 3, 'follow', NULL, 0, '2026-05-12 09:00:00'),
+(8, 5, 3, 'follow', NULL, 0, '2026-05-15 09:00:00');
+
+INSERT INTO `conversations` (`id`, `updated_at`) VALUES
+(1, '2026-06-05 10:15:00'),
+(2, '2026-06-06 18:30:00');
+
+INSERT INTO `conversation_participants` (`conversation_id`, `user_id`) VALUES
+(1, 1),
+(1, 2),
+(2, 3),
+(2, 4);
+
+INSERT INTO `messages` (`id`, `conversation_id`, `user_id`, `contenu`, `lu`, `created_at`) VALUES
+(1, 1, 1, 'Salut ! Tu as vu le dernier jeu Rockstar ?', 1, '2026-06-05 10:00:00'),
+(2, 1, 2, 'Oui, j''ai hâte de le tester !', 1, '2026-06-05 10:05:00'),
+(3, 1, 1, 'On y joue ensemble ce week-end ?', 0, '2026-06-05 10:15:00'),
+(4, 2, 3, 'On finit Life is Strange ensemble ce soir ?', 0, '2026-06-06 18:20:00'),
+(5, 2, 4, 'Carrément, je suis chaud !', 1, '2026-06-06 18:30:00');
+
+INSERT INTO `signalements` (`id`, `signaleur_id`, `type_contenu`, `contenu_id`, `motif`, `statut`, `created_at`) VALUES
+(1, 4, 'critique', 10, 'Propos méprisants envers la communauté', 'en_attente', '2026-05-19 22:00:00'),
+(2, 5, 'commentaire', 8, 'Message hors sujet / spam', 'en_examen', '2026-05-19 22:30:00'),
+(3, 2, 'critique', 10, 'Contenu inapproprié', 'modere', '2026-05-20 08:00:00');
