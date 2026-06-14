@@ -118,9 +118,9 @@ export default function Header() {
                                             <Loader size={14} className="spinner" style={{ color: 'var(--text-muted)' }} />
                                         ) : (
                                             <>
-                                                <button className="search-action-btn envie" onClick={() => handleAdd(game, 'envie')}>Envie</button>
-                                                <button className="search-action-btn joue" onClick={() => handleAdd(game, 'joue')}>Joue</button>
-                                                <button className="search-action-btn termine" onClick={() => handleAdd(game, 'termine')}>Fini</button>
+                                                <button className="search-action-btn envie" onClick={() => handleAdd(game, 3)}>Envie</button>
+                                                <button className="search-action-btn joue" onClick={() => handleAdd(game, 1)}>Joue</button>
+                                                <button className="search-action-btn termine" onClick={() => handleAdd(game, 2)}>Fini</button>
                                             </>
                                         )}
                                     </div>

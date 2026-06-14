@@ -9,5 +9,10 @@ export function createFollowerService(getAccessTokenSilently) {
     getFollowing: (userId) => api.get(`/users/${userId}/following`),
     follow: (userId) => api.post(`/users/${userId}/follow`),
     unfollow: (userId) => api.delete(`/users/${userId}/follow`),
+    isFollowing: (userId) => api.get(`/users/${userId}/is-following`),
+    
+    getFollowRequests: () => api.get('/follow-requests'),
+    sendFollowRequest: (targetId) => api.post('/follow-requests', { target_id: targetId }),
+    handleFollowRequest: (requestId, action) => api.patch(`/follow-requests/${requestId}`, { action }),
   };
 }

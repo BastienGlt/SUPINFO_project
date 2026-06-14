@@ -9,15 +9,26 @@ import AdvancedSearch from '../components/AdvancedSearch';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 async function loadPublicCritiques() {
-    const res = await fetch(`${API_URL}/critiques/recentes?limit=20`, { headers: { 'Content-Type': 'application/json' } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    const critiques = [];
+    const ids = Array.from({ length: 50 }, (_, i) => i + 1);
+    const results = await Promise.all(
+        ids.map(id =>
+            fetch(`${API_URL}/critiques/${id}/ratings`, { headers: { 'Content-Type': 'application/json' } })
+            .then(res => res.ok ? res.json() : null).catch(() => null)
+        )
+    );
+    for (let i = 0; i < results.length; i++) {
+        if (!results[i]) continue;
+        const r = results[i];
+        const list = Array.isArray(r) ? r : Array.isArray(r?.critiques) ? r.critiques : [];
+        list.forEach(c => { c._loaded_oeuvre_id = ids[i]; });
+        critiques.push(...list);
+    }
+    return critiques.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 20);
 }
 
 function getAuthorName(post) {
-    return post.pseudo || post.user_pseudo || post.auteur_pseudo || post.author_pseudo
-        || post.prenom || post.user_prenom || post.auteur || 'Utilisateur';
+    return post.author_pseudo || post.pseudo || post.user_pseudo || post.prenom || 'Utilisateur';
 }
 
 function CritiqueCard({ post, onClick }) {
@@ -25,9 +36,7 @@ function CritiqueCard({ post, onClick }) {
         <div className="card" style={{ cursor: 'pointer' }} onClick={onClick}>
             <div className="card-header">
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ color: 'var(--text)', fontSize: '1.1rem' }}>
-                        {post.oeuvre_titre || post.titre || 'Sans titre'}
-                    </h3>
+                    <h3 style={{ color: 'var(--text)', fontSize: '1.1rem' }}>{post.oeuvre_titre || post.titre || 'Sans titre'}</h3>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         par <span style={{ color: 'var(--primary)' }}>{getAuthorName(post)}</span>
                         {post.created_at && <> · {new Date(post.created_at).toLocaleDateString()}</>}
@@ -57,7 +66,6 @@ export default function HomePage() {
     const { isAuthenticated } = useAuth();
     const { getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
-
     const [feed, setFeed] = useState([]);
     const [critiques, setCritiques] = useState([]);
     const [loadingFeed, setLoadingFeed] = useState(true);
@@ -70,34 +78,26 @@ export default function HomePage() {
                 const service = createFeedService(getAccessTokenSilently);
                 const data = await service.getFeed();
                 const list = Array.isArray(data) ? data
-                    : Array.isArray(data?.feed) ? data.feed
-                    : Array.isArray(data?.activities) ? data.activities
-                    : [];
+                    : Array.isArray(data?.feed) ? data.feed : [];
                 setFeed(list);
-            } catch (err) { console.error('Erreur feed:', err); }
-            finally { setLoadingFeed(false); }
+            } catch {} finally { setLoadingFeed(false); }
         };
         load();
     }, [isAuthenticated]);
 
     useEffect(() => {
-        loadPublicCritiques()
-            .then((data) => {
-                
-                setCritiques(data);
-            })
-            .catch(err => console.error('Erreur critiques:', err))
-            .finally(() => setLoadingCritiques(false));
+        loadPublicCritiques().then(setCritiques).catch(() => {}).finally(() => setLoadingCritiques(false));
     }, []);
 
     const handleClick = (post) => {
-        if (post.api_reference_id) navigate(`/oeuvre/${post.api_reference_id}`);
-        else if (post.oeuvre_id) navigate(`/oeuvre/${post.oeuvre_id}`);
+        const oeuvreId = post._loaded_oeuvre_id || post.oeuvre_id;
+        if (oeuvreId) navigate(`/oeuvre/${oeuvreId}`);
     };
 
     const handleFeedClick = (post) => {
-        if (post.oeuvre_api_ref || post.api_reference_id) navigate(`/oeuvre/${post.oeuvre_api_ref || post.api_reference_id}`);
-        else if (post.oeuvre_id) navigate(`/oeuvre/${post.oeuvre_id}`);
+        if (post.oeuvre_id) navigate(`/oeuvre/${post.oeuvre_id}`);
+        else if (post.oeuvre_api_ref) navigate(`/game/${post.oeuvre_api_ref}`);
+        else if (post._loaded_oeuvre_id) navigate(`/oeuvre/${post._loaded_oeuvre_id}`);
     };
 
     return (
@@ -105,68 +105,45 @@ export default function HomePage() {
             <div className="hero">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <Gamepad2 size={32} style={{ color: 'var(--primary)' }} />
-                    <h1 style={{ fontSize: '2rem' }}>
-                        {isAuthenticated ? 'Bienvenue !' : 'Bienvenue sur ProjetSupinfo'}
-                    </h1>
+                    <h1 style={{ fontSize: '2rem' }}>{isAuthenticated ? 'Bienvenue !' : 'Bienvenue sur ProjetSupinfo'}</h1>
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
-                    {isAuthenticated
-                        ? 'Voici les dernières activités de la communauté.'
-                        : 'Découvrez les derniers avis de la communauté gaming. Connectez-vous pour participer !'}
+                    {isAuthenticated ? 'Voici les dernières activités de la communauté.' : 'Découvrez les derniers avis de la communauté gaming. Connectez-vous pour participer !'}
                 </p>
                 {!isAuthenticated && (
-                    <Link to="/login" style={{
-                        display: 'inline-block', marginTop: '1rem',
-                        background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
-                        color: 'white', padding: '10px 24px', borderRadius: '8px',
-                        textDecoration: 'none', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif',
-                    }}>
+                    <Link to="/login" style={{ display: 'inline-block', marginTop: '1rem', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', padding: '10px 24px', borderRadius: '8px', textDecoration: 'none', fontWeight: 700, fontFamily: 'Rajdhani, sans-serif' }}>
                         Rejoindre la communauté
                     </Link>
                 )}
             </div>
-
             <AdvancedSearch />
-
             {isAuthenticated && (
                 <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
-                        <Users size={20} style={{ color: 'var(--primary)' }} />
-                        <h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Fil d'actualité</h2>
+                        <Users size={20} style={{ color: 'var(--primary)' }} /><h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Fil d'actualité</h2>
                     </div>
-                    {loadingFeed ? (
-                        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Chargement du fil...</p>
-                    ) : feed.length === 0 ? (
+                    {loadingFeed ? <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Chargement du fil...</p>
+                    : feed.length === 0 ? (
                         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
                             <p style={{ color: 'var(--text-muted)' }}>Aucune activité de tes abonnements.</p>
                         </div>
                     ) : (
                         <div className="grid" style={{ marginBottom: '2rem' }}>
-                            {feed.map((post, index) => (
-                                <CritiqueCard key={post.id || `feed-${index}`} post={post} onClick={() => handleFeedClick(post)} />
-                            ))}
+                            {feed.map((post, i) => <CritiqueCard key={post.id || `feed-${i}`} post={post} onClick={() => handleFeedClick(post)} />)}
                         </div>
                     )}
                 </>
             )}
-
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
-                <TrendingUp size={20} style={{ color: 'var(--primary)' }} />
-                <h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Derniers avis</h2>
+                <TrendingUp size={20} style={{ color: 'var(--primary)' }} /><h2 style={{ color: 'var(--text)', fontSize: '1.3rem' }}>Derniers avis</h2>
             </div>
-
-            {loadingCritiques ? (
-                <p style={{ color: 'var(--text-muted)' }}>Chargement des avis...</p>
-            ) : critiques.length === 0 ? (
+            {loadingCritiques ? <p style={{ color: 'var(--text-muted)' }}>Chargement des avis...</p>
+            : critiques.length === 0 ? (
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '3rem', textAlign: 'center' }}>
                     <p style={{ color: 'var(--text-muted)' }}>Aucun avis pour le moment.</p>
                 </div>
             ) : (
-                <div className="grid">
-                    {critiques.map((post, index) => (
-                        <CritiqueCard key={post.id || `pub-${index}`} post={post} onClick={() => handleClick(post)} />
-                    ))}
-                </div>
+                <div className="grid">{critiques.map((post, i) => <CritiqueCard key={post.id || `pub-${i}`} post={post} onClick={() => handleClick(post)} />)}</div>
             )}
         </div>
     );

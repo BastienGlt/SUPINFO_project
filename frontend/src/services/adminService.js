@@ -19,5 +19,17 @@ export function createAdminService(getAccessTokenSilently) {
         getWarned: () => api.get('/admin/users/warned'),
         warn: (id) => api.put(`/admin/users/${id}/warn`),
         unwarn: (id) => api.put(`/admin/users/${id}/unwarn`),
+        // Signalements (via API au lieu de localStorage)
+        getSignalements: (statut, type) => {
+            let url = '/admin/signalements';
+            const params = [];
+            if (statut) params.push(`statut=${statut}`);
+            if (type) params.push(`type_contenu=${type}`);
+            if (params.length) url += '?' + params.join('&');
+            return api.get(url);
+        },
+        getSignalement: (id) => api.get(`/admin/signalements/${id}`),
+        updateSignalementStatut: (id, statut) => api.put(`/admin/signalements/${id}/statut`, { statut }),
+        deleteSignalement: (id) => api.delete(`/admin/signalements/${id}`),
     };
 }

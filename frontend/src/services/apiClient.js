@@ -16,7 +16,7 @@ export function createApiClient(getAccessTokenSilently) {
       headers,
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+    if (!res.ok) throw new Error(data.error || data.message || 'Erreur serveur');
     return data;
   }
 
@@ -28,6 +28,10 @@ export function createApiClient(getAccessTokenSilently) {
     }),
     put: (endpoint, body) => request(endpoint, {
       method: 'PUT',
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }),
+    patch: (endpoint, body) => request(endpoint, {
+      method: 'PATCH',
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     }),
     delete: (endpoint) => request(endpoint, { method: 'DELETE' }),
