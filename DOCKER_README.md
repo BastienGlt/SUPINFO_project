@@ -18,12 +18,23 @@ Application web full-stack de critiques de jeux vidéo avec authentification Aut
 
 ### 1. Configuration
 
-Les fichiers `.env` sont déjà configurés avec les valeurs du projet. Si besoin de modifier :
+Générer le fichier `.env` à la racine avec le script de setup :
 
 ```bash
-# Éditer le fichier .env à la racine
-nano .env
+npm run setup-env
+# ou directement :
+node setup-env.js
 ```
+
+Le script propose une valeur par défaut pour chaque variable (générée pour
+`DB_PASSWORD`, sinon reprise de `.env.example`) :
+- en mode interactif, appuyez sur Entrée pour accepter la valeur proposée,
+  ou saisissez la vôtre ;
+- en CI / mode non interactif, les valeurs sont prises depuis les variables
+  d'environnement déjà exportées (secrets), sinon les valeurs par défaut sont
+  utilisées sans prompt ;
+- si un `.env` existe déjà, ses valeurs actuelles sont reprises comme
+  valeurs par défaut (relancer le script ne les écrase pas).
 
 Variables disponibles :
 - `DB_PASSWORD` : mot de passe MySQL
@@ -31,6 +42,12 @@ Variables disponibles :
 - `AUTH0_*` : configuration Auth0 (backend + frontend)
 - `VITE_API_URL` : URL de l'API pour le frontend
 - `VITE_RAWG_API_KEY` : clé API RAWG
+
+Il est toujours possible d'éditer `.env` manuellement après génération :
+
+```bash
+nano .env
+```
 
 ### 2. Lancer l'application
 

@@ -1,0 +1,44 @@
+name: Test génération .env
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-env:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Générer le .env depuis les secrets
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          AUTH0_AUDIENCE: ${{ secrets.AUTH0_AUDIENCE }}
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          VITE_AUTH0_DOMAIN: ${{ secrets.VITE_AUTH0_DOMAIN }}
+          VITE_AUTH0_CLIENT_ID: ${{ secrets.VITE_AUTH0_CLIENT_ID }}
+          VITE_AUTH0_AUDIENCE: ${{ secrets.VITE_AUTH0_AUDIENCE }}
+          VITE_RAWG_API_KEY: ${{ secrets.VITE_RAWG_API_KEY }}
+        run: node setup-env.js
+
+      - name: Vérifier que les valeurs par défaut ont été remplacées
+        run: |
+          DEFAULTS="your_auth0_client_id your-auth0-tenant.eu.auth0.com your_rawg_api_key"
+          MISSING=0
+          for default in $DEFAULTS; do
+            if grep -q "$default" .env; then
+              echo "::error::Valeur par défaut '$default' encore présente dans .env - secret manquant"
+              MISSING=1
+            fi
+          done
+
+          echo "--- .env généré (valeurs masquées) ---"
+          sed -E 's/=(.+)/=***/' .env
+
+          if [ "$MISSING" -eq 1 ]; then
+            exit 1
+          fi
+          echo "OK - tous les secrets ont bien été injectés"
