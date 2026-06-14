@@ -195,6 +195,7 @@ export default function GamePage() {
     const [game, setGame] = useState(null);
     const [screenshots, setScreenshots] = useState([]);
     const [gameLoading, setGameLoading] = useState(true);
+    const [critiquesLoaded, setCritiquesLoaded] = useState(false);
 
     const [oeuvreId, setOeuvreId] = useState(urlOeuvreId ? parseInt(urlOeuvreId) : null);
     const [inLibrary, setInLibrary] = useState(false);
@@ -209,6 +210,9 @@ export default function GamePage() {
     const [formContenu, setFormContenu] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    // ══════════════════════════════════════
+    // ÉTAPE 1 : Charger les critiques
+    // ══════════════════════════════════════
     useEffect(() => {
         const loadCritiques = async () => {
             let oId = oeuvreId;
@@ -245,10 +249,14 @@ export default function GamePage() {
                     }
                 } catch {}
             }
+            setCritiquesLoaded(true);
         };
         loadCritiques();
     }, [rawgId, urlOeuvreId, isAuthenticated]);
 
+    // ══════════════════════════════════════
+    // ÉTAPE 2 : Charger le jeu depuis RAWG
+    // ══════════════════════════════════════
     useEffect(() => {
         const loadGame = async () => {
             setGameLoading(true);
@@ -343,8 +351,49 @@ export default function GamePage() {
         }
     };
 
+    // ══════════════════════════════════════
+    // LOADING / NOT FOUND
+    // ══════════════════════════════════════
+    const hasContent = game || ratings.length > 0;
+    const isStillLoading = (gameLoading || !critiquesLoaded) && !hasContent;
+
+    if (isStillLoading) {
+        return (
+            <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: '40px', height: '40px', border: '3px solid var(--border)',
+                        borderTop: '3px solid var(--primary)', borderRadius: '50%',
+                        animation: 'spin 1s linear infinite', margin: '0 auto 1rem',
+                    }} />
+                    <p style={{ color: 'var(--text-muted)' }}>Chargement du jeu...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!hasContent && critiquesLoaded && !gameLoading) {
+        return (
+            <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '1rem' }}>Ce jeu n'a pas été trouvé.</p>
+                    <button onClick={() => window.history.back()} style={{
+                        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px',
+                        padding: '10px 24px', color: 'var(--text)', cursor: 'pointer',
+                        fontFamily: 'Rajdhani, sans-serif', fontWeight: 700,
+                    }}>
+                        ← Retour
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const gameTitle = game?.name || ratings[0]?.oeuvre_titre || ratings[0]?.titre || 'Jeu';
 
+    // ══════════════════════════════════════
+    // RENDER
+    // ══════════════════════════════════════
     return (
         <div className="page-container">
             {/* HERO */}
@@ -355,9 +404,9 @@ export default function GamePage() {
                     <div style={{ height: '200px', background: 'linear-gradient(135deg, var(--bg-card), var(--primary-dark))' }} />
                 )}
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(10,14,23,0.95))', padding: '3rem 2rem 1.5rem' }}>
-                    <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>{gameTitle}</h1>
+                    <h1 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: 'white' }}>{gameTitle}</h1>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        {game?.released && <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>📅 {game.released}</span>}
+                        {game?.released && <span style={{ color: '#ccc', fontSize: '0.9rem' }}>📅 {game.released}</span>}
                         {game?.rating > 0 && <span style={{ color: 'var(--accent)', fontSize: '0.9rem', fontWeight: 700 }}>⭐ {game.rating}/5 RAWG</span>}
                         {game?.genres?.map(g => (
                             <span key={g.id} style={{ background: 'var(--primary-glow)', color: 'var(--primary)', padding: '2px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid var(--primary)' }}>{g.name}</span>
@@ -381,6 +430,7 @@ export default function GamePage() {
                         </div>
                     )}
 
+                    {/* AVIS */}
                     <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '1.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                             <h2 style={{ color: 'var(--primary)', fontSize: '1.3rem' }}>Avis ({ratings.length})</h2>
@@ -463,6 +513,7 @@ export default function GamePage() {
                     </div>
                 </div>
 
+                {/* COLONNE DROITE */}
                 {(game || isAuthenticated) && (
                     <div>
                         {isAuthenticated && (

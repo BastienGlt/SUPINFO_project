@@ -96,7 +96,7 @@ export default function HomePage() {
     useEffect(() => {
         loadPublicCritiques()
             .then((data) => {
-                console.log('Premier avis (debug champs):', data[0]);
+                
                 setCritiques(data);
             })
             .catch(err => console.error('Erreur critiques:', err))

@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { createNotificationService } from '../services/notificationService';
-import { Bell, Heart, MessageCircle, UserPlus, CheckCheck, Eye } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, CheckCheck } from 'lucide-react';
 
 const TYPE_CONFIG = {
     like: { icon: Heart, color: '#ef4444', label: 'a aimé votre critique' },
@@ -37,10 +37,10 @@ export default function NotificationsPage() {
     };
 
     useEffect(() => {
-    loadNotifications();
-    const interval = setInterval(loadNotifications, 15000);
-    return () => clearInterval(interval);
-}, []);
+        loadNotifications();
+        const interval = setInterval(loadNotifications, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleMarkAsRead = async (id) => {
         try {
@@ -64,8 +64,6 @@ export default function NotificationsPage() {
         if (!notif.lu) handleMarkAsRead(notif.id);
         if (notif.type === 'follow') {
             navigate(`/user/${notif.from_user_id}`);
-        } else if (notif.source_id) {
-            navigate(`/oeuvre/${notif.source_id}`);
         }
     };
 
@@ -78,10 +76,7 @@ export default function NotificationsPage() {
                     <Bell size={24} style={{ color: 'var(--primary)' }} />
                     <h1 style={{ fontSize: '1.5rem' }}>Notifications</h1>
                     {unreadCount > 0 && (
-                        <span style={{
-                            background: 'var(--danger)', color: 'white', borderRadius: '10px',
-                            padding: '2px 10px', fontSize: '0.8rem', fontWeight: 700,
-                        }}>
+                        <span style={{ background: 'var(--danger)', color: 'white', borderRadius: '10px', padding: '2px 10px', fontSize: '0.8rem', fontWeight: 700 }}>
                             {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
                         </span>
                     )}
@@ -99,10 +94,7 @@ export default function NotificationsPage() {
             </div>
 
             {notifications.length === 0 ? (
-                <div style={{
-                    background: 'var(--bg-card)', border: '1px solid var(--border)',
-                    borderRadius: '12px', padding: '3rem', textAlign: 'center',
-                }}>
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '3rem', textAlign: 'center' }}>
                     <Bell size={40} style={{ color: 'var(--text-muted)', marginBottom: '1rem' }} />
                     <p style={{ color: 'var(--text-muted)' }}>Aucune notification.</p>
                 </div>
@@ -111,19 +103,17 @@ export default function NotificationsPage() {
                     {notifications.map(notif => {
                         const config = TYPE_CONFIG[notif.type] || TYPE_CONFIG.like;
                         const Icon = config.icon;
+                        const isClickable = notif.type === 'follow';
                         return (
-                            <div key={notif.id}
-                                onClick={() => handleClick(notif)}
+                            <div key={notif.id} onClick={() => handleClick(notif)}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '14px',
-                                    padding: '14px 18px', borderRadius: '10px', cursor: 'pointer',
+                                    padding: '14px 18px', borderRadius: '10px',
+                                    cursor: isClickable ? 'pointer' : 'default',
                                     background: notif.lu ? 'var(--bg-card)' : 'var(--primary-glow)',
                                     border: notif.lu ? '1px solid var(--border)' : '1px solid var(--primary)',
                                     transition: 'background 0.15s',
-                                }}
-                                onMouseEnter={e => { if (notif.lu) e.currentTarget.style.background = 'var(--bg-card-hover)'; }}
-                                onMouseLeave={e => { if (notif.lu) e.currentTarget.style.background = 'var(--bg-card)'; }}
-                            >
+                                }}>
                                 <div style={{
                                     width: '40px', height: '40px', borderRadius: '50%',
                                     background: `${config.color}20`, display: 'flex',
@@ -131,7 +121,6 @@ export default function NotificationsPage() {
                                 }}>
                                     <Icon size={18} style={{ color: config.color }} />
                                 </div>
-
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ color: 'var(--text)', fontSize: '0.9rem' }}>
                                         <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
@@ -145,12 +134,8 @@ export default function NotificationsPage() {
                                         })}
                                     </div>
                                 </div>
-
                                 {!notif.lu && (
-                                    <div style={{
-                                        width: '10px', height: '10px', borderRadius: '50%',
-                                        background: 'var(--primary)', flexShrink: 0,
-                                    }} />
+                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 }} />
                                 )}
                             </div>
                         );

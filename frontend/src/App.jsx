@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
+import LegalPage from './routes/LegalPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationsPage from './routes/NotificationsPage';
 import Footer from './components/Footer';
@@ -38,6 +39,7 @@ function AppLayout() {
             <Route path="/game/:rawgId" element={<GamePage />} />
             <Route path="/oeuvre/:oeuvreId" element={<GamePage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/legal" element={<LegalPage />} />
             <Route path="/complete-profile" element={<CompleteProfilePage />} />
             <Route path="/user/:userId" element={<UserProfilePage />} />
             <Route path="/followers/:userId" element={<FollowListPage />} />
