@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS `oeuvres` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `api_reference_id` varchar(100) DEFAULT NULL,
   `titre` varchar(255) NOT NULL,
-  `description` varchar(255) NOT NULL,
+  `description` TEXT NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
@@ -276,7 +276,7 @@ CREATE TABLE `v_bibliotheque_details` (
 	`oeuvre_id` INT(11) NULL,
 	`updated_at` TIMESTAMP NOT NULL,
 	`titre` VARCHAR(255) NOT NULL COLLATE 'utf8_general_ci',
-	`description` VARCHAR(255) NOT NULL COLLATE 'utf8_general_ci',
+	`description` TEXT NOT NULL COLLATE 'utf8_general_ci',
 	`api_reference_id` VARCHAR(100) NULL COLLATE 'utf8_general_ci',
 	`statut_id` INT(11) NOT NULL,
 	`statut_code` VARCHAR(50) NULL COLLATE 'utf8_general_ci',
@@ -331,7 +331,7 @@ CREATE TABLE `v_critiques_complete` (
 	`nom` VARCHAR(100) NOT NULL COLLATE 'utf8_general_ci',
 	`photo` VARCHAR(255) NULL COLLATE 'utf8_general_ci',
 	`oeuvre_titre` VARCHAR(255) NOT NULL COLLATE 'utf8_general_ci',
-	`oeuvre_description` VARCHAR(255) NOT NULL COLLATE 'utf8_general_ci',
+	`oeuvre_description` TEXT NOT NULL COLLATE 'utf8_general_ci',
 	`api_reference_id` VARCHAR(100) NULL COLLATE 'utf8_general_ci',
 	`likes_count` BIGINT(21) NULL
 ) ENGINE=MyISAM;
