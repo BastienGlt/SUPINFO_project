@@ -167,7 +167,7 @@ Le fichier `frontend-mobile/.env` (variables `EXPO_PUBLIC_*`) est généré auto
 
 ```bash
 # Depuis la racine du projet
-npm run setup-env
+npm run start
 ```
 
 | Variable | Description |
@@ -176,13 +176,21 @@ npm run setup-env
 | `EXPO_PUBLIC_API_URL` | URL de l'API backend, joignable depuis l'appareil mobile |
 | `EXPO_PUBLIC_RAWG_API_KEY` | Clé API [RAWG](https://rawg.io/apidocs) |
 
-> ⚠️ **`EXPO_PUBLIC_API_URL`** : la valeur par défaut `http://localhost:5000` ne fonctionne **pas** sur un appareil physique ou un émulateur Android (`localhost` y désigne l'appareil lui-même, pas votre PC). Remplacez-la par l'adresse IP locale de votre machine sur le réseau, par ex. :
+> ⚠️ **`EXPO_PUBLIC_API_URL`** : la valeur par défaut `http://localhost:5000` ne fonctionne **pas** sur un appareil physique ou un émulateur Android (`localhost` y désigne l'appareil lui-même, pas votre PC).
+>
+> Le plus simple pour éviter toute complication réseau est de pointer directement sur notre API déjà hébergée :
+>
+> ```
+> EXPO_PUBLIC_API_URL=https://api-supinfo.bastien-guillemet.fr
+> ```
+>
+> Sinon, pour utiliser un backend lancé en local, remplacez la valeur par l'adresse IP locale de votre machine sur le réseau, par ex. :
 >
 > ```
 > EXPO_PUBLIC_API_URL=http://192.168.1.21:5000
 > ```
 >
-> (IP locale visible via `ipconfig` sur Windows / `ifconfig` ou `ip a` sur Linux/Mac.) Le backend doit être démarré (`npm run dev`) et l'appareil mobile connecté au **même réseau Wi-Fi** que le PC.
+> (IP locale visible via `ipconfig` sur Windows / `ifconfig` ou `ip a` sur Linux/Mac.) Le backend doit alors être démarré (`npm run dev`) et l'appareil mobile connecté au **même réseau Wi-Fi** que le PC.
 
 ### 3. Démarrer le backend
 
