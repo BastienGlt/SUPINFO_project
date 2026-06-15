@@ -58,10 +58,17 @@ app.get('/health', (req, res) => {
 
 // --- Gestion des erreurs 404 ---
 app.use((req, res) => {
-  res.status(404).json({ 
-    error: "Route introuvable", 
-    path: req.path 
+  res.status(404).json({
+    error: "Route introuvable",
+    path: req.path
   });
+});
+
+// --- Gestion des erreurs (JWT invalide/expiré, etc.) ---
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  if (status >= 500) console.error(err);
+  res.status(status).json({ error: err.message || "Erreur serveur" });
 });
 
 // --- 3. DÉMARRAGE ---
