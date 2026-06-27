@@ -201,13 +201,15 @@ npm run dev   # depuis la racine, ou `cd backend && npm run dev`
 ### 4. Lancer l'app mobile
 
 ```bash
-cd frontend-mobile
-npm run lan      # mode LAN (même réseau Wi-Fi)
+# Depuis la racine du projet
+npm run mobile    # app mobile (Expo, mode LAN)
 # ou
-npm run tunnel    # mode tunnel (réseaux différents, plus lent)
+npm run tunnel    # app mobile (Expo, mode tunnel)
 ```
 
 Scannez le QR code affiché avec l'app **Expo Go** (Android) ou l'appareil photo (iOS), ou lancez un émulateur/simulateur depuis le terminal Expo.
+
+> ⚠️ **Pour tester la connexion Auth0, privilégiez l'émulateur web** : dans le terminal Expo, cliquez sur le lien **`Web is waiting on http://localhost:8081`**. Avec l'app **Expo Go** sur un appareil physique ou un émulateur, Auth0 refusera la connexion utilisateur car l'adresse IP réseau de l'appareil n'est pas enregistrée dans la whitelist Auth0 (Allowed Callback / Logout URLs).
 
 ### 5. Configuration Auth0
 
